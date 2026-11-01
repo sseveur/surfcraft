@@ -556,7 +556,7 @@ impl Spline {
         }
         let (a, k, b) = (&self.knots[i - 1], &self.knots[i], &self.knots[i + 1]);
         let tmp = Segment::new(a.point(), a.next(), b.prev(), b.point());
-        let t = tmp.nearest_t_precise(k.point());
+        let t = tmp.nearest_t(k.point());
         let knots = self.knots_mut();
         if t != 0.0 && t != 1.0 {
             let a = &mut knots[i - 1];
