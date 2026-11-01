@@ -505,7 +505,7 @@ impl MachineConfig {
                 return Err(bad(format!("{name} must not be 0")));
             }
         }
-        within("Clear height", self.clear_height, 0.0, 1000.0)?;
+        within("Clear height", self.clear_height, 0.0, 100.0)?;
         within("Stringer width", self.stringer_width, 0.0, 10.0)?;
         for (name, v) in [
             ("X ref. offset", self.cutter_offset.x),
