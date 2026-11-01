@@ -1218,14 +1218,14 @@ fn qa_bug_flat_bottom_is_not_covered() {
 /// The bottom program of the funboard must not gouge (the hard rail edge was gouged by ~11 mm, see
 /// `qa_bug_flat_bottom_is_not_covered`).
 ///
-/// Open: the current funboard has a crease at its hard bottom edge (the section edge knot has a kink). A regular
+/// Was open: the funboard has a crease at its hard bottom edge (the section edge knot has a kink). A regular
 /// lengthwise pass at a constant arc-length fraction crosses that crease between two stations: pass 23 touches the
 /// rail side at x = 76 cm (y = 26.24 cm, normal tilted 33 degrees) and the flat side at x = 77 cm (y = 26.03 cm,
 /// normal vertical). The straight move between them takes the flat face of the cutter into the bottom near
 /// (76.5, 26.1) cm: 1.01 mm with the default 2 mm simulation step, 1.07 mm at 1 mm. The contact normals are exact
 /// and the reference surface agrees with the modelled one there to 0.02 mm, so this is not a simulator artefact.
+/// Fixed: every straight move is checked against the board (drop cutter) and lifted where it would cut in.
 #[test]
-#[ignore = "product bug: ~1 mm gouge where a bottom pass crosses the funboard's hard-edge crease between stations"]
 fn qa_bug_bottom_pass_crossing_hard_edge_gouges() {
     let s = gouge_of(1, &MachineConfig::default(), BoardSide::Bottom);
     assert!(s.gouge < 1.0, "gouge {:.2} mm at {:?}", s.gouge, s.gouge_at);
@@ -1272,13 +1272,14 @@ fn qa_bug_rotating_clamp_hold_point() {
     }
 }
 
-/// Open: the hold height at the tail clamp edge (machine Z211.4, from the swept clamp box) ignores the board, which
+/// Was open: the hold height at the tail clamp edge (machine Z211.4, from the swept clamp box) ignores the board, which
 /// turns under the held cutter. Where the tail is wider than that (rail more than ~211 mm from the A axis), the
 /// rail rotates into the cutter: on the longboard deck program the Outline pass is held at X62.7 Z211.4 while A goes
 /// from 79.7 to 87.3 degrees, and the tool sits ~6 mm inside the rail at x = 14.3-14.6 cm, y = 21 cm (6.1 mm in the
 /// gouge report, deck and bottom programs); the funboard Cleanup pass does the same by 1.7 mm.
+/// Fixed: held positions and turns of the board go through a height that clears the board's swept radius as well
+/// as the clamps.
 #[test]
-#[ignore = "product bug: rotating-board hold height at the tail clamp is below the rail of wide tails (6.1 mm gouge on the longboard)"]
 fn qa_bug_rotating_hold_height_below_wide_tail() {
     for (bi, (name, _)) in boards().iter().enumerate() {
         for side in [BoardSide::Deck, BoardSide::Bottom] {

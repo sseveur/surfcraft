@@ -101,7 +101,11 @@ pub(crate) struct Planned {
     pub notes: Vec<String>,
 }
 
-fn map<T: Send, R: Send>(parallel: bool, items: Vec<T>, f: impl Fn(T) -> R + Sync + Send) -> Vec<R> {
+fn map<T: Send, R: Send>(
+    parallel: bool,
+    items: Vec<T>,
+    f: impl Fn(T) -> R + Sync + Send,
+) -> Vec<R> {
     if parallel {
         items.into_par_iter().map(f).collect()
     } else {
@@ -141,12 +145,14 @@ fn stations(len: f64, res: f64) -> Result<Vec<f64>, Error> {
 pub(crate) fn check_board(board: &Board) -> Result<(), Error> {
     let l = board.length();
     if board.is_empty()
-        || !(l > 1.0)
+        || l.is_nan()
+        || l <= 1.0
         || board.sections.len() < 3
         || board.deck.segment_count() == 0
         || board.bottom.segment_count() == 0
         || board.outline.segment_count() == 0
-        || !(board.max_width() > 0.0)
+        || board.max_width().is_nan()
+        || board.max_width() <= 0.0
     {
         return Err(Error::InvalidBoard);
     }
@@ -165,7 +171,11 @@ struct Band {
 
 impl Band {
     fn passes(&self) -> usize {
-        if (self.a - self.b).abs() < 1e-9 { 0 } else { self.n }
+        if (self.a - self.b).abs() < 1e-9 {
+            0
+        } else {
+            self.n
+        }
     }
 }
 
@@ -393,7 +403,13 @@ fn finishes_at_nose(cfg: &MachineConfig, side: BoardSide, start_at_nose: bool) -
     at_nose
 }
 
-fn sandwich(cfg: &MachineConfig, board: &Board, side: BoardSide, kind: PassKind, p: ToolPoint) -> ToolPoint {
+fn sandwich(
+    cfg: &MachineConfig,
+    board: &Board,
+    side: BoardSide,
+    kind: PassKind,
+    p: ToolPoint,
+) -> ToolPoint {
     let s = &cfg.sandwich;
     let (on, t, limit) = match (kind, side) {
         (PassKind::Outline, _) if s.rail => (true, s.rail_thickness, 0.0),
@@ -482,7 +498,8 @@ pub(crate) fn surface_splits(
     let surf = Surf::new(board);
     let len = surf.len;
     let xs = stations(len, cfg.lengthwise_resolution)?;
-    let lanes_per_side = st.main.passes() + st.rail.passes() + usize::from(st.outline) + st.cleanups;
+    let lanes_per_side =
+        st.main.passes() + st.rail.passes() + usize::from(st.outline) + st.cleanups;
     let cut_offs = match side {
         BoardSide::Deck => cfg.cut_off_nose,
         BoardSide::Bottom => cfg.cut_off_tail,
@@ -491,7 +508,8 @@ pub(crate) fn surface_splits(
         return Err(Error::NothingToCut);
     }
     let lanes = usize::from(st.stringer) + 2 * lanes_per_side;
-    if (lanes as f64) * (xs.len() as f64 + 2.0 + cfg.move_between_steps as f64) > MAX_POINTS as f64 {
+    if (lanes as f64) * (xs.len() as f64 + 2.0 + cfg.move_between_steps as f64) > MAX_POINTS as f64
+    {
         return Err(Error::TooManyPoints);
     }
     let n = xs.len() - 1;
@@ -513,7 +531,10 @@ pub(crate) fn surface_splits(
         let mut v: Vec<ToolPoint> = if forward {
             (0..=n).map(|k| on(side, slices[k].get(lane))).collect()
         } else {
-            (0..=n).rev().map(|k| on(side, slices[k].get(lane))).collect()
+            (0..=n)
+                .rev()
+                .map(|k| on(side, slices[k].get(lane)))
+                .collect()
         };
         if extra && let Some(&l) = v.last() {
             v.push(l);
@@ -576,7 +597,12 @@ pub(crate) fn surface_splits(
     };
     let stringer_first = at_nose != cut_at_nose;
     if stringer_first && st.stringer {
-        b.push(PassKind::Stringer, Side::Center, 0, lengthwise(Lane::Stringer, Side::Center, !at_nose, true));
+        b.push(
+            PassKind::Stringer,
+            Side::Center,
+            0,
+            lengthwise(Lane::Stringer, Side::Center, !at_nose, true),
+        );
         at_nose = !at_nose;
     }
     if cut_offs {
@@ -584,7 +610,12 @@ pub(crate) fn surface_splits(
         at_nose = cut_at_nose;
     }
     if !stringer_first && st.stringer {
-        b.push(PassKind::Stringer, Side::Center, 0, lengthwise(Lane::Stringer, Side::Center, !at_nose, true));
+        b.push(
+            PassKind::Stringer,
+            Side::Center,
+            0,
+            lengthwise(Lane::Stringer, Side::Center, !at_nose, true),
+        );
         at_nose = !at_nose;
     }
 
@@ -621,7 +652,10 @@ pub(crate) fn surface_splits(
                 };
                 let normal = DVec3::new(if at_nose { 1.0 } else { -1.0 }, 0.0, 0.0);
                 let raised = prev.pos + DVec3::new(0.0, 0.0, 5.0 * up);
-                pts.push(ToolPoint { pos: raised, normal });
+                pts.push(ToolPoint {
+                    pos: raised,
+                    normal,
+                });
                 let y = match side {
                     BoardSide::Deck => -2.5 * cfg.stringer_width,
                     BoardSide::Bottom => -0.5 * cfg.stringer_width,
@@ -640,7 +674,11 @@ pub(crate) fn surface_splits(
         }
         for (band, rail) in [(&st.main, false), (&st.rail, true)] {
             let n_b = band.passes();
-            let kind = if rail { PassKind::Rail } else { PassKind::Regular };
+            let kind = if rail {
+                PassKind::Rail
+            } else {
+                PassKind::Regular
+            };
             let m = cfg.move_between_steps;
             for i in 1..=n_b {
                 let sl = end_slice(at_nose);
@@ -657,11 +695,21 @@ pub(crate) fn surface_splits(
             }
         }
         if st.outline {
-            b.push(PassKind::Outline, half, 0, lengthwise(Lane::Outline, half, !at_nose, true));
+            b.push(
+                PassKind::Outline,
+                half,
+                0,
+                lengthwise(Lane::Outline, half, !at_nose, true),
+            );
             at_nose = !at_nose;
         }
         for i in 0..st.cleanups {
-            b.push(PassKind::Cleanup, half, 0, lengthwise(Lane::Cleanup(i), half, !at_nose, true));
+            b.push(
+                PassKind::Cleanup,
+                half,
+                0,
+                lengthwise(Lane::Cleanup(i), half, !at_nose, true),
+            );
             at_nose = !at_nose;
         }
     }
@@ -778,11 +826,20 @@ pub(crate) fn hotwire(board: &Board, cfg: &HotwireConfig, kind: HotwireKind) -> 
     let kerf = cfg.kerf / 20.0;
     // Samples of a curve at the segment-index parameter, with the outward unit normal (`up` true: the side of
     // +y in the curve plane).
-    let curve = |spline: &surfcraft_core::Spline, g0: f64, g1: f64, count: usize, up: bool| -> Vec<(DVec2, DVec2)> {
+    let curve = |spline: &surfcraft_core::Spline,
+                 g0: f64,
+                 g1: f64,
+                 count: usize,
+                 up: bool|
+     -> Vec<(DVec2, DVec2)> {
         let m = spline.segment_count();
         (0..=count)
             .map(|j| {
-                let g = if count == 0 { g0 } else { g0 + (g1 - g0) * j as f64 / count as f64 };
+                let g = if count == 0 {
+                    g0
+                } else {
+                    g0 + (g1 - g0) * j as f64 / count as f64
+                };
                 let gm = (g.clamp(0.0, 1.0) * m as f64).min(m as f64);
                 let i = (gm.floor() as usize).min(m - 1);
                 let seg = spline.segment(i);
@@ -796,13 +853,18 @@ pub(crate) fn hotwire(board: &Board, cfg: &HotwireConfig, kind: HotwireKind) -> 
             })
             .collect()
     };
-    let pt = |p: DVec2, nrm: DVec2, extra: DVec2, kind: PassKind| -> ToolPoint {
-        let q = p + extra + kerf * nrm;
+    // The extra material and the kerf widen the shape across the curve plane: up on the deck, down on the bottom,
+    // outward from the stringer on the outline.
+    let pt = |p: DVec2, nrm: DVec2, extra: f64| -> ToolPoint {
+        let q = p + DVec2::new(0.0, nrm.y.signum() * (extra + kerf));
         let normal = DVec3::new(nrm.x, 0.0, nrm.y);
-        let _ = kind;
         ToolPoint {
             pos: DVec3::new(q.x, 0.0, q.y),
-            normal: if normal == DVec3::ZERO { DVec3::Z } else { normal },
+            normal: if normal == DVec3::ZERO {
+                DVec3::Z
+            } else {
+                normal
+            },
         }
     };
     let mk = |kind: PassKind, side: Side, index: usize, points: Vec<ToolPoint>| Pass {
@@ -815,15 +877,18 @@ pub(crate) fn hotwire(board: &Board, cfg: &HotwireConfig, kind: HotwireKind) -> 
     match kind {
         HotwireKind::Profile => {
             let k = PassKind::HotwireProfile;
-            let lift = DVec2::new(0.0, cfg.expand);
-            let (a, bb) = if cfg.begin_at_nose { (1.0, 0.0) } else { (0.0, 1.0) };
+            let (a, bb) = if cfg.begin_at_nose {
+                (1.0, 0.0)
+            } else {
+                (0.0, 1.0)
+            };
             let deck: Vec<ToolPoint> = curve(&board.deck, a, bb, n, true)
                 .into_iter()
-                .map(|(p, nr)| pt(p, nr, lift, k))
+                .map(|(p, nr)| pt(p, nr, cfg.expand))
                 .collect();
             let bottom: Vec<ToolPoint> = curve(&board.bottom, bb, a, n, false)
                 .into_iter()
-                .map(|(p, nr)| pt(p, nr, DVec2::ZERO, k))
+                .map(|(p, nr)| pt(p, nr, 0.0))
                 .collect();
             // Close the loop: re-trace the last 1/m of the deck from where the bottom ended (m deck knots).
             let m = board.deck.len().max(1);
@@ -832,7 +897,7 @@ pub(crate) fn hotwire(board: &Board, cfg: &HotwireConfig, kind: HotwireKind) -> 
             let end = if cfg.begin_at_nose { 1.0 - span } else { span };
             let closing: Vec<ToolPoint> = curve(&board.deck, a, end, count, true)
                 .into_iter()
-                .map(|(p, nr)| pt(p, nr, lift, k))
+                .map(|(p, nr)| pt(p, nr, cfg.expand))
                 .collect();
             Toolpath {
                 passes: vec![
@@ -845,10 +910,14 @@ pub(crate) fn hotwire(board: &Board, cfg: &HotwireConfig, kind: HotwireKind) -> 
         HotwireKind::Outline => {
             let k = PassKind::HotwireOutline;
             let out = cfg.expand / 2.0;
-            let (a, bb) = if cfg.begin_at_nose { (1.0, 0.0) } else { (0.0, 1.0) };
+            let (a, bb) = if cfg.begin_at_nose {
+                (1.0, 0.0)
+            } else {
+                (0.0, 1.0)
+            };
             let right: Vec<ToolPoint> = curve(&board.outline, a, bb, n, true)
                 .into_iter()
-                .map(|(p, nr)| pt(p, nr, out * nr, k))
+                .map(|(p, nr)| pt(p, nr, out))
                 .collect();
             let left: Vec<ToolPoint> = right
                 .iter()

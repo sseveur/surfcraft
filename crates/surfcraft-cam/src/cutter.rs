@@ -40,7 +40,7 @@ fn bucket_of(n: DVec3) -> usize {
 
 /// Unit direction of a cube-face point.
 fn face_dir(face: usize, u: f64, v: f64) -> DVec3 {
-    let s = if face % 2 == 0 { 1.0 } else { -1.0 };
+    let s = if face.is_multiple_of(2) { 1.0 } else { -1.0 };
     match face / 2 {
         0 => DVec3::new(s, u, v),
         1 => DVec3::new(u, s, v),
@@ -80,7 +80,7 @@ impl StlCutter {
         if raw.len() < 3 {
             return Err(Error::InvalidStl("no facets".into()));
         }
-        let facets: Vec<[DVec3; 3]> = raw.chunks_exact(3).map(|t| [t[0], t[1], t[2]]).collect();
+        let facets: Vec<[DVec3; 3]> = raw.as_chunks::<3>().0.to_vec();
         let mut vertices: Vec<DVec3> = Vec::new();
         let mut seen = std::collections::HashSet::new();
         for v in &raw {
@@ -96,8 +96,10 @@ impl StlCutter {
         };
         c.build_buckets();
         let (r, lo, hi) = c.bounds();
-        if !(r > 0.0) || !(hi > lo) {
-            return Err(Error::InvalidStl("the cutter has no width or height".into()));
+        if r.is_nan() || r <= 0.0 || hi.is_nan() || hi <= lo {
+            return Err(Error::InvalidStl(
+                "the cutter has no width or height".into(),
+            ));
         }
         Ok(c)
     }
@@ -110,7 +112,12 @@ impl StlCutter {
             for i in 0..GRID {
                 for j in 0..GRID {
                     let at = |k: f64| -1.0 + 2.0 * k / GRID as f64;
-                    let (u0, u1, v0, v1) = (at(i as f64), at(i as f64 + 1.0), at(j as f64), at(j as f64 + 1.0));
+                    let (u0, u1, v0, v1) = (
+                        at(i as f64),
+                        at(i as f64 + 1.0),
+                        at(j as f64),
+                        at(j as f64 + 1.0),
+                    );
                     let c = face_dir(face, (u0 + u1) / 2.0, (v0 + v1) / 2.0);
                     let eps = [(u0, v0), (u0, v1), (u1, v0), (u1, v1)]
                         .iter()
@@ -406,8 +413,7 @@ impl Cutter {
                 if rho < 1e-9 {
                     contact
                 } else {
-                    contact
-                        + f.radius * 10.0 * DVec3::new(normal.x / rho, normal.y / rho, 0.0)
+                    contact + f.radius * 10.0 * DVec3::new(normal.x / rho, normal.y / rho, 0.0)
                 }
             }
             Cutter::Stl(s) => s.offset(contact, normal),

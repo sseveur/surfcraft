@@ -423,7 +423,9 @@ fn within(name: &str, v: f64, lo: f64, hi: f64) -> Result<(), Error> {
     if (lo..=hi).contains(&v) {
         Ok(())
     } else {
-        Err(bad(format!("{name} must be between {lo} and {hi} (got {v})")))
+        Err(bad(format!(
+            "{name} must be between {lo} and {hi} (got {v})"
+        )))
     }
 }
 
@@ -457,7 +459,9 @@ impl Cutter {
                 Ok(())
             }
             Cutter::RotatingBoard(inner) => match inner.as_ref() {
-                Cutter::RotatingBoard(_) => Err(bad("a rotating board needs a plain cutter inside")),
+                Cutter::RotatingBoard(_) => {
+                    Err(bad("a rotating board needs a plain cutter inside"))
+                }
                 c => c.validate(),
             },
         }
@@ -619,7 +623,7 @@ impl MachineConfig {
             non_negative(name, v)?;
         }
         if let Some(blank) = &self.blank
-            && (blank.is_empty() || !(blank.length() > 1.0))
+            && (blank.is_empty() || blank.length().is_nan() || blank.length() <= 1.0)
         {
             return Err(bad("the blank has no usable shape"));
         }

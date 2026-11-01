@@ -5,6 +5,7 @@
 use rayon::prelude::*;
 use surfcraft_core::{Board, DVec2, DVec3};
 
+use crate::Error;
 use crate::config::{
     AxisScaling, BoardSide, Cutter, HotwireConfig, HotwireKind, MachineAction, MachineConfig,
 };
@@ -13,7 +14,6 @@ use crate::eval::Part3;
 use crate::gouge::{Envelope, cloud};
 use crate::holding::{Obstacle, Placement};
 use crate::toolpath::{PassKind, Planned, Side, Toolpath};
-use crate::Error;
 
 /// One linear cutting move (machine frame, mm; feed mm/min; A degrees).
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -115,7 +115,11 @@ impl Program {
 
     fn scaled(&self, p: DVec3) -> DVec3 {
         let s = &self.scaling;
-        DVec3::new(Self::word(p.x, s.x), Self::word(p.y, s.y), Self::word(p.z, s.z))
+        DVec3::new(
+            Self::word(p.x, s.x),
+            Self::word(p.y, s.y),
+            Self::word(p.z, s.z),
+        )
     }
 
     pub fn to_gcode(&self) -> String {
@@ -124,7 +128,11 @@ impl Program {
         let mut feed: Option<i64> = None;
         let fmt = |v: f64| {
             let s = format!("{v:.4}");
-            if s == "-0.0000" { "0.0000".to_string() } else { s }
+            if s == "-0.0000" {
+                "0.0000".to_string()
+            } else {
+                s
+            }
         };
         for c in &self.commands {
             match c {
@@ -218,11 +226,21 @@ impl Program {
                 Command::Home => pos = [None; 3],
                 Command::Dwell(t) => s.estimated_time += t,
                 Command::MoveZ { z, feed: f } => {
-                    step([None, None, Some(Self::word(*z, self.scaling.z))], f.trunc(), &mut pos, &mut s);
+                    step(
+                        [None, None, Some(Self::word(*z, self.scaling.z))],
+                        f.trunc(),
+                        &mut pos,
+                        &mut s,
+                    );
                 }
                 Command::Move(m) => {
                     let p = self.scaled(m.pos);
-                    step([Some(p.x), Some(p.y), Some(p.z)], m.feed.trunc(), &mut pos, &mut s);
+                    step(
+                        [Some(p.x), Some(p.y), Some(p.z)],
+                        m.feed.trunc(),
+                        &mut pos,
+                        &mut s,
+                    );
                 }
                 _ => {}
             }
@@ -335,8 +353,17 @@ impl Machine<'_> {
     }
 
     /// Tool position for a reference-frame contact.
-    fn position(&self, contact: DVec3, normal: DVec3, side: f64, mode: Mode) -> (DVec3, Option<f64>) {
-        let stay = self.cfg.stay_away_from_stringer.then_some(self.cfg.stringer_width);
+    fn position(
+        &self,
+        contact: DVec3,
+        normal: DVec3,
+        side: f64,
+        mode: Mode,
+    ) -> (DVec3, Option<f64>) {
+        let stay = self
+            .cfg
+            .stay_away_from_stringer
+            .then_some(self.cfg.stringer_width);
         match mode {
             Mode::CutOff => {
                 let inner = self.cfg.cutter.mounted();
@@ -371,7 +398,11 @@ fn describe_cutter(c: &Cutter) -> String {
         ),
         Cutter::Stl(s) => {
             let (r, lo, hi) = s.bounds();
-            format!("Stl cutter, diameter {:.1} mm, height {:.1} mm", 2.0 * r, hi - lo)
+            format!(
+                "Stl cutter, diameter {:.1} mm, height {:.1} mm",
+                2.0 * r,
+                hi - lo
+            )
         }
         Cutter::RotatingBoard(inner) => {
             format!("Rotating board system with {}", describe_cutter(inner))
@@ -404,8 +435,8 @@ fn action(a: &MachineAction, z: f64, feed: f64, out: &mut Vec<Command>) {
 }
 
 /// Points of a board's section samples used for the clouds, cm.
-const CLOUD_STEP: f64 = 0.1;
-const CLOUD_SPACING: f64 = 0.1;
+const CLOUD_STEP: f64 = 0.05;
+const CLOUD_SPACING: f64 = 0.05;
 
 /// Milling program from a contact toolpath.
 pub(crate) fn milling(
@@ -440,7 +471,14 @@ pub(crate) fn milling(
         (Some(env), top, 0.0)
     };
     let blank_env = blank.map(|b| {
-        let pts = cloud(b, &blank_placement, if four { Part3::Whole } else { up_part }, 0.5, 0.3, par);
+        let pts = cloud(
+            b,
+            &blank_placement,
+            if four { Part3::Whole } else { up_part },
+            0.5,
+            0.3,
+            par,
+        );
         let r = pts.iter().map(|p| p.y.hypot(p.z)).fold(0.0, f64::max);
         (Envelope::new(pts, profile.radius() / 2.0), r)
     });
@@ -480,7 +518,9 @@ pub(crate) fn milling(
         };
         let next = passes.get(pi + 1);
         let feed = if pass.kind == PassKind::Approach {
-            next.map_or(feed_of(cfg, kind, pass.side, 0), |n| feed_of(cfg, n.kind, n.side, n.index))
+            next.map_or(feed_of(cfg, kind, pass.side, 0), |n| {
+                feed_of(cfg, n.kind, n.side, n.index)
+            })
         } else {
             feed_of(cfg, kind, pass.side, pass.index)
         };
@@ -497,9 +537,6 @@ pub(crate) fn milling(
         if !four {
             if mode == Mode::Contact {
                 let (pen, z) = m.check(tip);
-                if std::env::var("CAM_DEBUG").is_ok() && pen > 0.03 {
-                    eprintln!("PEN {:?} {pi} {:.3} at {:?} n {:?} raise {:.3}", passes[pi].kind, pen, pos, normal, z - tip.z);
-                }
                 if pen > m.tol {
                     tip.z = z;
                     raised = true;
@@ -567,7 +604,11 @@ pub(crate) fn milling(
     let links: Vec<Vec<Pos>> = {
         let link = |i: usize| -> (Vec<Pos>, usize) {
             let (a, b) = (&pos[i], &pos[i + 1]);
-            if four { link_4(&m, a, b) } else { link_3(&m, a, b) }
+            if four {
+                link_4(&m, a, b)
+            } else {
+                link_3(&m, a, b)
+            }
         };
         let r: Vec<(Vec<Pos>, usize)> = if par {
             (0..pos.len() - 1).into_par_iter().map(link).collect()
@@ -586,7 +627,10 @@ pub(crate) fn milling(
     }
 
     // Safe height and the end of the program.
-    let top_tip = seq.iter().map(|p| p.tip.z).fold(f64::NEG_INFINITY, f64::max);
+    let top_tip = seq
+        .iter()
+        .map(|p| p.tip.z)
+        .fold(f64::NEG_INFINITY, f64::max);
     let z_safe = if four {
         safe_turn.max(top_tip)
     } else {
@@ -616,12 +660,18 @@ pub(crate) fn milling(
         }
         .into(),
     ));
-    cmds.push(Command::Comment(format!("Board: {}", describe_board(board))));
+    cmds.push(Command::Comment(format!(
+        "Board: {}",
+        describe_board(board)
+    )));
     cmds.push(Command::Comment(match blank {
         Some(b) => format!("Blank: {}", describe_board(b)),
         None => "Blank: none".into(),
     }));
-    cmds.push(Command::Comment(format!("Cutter: {}", describe_cutter(&cfg.cutter))));
+    cmds.push(Command::Comment(format!(
+        "Cutter: {}",
+        describe_cutter(&cfg.cutter)
+    )));
     let pl = &m.placement;
     cmds.push(Command::Comment(format!(
         "Holding system: {}. Board offset {:.3}, {:.3}, {:.3} cm, angle {:.6} rad",
@@ -654,7 +704,12 @@ pub(crate) fn milling(
         .trunc()
         .max(1.0);
     let first_z = seq[0].tip.z - offset.z;
-    action(before, first_z + cfg.clear_height * 10.0, lift_feed, &mut cmds);
+    action(
+        before,
+        first_z + cfg.clear_height * 10.0,
+        lift_feed,
+        &mut cmds,
+    );
     cmds.push(Command::SpindleOn);
     cmds.push(Command::Dwell(2.0));
     let mut prev_key: Option<[i64; 4]> = None;
@@ -680,9 +735,21 @@ pub(crate) fn milling(
     }
     cmds.push(Command::SpindleOff);
     let last_z = seq.last().unwrap().tip.z - offset.z;
-    action(after, last_z + cfg.clear_height * 10.0, lift_feed, &mut cmds);
+    action(
+        after,
+        last_z + cfg.clear_height * 10.0,
+        lift_feed,
+        &mut cmds,
+    );
     cmds.push(Command::End);
-    let mut program = Program::new(side, toolpath, m.placement, offset, cmds, cfg.scaling.clone());
+    let mut program = Program::new(
+        side,
+        toolpath,
+        m.placement,
+        offset,
+        cmds,
+        cfg.scaling.clone(),
+    );
     program.stats.raised = raised;
     program.stats.held = held;
     Ok(program)
@@ -694,11 +761,13 @@ fn link_3(m: &Machine, a: &Pos, b: &Pos) -> (Vec<Pos>, usize) {
     if a.mode == Mode::CutOff && b.mode == Mode::CutOff && a.pass == b.pass {
         return (Vec::new(), 0);
     }
-    let d = (b.tip.truncate() - a.tip.truncate()).length();
-    let k = (d / m.cfg.linking_spacing).ceil() as usize;
-    if k < 2 {
+    // A purely vertical move between two clear positions is clear (the tool is unbounded upwards).
+    let horizontal = (b.tip.truncate() - a.tip.truncate()).length();
+    if horizontal < 1e-9 {
         return (Vec::new(), 0);
     }
+    let d = a.tip.distance(b.tip);
+    let k = ((d / m.cfg.linking_spacing).ceil() as usize).max(2);
     let mut need = Vec::with_capacity(k - 1);
     let mut worst = 0.0f64;
     let mut obstacle = false;
@@ -751,7 +820,10 @@ fn link_3(m: &Machine, a: &Pos, b: &Pos) -> (Vec<Pos>, usize) {
         .filter(|(_, e)| e.1.z < e.2)
         .map(|(i, _)| i)
         .collect();
-    let (first, last) = (bad[0].saturating_sub(1), (bad[bad.len() - 1] + 1).min(need.len() - 1));
+    let (first, last) = (
+        bad[0].saturating_sub(1),
+        (bad[bad.len() - 1] + 1).min(need.len() - 1),
+    );
     let pts: Vec<Pos> = need[first..=last]
         .iter()
         .map(|e| Pos {
@@ -826,11 +898,7 @@ fn link_4(m: &Machine, a: &Pos, b: &Pos) -> (Vec<Pos>, usize) {
         if tip.z < m.obstacle_floor(tip.truncate()) {
             return (retract(false), 0);
         }
-        v.push(Pos {
-            tip,
-            a: an,
-            ..base
-        });
+        v.push(Pos { tip, a: an, ..base });
     }
     (v, 0)
 }
@@ -838,7 +906,12 @@ fn link_4(m: &Machine, a: &Pos, b: &Pos) -> (Vec<Pos>, usize) {
 // ------------------------------------------------------------------------------------------------ hot wire
 
 /// Hot-wire program (`cam.md` §7.1, §7.2, §10.7): pass-through tool, no scaling.
-pub(crate) fn hotwire_program(board: &Board, cfg: &HotwireConfig, kind: HotwireKind, toolpath: Toolpath) -> Program {
+pub(crate) fn hotwire_program(
+    board: &Board,
+    cfg: &HotwireConfig,
+    kind: HotwireKind,
+    toolpath: Toolpath,
+) -> Program {
     let placement = match kind {
         HotwireKind::Profile => {
             let t = board.max_deck_at_tail();
@@ -899,61 +972,4 @@ pub(crate) fn hotwire_program(board: &Board, cfg: &HotwireConfig, kind: HotwireK
         cmds,
         AxisScaling::default(),
     )
-}
-
-#[cfg(test)]
-mod debug {
-    use super::*;
-
-    #[test]
-    #[ignore = "debug"]
-    fn tail_gouge() {
-        let bytes = std::fs::read(format!(
-            "{}/../../tests/fixtures/shortboard.brd",
-            env!("CARGO_MANIFEST_DIR")
-        ))
-        .unwrap();
-        let board = surfcraft_io::brd::read(&bytes).unwrap();
-        let cfg = MachineConfig::default();
-        let side = BoardSide::Bottom;
-        let planned = crate::toolpath::plan(&board, &cfg, side).unwrap();
-        let (pl, _) = cfg.holding.placements(&board, None, side);
-        let pass = &planned.toolpath.passes[27];
-        let profile = cfg.cutter.profile();
-        let pts = cloud(&board, &pl, Part3::Bottom, CLOUD_STEP, CLOUD_SPACING, true);
-        for (i, p) in pass.points.iter().enumerate().skip(183).take(8) {
-            let c = pl.point(p.pos);
-            let n = pl.vector(p.normal);
-            let t = cfg.cutter.tip(c, n, Some(0.5), 1.0, None).pos;
-            let mut best = (f64::NEG_INFINITY, DVec3::ZERO, 0.0);
-            for q in &pts {
-                let d = (q.truncate() - t.truncate()).length();
-                if let Some(e) = profile.bottom(d)
-                    && q.z - e > best.0
-                {
-                    best = (q.z - e, *q, d);
-                }
-            }
-            let env = Envelope::new(pts.clone(), 6.35);
-            let (pen, dz) = env.check(t, &profile);
-            let mut worst = (0.0, DVec3::ZERO);
-            for q in &pts {
-                let d = (q.truncate() - t.truncate()).length();
-                if let Some(e) = profile.bottom(d) && q.z - e > t.z {
-                    let v = (q.z - e - t.z).min(profile.radius_at(q.z - t.z) - d);
-                    if v > worst.0 { worst = (v, pl.inverse_point(*q)); }
-                }
-            }
-            println!("pen {pen:.4} drop {dz:.3} worst {worst:?}");
-            println!(
-                "{i}: board {:?} n {:?} contact {c:?} tip {t:?} drop {:.3} by {:?} at d {:.2} (board {:?})",
-                p.pos,
-                p.normal,
-                best.0,
-                best.1,
-                best.2,
-                pl.inverse_point(best.1)
-            );
-        }
-    }
 }

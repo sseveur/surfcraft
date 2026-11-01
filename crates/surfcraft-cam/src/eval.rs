@@ -134,7 +134,7 @@ impl Curve {
 
     /// Point and derivative with respect to the length fraction at fraction `f` of the length.
     fn at(&self, f: f64) -> (DVec2, DVec2) {
-        if self.segs.is_empty() || !(self.total > 0.0) {
+        if self.segs.is_empty() || self.total.is_nan() || self.total <= 0.0 {
             return (self.single, DVec2::ZERO);
         }
         let l = (f * self.total).clamp(0.0, self.total);
@@ -431,7 +431,7 @@ impl Slice {
     /// Parameter at girth `g` from the deck centre.
     pub fn s_at_girth(&self, g: f64) -> f64 {
         let last = self.table[GIRTH_SAMPLES].1;
-        if !(last > 0.0) {
+        if last.is_nan() || last <= 0.0 {
             return 0.0;
         }
         let g = g.clamp(0.0, last);
@@ -563,7 +563,9 @@ pub(crate) fn section_samples(surf: &Surf, x: f64, part: Part3, spacing: f64) ->
     };
     let span = (girth(s1) - girth(s0)).max(0.0);
     let n = ((span / spacing).ceil() as usize).clamp(2, 4000);
-    let mut ss: Vec<f64> = (0..=n).map(|i| s0 + (s1 - s0) * i as f64 / n as f64).collect();
+    let mut ss: Vec<f64> = (0..=n)
+        .map(|i| s0 + (s1 - s0) * i as f64 / n as f64)
+        .collect();
     // Corners: where the normal turns by more than a few degrees between samples, add the turning point.
     let mut extra = Vec::new();
     for w in ss.windows(2) {
@@ -574,7 +576,11 @@ pub(crate) fn section_samples(surf: &Surf, x: f64, part: Part3, spacing: f64) ->
             let (mut lo, mut hi) = (w[0], w[1]);
             for _ in 0..30 {
                 let m = (lo + hi) / 2.0;
-                if (st.angle(m) >= mid) == up { hi = m } else { lo = m }
+                if (st.angle(m) >= mid) == up {
+                    hi = m
+                } else {
+                    lo = m
+                }
             }
             extra.push(lo);
             extra.push(hi);
@@ -642,46 +648,6 @@ mod tests {
             }
             let apex = sl.apex();
             assert!((sl.contact(apex).0.y - surf.width(x) / 2.0).abs() < 0.05);
-        }
-    }
-}
-
-#[cfg(test)]
-mod diag {
-    use super::*;
-
-    #[test]
-    #[ignore = "diagnostic"]
-    fn range_surfaces_differ() {
-        for name in ["shortboard", "funboard", "longboard"] {
-            let bytes = std::fs::read(format!(
-                "{}/../../tests/fixtures/{name}.brd",
-                env!("CARGO_MANIFEST_DIR")
-            ))
-            .unwrap();
-            let board = surfcraft_io::brd::read(&bytes).unwrap();
-            let surf = Surf::new(&board);
-            let l = board.length();
-            for (rname, range) in [("deck", (-90.0, 90.0)), ("bottom", (90.0, 360.0))] {
-                let mut worst = (0.0f64, 0.0, 0.0);
-                for i in 0..=200 {
-                    let x = 0.1 + (l - 0.2) * i as f64 / 200.0;
-                    let st = surf.station(x, WHOLE);
-                    let pts: Vec<DVec3> = (0..=2000).map(|j| st.point(j as f64 / 2000.0)).collect();
-                    for j in 0..=40 {
-                        let s = j as f64 / 40.0;
-                        let q = board.surface_point(x, s, range.0, range.1);
-                        let d = pts.iter().map(|p| p.distance(q)).fold(f64::MAX, f64::min);
-                        if d > worst.0 {
-                            worst = (d, x, s);
-                        }
-                    }
-                }
-                println!(
-                    "{name} {rname}: worst {:.4} cm at x {:.1} s {:.3}",
-                    worst.0, worst.1, worst.2
-                );
-            }
         }
     }
 }

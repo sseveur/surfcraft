@@ -20,14 +20,21 @@ pub(crate) fn cloud(
 ) -> Vec<DVec3> {
     let surf = Surf::new(board);
     let l = surf.len;
-    let mut xs: Vec<f64> = (0..)
-        .map(|i| 0.1 + i as f64 * step)
-        .take_while(|&x| x < l - 0.1)
-        .collect();
+    // Four times denser within 3 cm of the tips, where the surface turns fast.
+    let end = 3.0f64.min(l / 4.0);
+    let mut xs = Vec::new();
+    let mut x = 0.1;
+    while x < l - 0.1 {
+        xs.push(x);
+        let near = x < end || x > l - end;
+        x += if near { step / 4.0 } else { step };
+    }
     xs.push(l - 0.1);
     let one = |x: f64| -> Vec<DVec3> {
+        let near = x < end || x > l - end;
+        let sp = if near { spacing / 2.0 } else { spacing };
         let mut v = Vec::new();
-        for p in section_samples(&surf, x, part, spacing) {
+        for p in section_samples(&surf, x, part, sp) {
             v.push(placement.point(p));
             if p.y.abs() > 1e-9 {
                 v.push(placement.point(DVec3::new(p.x, -p.y, p.z)));
@@ -128,12 +135,15 @@ impl Envelope {
         let mut pen = 0.0f64;
         for i in i0..=i1 {
             let base = i * self.ny;
-            let (s, e) = (self.start[base + j0] as usize, self.start[base + j1 + 1] as usize);
+            let (s, e) = (
+                self.start[base + j0] as usize,
+                self.start[base + j1 + 1] as usize,
+            );
             for p in &self.pts[s..e] {
                 let dx = p.x - at.x;
                 let dy = p.y - at.y;
                 let d2 = dx * dx + dy * dy;
-                if d2 > r2 || p.z <= drop.max(tip.z) {
+                if d2 > r2 || p.z <= tip.z {
                     continue;
                 }
                 let d = d2.sqrt();
@@ -168,7 +178,10 @@ impl Envelope {
         let mut best = f64::NEG_INFINITY;
         for i in i0..=i1 {
             let base = i * self.ny;
-            let (s, e) = (self.start[base + j0] as usize, self.start[base + j1 + 1] as usize);
+            let (s, e) = (
+                self.start[base + j0] as usize,
+                self.start[base + j1 + 1] as usize,
+            );
             for p in &self.pts[s..e] {
                 let dx = p.x - at.x;
                 let dy = p.y - at.y;

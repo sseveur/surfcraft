@@ -130,8 +130,14 @@ fn rest_on_supports(
     rear_shift: f64,
 ) -> (f64, DVec3) {
     let xt = s.tailstop_pos / 10.0;
-    let (x1, h1) = (xt + s.support1_from_tailstop / 10.0, s.support1_height / 10.0);
-    let (x2, h2) = (xt + s.support2_from_tailstop / 10.0, s.support2_height / 10.0);
+    let (x1, h1) = (
+        xt + s.support1_from_tailstop / 10.0,
+        s.support1_height / 10.0,
+    );
+    let (x2, h2) = (
+        xt + s.support2_from_tailstop / 10.0,
+        s.support2_height / 10.0,
+    );
     let solve = |theta: f64| -> (f64, f64, f64) {
         let (sn, cs) = theta.sin_cos();
         let rearmost = rear
