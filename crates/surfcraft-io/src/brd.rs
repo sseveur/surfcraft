@@ -730,4 +730,39 @@ mod tests {
             exercise(&again);
         }
     }
+
+    /// Centre knots of the sections a rounding error off the stringer (as in files written in single
+    /// precision) must not change the volume or the stringer thickness of the sections.
+    #[test]
+    fn centre_knots_off_the_stringer_keep_volume() {
+        use surfcraft_core::SurfaceModel;
+        for model in [SurfaceModel::SBlend, SurfaceModel::ControlPoint] {
+            let mut b = read_text(FIXTURE).unwrap();
+            b.model = model;
+            let v0 = b.volume();
+            for d in [
+                DVec2::new(1e-9, 0.0),
+                DVec2::new(-1e-9, 0.0),
+                DVec2::new(0.0, 1e-9),
+                DVec2::new(0.0, -1e-9),
+            ] {
+                let mut c = b.clone();
+                for i in c.real_sections() {
+                    let k = c.sections[i].spline.knots_mut();
+                    let n = k.len();
+                    k[0].translate(d);
+                    k[n - 1].translate(-d);
+                }
+                let v = c.volume();
+                assert!(((v - v0) / v0).abs() < 1e-6, "{model:?} {d}: {v} vs {v0}");
+                for i in c.real_sections() {
+                    let (s0, s1) = (&b.sections[i], &c.sections[i]);
+                    let (t0, t1) = (s0.thickness_at(1e-10), s1.thickness_at(1e-10));
+                    assert!(((t1 - t0) / t0).abs() < 1e-6, "{model:?} {d} section {i}");
+                    let (c0, c1) = (s0.center_thickness(), s1.center_thickness());
+                    assert!(((c1 - c0) / c0).abs() < 1e-6);
+                }
+            }
+        }
+    }
 }

@@ -76,12 +76,14 @@ impl CrossSection {
 
     /// Height of the bottom at lateral distance `u`.
     pub fn bottom_at(&self, u: f64) -> f64 {
-        self.spline.value_at(u.abs())
+        let x = self.spline.first().map_or(0.0, |k| k.point().x);
+        self.spline.value_at(snap_to_centre(u.abs(), x))
     }
 
     /// Height of the deck at lateral distance `u`.
     pub fn deck_at(&self, u: f64) -> f64 {
-        self.spline.value_at_reverse(u.abs())
+        let x = self.spline.last().map_or(0.0, |k| k.point().x);
+        self.spline.value_at_reverse(snap_to_centre(u.abs(), x))
     }
 
     pub fn thickness_at(&self, u: f64) -> f64 {
@@ -158,6 +160,21 @@ impl CrossSection {
             }
         }
         Some(q)
+    }
+}
+
+/// Distance (cm) within which a lateral position counts as being on a centre knot. Imported files can leave
+/// the centre knots a rounding error off the centre line; a lookup just inside the stringer must still find the
+/// curve there.
+const CENTRE_TOL: f64 = 1e-6;
+
+/// Move a lateral position `u` that lies just short of the centre knot at `end_x` onto that knot, so that the
+/// lookup by lateral position finds the curve.
+fn snap_to_centre(u: f64, end_x: f64) -> f64 {
+    if u < end_x && end_x - u <= CENTRE_TOL {
+        end_x
+    } else {
+        u
     }
 }
 
@@ -304,6 +321,24 @@ mod tests {
         assert!((r - std::f64::consts::PI).abs() < 0.01, "{r}");
         let radius = s.tuck_radius();
         assert!(radius > 0.0 && radius < 10.0, "{radius}");
+    }
+
+    #[test]
+    fn centre_knots_slightly_off_the_stringer() {
+        let s = section();
+        for d in [1e-9, -1e-9, 5e-7] {
+            let mut t = s.clone();
+            let n = t.spline.len();
+            for i in [0, n - 1] {
+                t.spline.knots_mut()[i].translate(DVec2::new(d, 0.0));
+            }
+            assert!(
+                (t.thickness_at(ZERO) - s.thickness_at(ZERO)).abs() < 1e-6,
+                "{d}"
+            );
+            assert!((t.bottom_at(0.0) - s.bottom_at(0.0)).abs() < 1e-6);
+            assert!((t.deck_at(0.0) - s.deck_at(0.0)).abs() < 1e-6);
+        }
     }
 
     #[test]
