@@ -319,10 +319,12 @@ pub fn read(bytes: &[u8]) -> Result<Board, Error> {
     deck.insert(0, head);
     deck.push(tail);
 
-    let mut b = Board::default();
-    b.outline = Spline::from_knots(outline);
-    b.bottom = Spline::from_knots(bottom);
-    b.deck = Spline::from_knots(deck);
+    let mut b = Board {
+        outline: Spline::from_knots(outline),
+        bottom: Spline::from_knots(bottom),
+        deck: Spline::from_knots(deck),
+        ..Board::default()
+    };
     let upper_rail = Spline::from_knots(upper_rail);
     let lower_rail = Spline::from_knots(lower_rail);
     let l = b.length();
