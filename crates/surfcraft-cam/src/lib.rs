@@ -31,7 +31,7 @@ pub use toolpath::{Pass, PassKind, Side, ToolPoint, Toolpath};
 use surfcraft_core::Board;
 
 /// Largest number of toolpath points a program may have (finer resolutions are refused).
-pub(crate) const MAX_POINTS: usize = 20_000_000;
+pub(crate) const MAX_POINTS: usize = 5_000_000;
 
 /// Why a program could not be generated.
 #[derive(Clone, Debug, PartialEq, thiserror::Error)]
@@ -77,4 +77,104 @@ pub fn generate_hotwire(
     cfg.validate()?;
     let tp = toolpath::hotwire(board, cfg, kind);
     Ok(program::hotwire_program(board, cfg, kind, tp))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use surfcraft_core::DVec3;
+
+    fn shortboard() -> Board {
+        let bytes = std::fs::read(format!(
+            "{}/../../tests/fixtures/shortboard.brd",
+            env!("CARGO_MANIFEST_DIR")
+        ))
+        .unwrap();
+        surfcraft_io::brd::read(&bytes).unwrap()
+    }
+
+    #[test]
+    fn placement_round_trips_and_flips() {
+        let p = Placement {
+            angle: 0.03,
+            offset: DVec3::new(100.0, 0.0, 26.0),
+            scale: 10.0,
+            flip: true,
+        };
+        let q = DVec3::new(50.0, 12.0, 4.0);
+        assert!((p.inverse_point(p.point(q)) - q).length() < 1e-12);
+        let v = DVec3::new(0.2, 0.3, -0.9).normalize();
+        assert!((p.inverse_vector(p.vector(v)) - v).length() < 1e-12);
+        // Turned over: a downward normal points up on the machine.
+        assert!(p.vector(DVec3::NEG_Z).z > 0.99);
+    }
+
+    #[test]
+    fn bullnose_touches_the_contact() {
+        let c = Cutter::Bullnose(BullnoseCutter::default());
+        let p = DVec3::new(10.0, 20.0, 30.0);
+        assert_eq!(c.offset(p, DVec3::Z), p);
+        for tilt in [5.0f64, 30.0, 60.0, 90.0] {
+            let n = DVec3::new(tilt.to_radians().sin(), 0.0, tilt.to_radians().cos());
+            let tip = c.offset(p, n);
+            // The corner tube centre is r along the normal from the contact, a flat radius from the axis.
+            let tube = p + 5.0 * n;
+            let rel = tube - tip;
+            assert!(
+                (rel.z - 5.0).abs() < 1e-9 && (rel.x + 7.7).abs() < 1e-9,
+                "{tilt}: {rel}"
+            );
+        }
+        let flat = Cutter::Flat(FlatCutter::default());
+        let tip = flat.offset(p, DVec3::new(0.0, 0.6, 0.8));
+        assert!((tip - (p + DVec3::new(0.0, 12.7, 0.0))).length() < 1e-9);
+    }
+
+    #[test]
+    fn stl_keywords_any_case_and_every_vertex() {
+        let text = "solid t\n FACET NORMAL 0 0 -1\n outer loop\n VERTEX 0 0 0\n Vertex 2 0 0\n vertex 0 2 1\n \
+                    endloop\n endfacet\nendsolid t\n";
+        let c = StlCutter::from_ascii(text, DVec3::new(2.0, 1.0, 1.0)).unwrap();
+        let (r, lo, hi) = c.bounds();
+        assert_eq!((r, lo, hi), (4.0, 0.0, 1.0));
+        assert!(StlCutter::from_ascii("solid empty\nendsolid\n", DVec3::ONE).is_err());
+    }
+
+    #[test]
+    fn board_fields_prefill_without_zeros() {
+        let mut board = shortboard();
+        let mut cfg = MachineConfig::default();
+        cfg.prefill_from_board(&board);
+        // The fixture stores no machining data: nothing changes.
+        assert_eq!(cfg.cutting_speed, 80.0);
+        assert_eq!(cfg.deck_cuts, 28);
+        cfg.deck_cuts = 12;
+        cfg.cutting_speed = 100.7;
+        cfg.rail_speed = 300.0;
+        cfg.write_to_board(&mut board);
+        assert_eq!(board.machine.regular_speed, 100);
+        let mut again = MachineConfig::default();
+        again.prefill_from_board(&board);
+        assert_eq!(again.deck_cuts, 12);
+        assert_eq!(again.cutting_speed, 100.0);
+        if let (HoldingSystem::Supports(a), HoldingSystem::Supports(b)) =
+            (&again.holding, &cfg.holding)
+        {
+            assert_eq!(a, b);
+        }
+    }
+
+    #[test]
+    fn negative_zero_is_written_as_zero() {
+        let board = shortboard();
+        let cfg = MachineConfig {
+            lengthwise_resolution: 20.0,
+            deck_cuts: 1,
+            deck_rail_cuts: 0,
+            ..Default::default()
+        };
+        let g = generate_deck(&board, &cfg).unwrap().to_gcode();
+        assert!(!g.contains("-0.0000"));
+        assert!(g.contains("(Cutter: Bullnose cutter, diameter 25.4 mm, corner radius 5.0 mm"));
+    }
 }

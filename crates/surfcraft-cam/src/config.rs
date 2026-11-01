@@ -631,6 +631,70 @@ impl MachineConfig {
     }
 }
 
+// ------------------------------------------------------------------------------------------------ board fields
+
+impl MachineConfig {
+    /// Take the machining fields stored in a board file (`cam.md` §3.13). Fields left at 0 (the file default) do
+    /// not overwrite settings: a 0 speed or cut count would give an `F0` or empty program.
+    pub fn prefill_from_board(&mut self, board: &Board) {
+        let m = &board.machine;
+        let count = |v: i32, to: &mut usize| {
+            if v > 0 {
+                *to = v as usize;
+            }
+        };
+        count(m.deck_cuts, &mut self.deck_cuts);
+        count(m.top_shoulder_cuts, &mut self.deck_rail_cuts);
+        count(m.bottom_cuts, &mut self.bottom_cuts);
+        count(m.bottom_rail_cuts, &mut self.bottom_rail_cuts);
+        let angle = |v: f64, to: &mut f64| {
+            if v > 0.0 && v <= 180.0 {
+                *to = v;
+            }
+        };
+        angle(m.top_shoulder_angle, &mut self.deck_angle);
+        angle(m.max_angle, &mut self.deck_rail_angle);
+        if m.regular_speed > 0 {
+            let v = f64::from(m.regular_speed);
+            (self.cutting_speed, self.rail_speed, self.outline_speed) = (v, v, v);
+        }
+        if m.stringer_speed > 0 {
+            self.stringer_speed = f64::from(m.stringer_speed);
+        }
+        if let HoldingSystem::Supports(s) = &mut self.holding {
+            if m.strut1[0] > 0.0 && m.strut1[1] > 0.0 {
+                (s.support1_from_tailstop, s.support1_height) = (m.strut1[0], m.strut1[1]);
+            }
+            // The file stores support 2 from the machine origin.
+            if m.strut2[0] > s.tailstop_pos && m.strut2[1] > 0.0 {
+                s.support2_from_tailstop = m.strut2[0] - s.tailstop_pos;
+                s.support2_height = m.strut2[1];
+            }
+        }
+    }
+
+    /// Store the settings in the board's machining fields (`cam.md` §3.13; the regular speed is the cutting
+    /// speed, speeds truncated to whole numbers).
+    pub fn write_to_board(&self, board: &mut Board) {
+        let m = &mut board.machine;
+        let int = |v: usize| i32::try_from(v).unwrap_or(i32::MAX);
+        m.deck_cuts = int(self.deck_cuts);
+        m.top_shoulder_cuts = int(self.deck_rail_cuts);
+        m.bottom_cuts = int(self.bottom_cuts);
+        m.bottom_rail_cuts = int(self.bottom_rail_cuts);
+        m.top_shoulder_angle = self.deck_angle;
+        m.max_angle = self.deck_rail_angle;
+        m.regular_speed = self.cutting_speed.trunc() as i32;
+        m.stringer_speed = self.stringer_speed.trunc() as i32;
+        if let HoldingSystem::Supports(s) = &self.holding {
+            m.strut1[0] = s.support1_from_tailstop;
+            m.strut1[1] = s.support1_height;
+            m.strut2[0] = s.tailstop_pos + s.support2_from_tailstop;
+            m.strut2[1] = s.support2_height;
+        }
+    }
+}
+
 impl HotwireConfig {
     pub fn validate(&self) -> Result<(), Error> {
         positive("Wire speed", self.speed)?;

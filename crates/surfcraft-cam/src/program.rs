@@ -435,8 +435,8 @@ fn action(a: &MachineAction, z: f64, feed: f64, out: &mut Vec<Command>) {
 }
 
 /// Points of a board's section samples used for the clouds, cm.
-const CLOUD_STEP: f64 = 0.05;
-const CLOUD_SPACING: f64 = 0.05;
+const CLOUD_STEP: f64 = 0.1;
+const CLOUD_SPACING: f64 = 0.1;
 
 /// Milling program from a contact toolpath.
 pub(crate) fn milling(
@@ -640,6 +640,16 @@ pub(crate) fn milling(
             .max(blank_env.as_ref().map_or(f64::NEG_INFINITY, |b| b.0.top))
             + cfg.retract_clearance
     };
+    // Approach from the safe height straight above the first position, then plunge (the move to the first cutting
+    // position carries the plunge feed).
+    if toolpath
+        .passes
+        .first()
+        .is_some_and(|p| p.kind == PassKind::Approach)
+        && seq.len() > 1
+    {
+        seq[0].tip.z = seq[0].tip.z.max(z_safe);
+    }
     let last = *seq.last().unwrap();
     seq.push(Pos {
         tip: DVec3::new(last.tip.x, last.tip.y, z_safe.max(last.tip.z)),
