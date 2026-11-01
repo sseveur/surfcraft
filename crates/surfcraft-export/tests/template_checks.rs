@@ -485,7 +485,7 @@ fn labels_use_the_callers_units() {
     assert!(
         texts(&s)
             .iter()
-            .any(|t| t.starts_with("Crossection 1 at ") && t.ends_with('"'))
+            .any(|t| t.starts_with("Cross-section 1 at ") && t.ends_with('"'))
     );
     for (t, d, _) in all_templates(&b, &cm) {
         if t != "spec sheet" {

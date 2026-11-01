@@ -1056,7 +1056,7 @@ pub fn hws_rib(board: &Board, x: f64, opts: &HwsOptions, fmt: &dyn Fn(f64) -> St
     finish(
         d,
         &[
-            format!("Board file: {} Crossection", board_name(board)),
+            format!("Board file: {} Cross-section", board_name(board)),
             format!("Position: {}", fmt(x / 10.0)),
         ],
         HEADER,
@@ -1073,7 +1073,7 @@ pub fn hws_ribs(board: &Board, opts: &HwsOptions, fmt: &dyn Fn(f64) -> String) -
         return finish(
             Drawing::default(),
             &[format!(
-                "Board file: {} Crossection: board too short for ribs",
+                "Board file: {} Cross-section: board too short for ribs",
                 board_name(board)
             )],
             HEADER,

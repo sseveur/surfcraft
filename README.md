@@ -3,9 +3,9 @@
 Surfboard design for macOS, Windows and Linux: shape the outline, rocker and cross-sections, watch the volume
 update live, print full-size templates, and generate CNC toolpaths.
 
-SurfCraft is a modern rewrite of [BoardCAD](http://www.boardcad.org) 3.0.1, the open-source surfboard CAD/CAM
-program last released in 2015 (Java Swing, Java3D, Jython). It opens and saves the same `.brd` files and computes the
-same numbers: its geometry is tested against values produced by the original program.
+SurfCraft opens and saves [BoardCAD](http://www.boardcad.org) `.brd` files, so boards designed in BoardCAD (last
+released in 2015) carry straight over, and its volumes and measurements agree with BoardCAD's: the test suite checks
+them against values measured with BoardCAD 3.0.1.
 
 ## Download
 
@@ -111,12 +111,25 @@ Command line: `surfcraft [board.brd] [--tab overview|outline|rocker|section|3d] 
 | `crates/surfcraft-cam` | Toolpaths, cutters, holding systems, G-code |
 | `crates/surfcraft-app` | Desktop app (egui/eframe + wgpu) |
 | `crates/surfcraft-mcp` | MCP server |
-| `reference/java` | Original BoardCAD 3.0.1 Java sources, translations, scripts and cutter STLs (reference only) |
-| `tools/oracle` | How the golden test values were produced from the original program |
+| `docs/spec` | Functional specifications the geometry, file-format, CNC and template code is written from |
+| `docs/clean-room` | How that code was written, and SurfCraft's own requirements |
+| `tests/fixtures` | Test boards (SurfCraft designs) with reference values, and a test cutter |
+| `tools` | Generators for the test boards and cutter; QA drivers for the MCP server |
 | `packaging` | macOS, Windows and Linux packaging |
 
-## Licence and credits
+## Licence
 
-GPL-3.0-or-later, same as the original (see `LICENSE`). SurfCraft is based on BoardCAD by Jonas Hörnstein,
-Ola Helenius, Håvard Nygård Jakobsen and Sven Wesley; translations by Mocoloitam, Pere Antoni Comas,
-Stephen Kitchener and Wouter Oosting.
+SurfCraft is licensed under either of
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
+- MIT license ([LICENSE-MIT](LICENSE-MIT))
+
+at your option. Contributions are accepted under the same terms.
+
+SurfCraft's geometry, file-format, CNC and template code was written in a clean-room process from functional
+specifications (see `docs/clean-room/PROCESS.md`); it contains no code from BoardCAD, which is GPL-licensed.
+
+## Acknowledgements
+
+Thanks to the authors of BoardCAD — Jonas Hörnstein, Ola Helenius, Håvard Nygård Jakobsen and Sven Wesley — whose
+program and `.brd` format SurfCraft is compatible with.

@@ -418,7 +418,7 @@ pub fn sections(board: &Board, fmt: &dyn Fn(f64) -> String) -> Drawing {
             d,
             &[
                 format!("Board file: {}", board_name(board)),
-                format!("Crossection {i} at {}", fmt(sec.position)),
+                format!("Cross-section {i} at {}", fmt(sec.position)),
             ],
             HEADER,
         ));
