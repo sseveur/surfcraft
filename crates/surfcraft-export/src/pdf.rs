@@ -289,7 +289,11 @@ mod tests {
         let mut d = Drawing::new(2000.0, 50.0);
         d.line(DVec2::new(0.0, 10.0), DVec2::new(100.0, 10.0), Style::CUT);
         d.text(DVec2::new(10.0, 20.0), 4.0, "FIRSTPIECE", Anchor::Left);
-        d.line(DVec2::new(1900.0, 10.0), DVec2::new(2000.0, 10.0), Style::CUT);
+        d.line(
+            DVec2::new(1900.0, 10.0),
+            DVec2::new(2000.0, 10.0),
+            Style::CUT,
+        );
         d.text(DVec2::new(1910.0, 20.0), 4.0, "LASTPIECE", Anchor::Left);
         d.part(DVec2::new(0.0, 0.0), DVec2::new(100.0, 50.0));
         d.part(DVec2::new(1900.0, 0.0), DVec2::new(2000.0, 50.0));
