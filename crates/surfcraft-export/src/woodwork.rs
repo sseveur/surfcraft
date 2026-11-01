@@ -297,18 +297,17 @@ impl<'a> Surf<'a> {
 
     /// Whether a plan point lies on the board: `y ≥ 0`, inside the outline, `x` within the length.
     pub fn inside(&self, p: DVec2) -> bool {
-        p.is_finite()
-            && p.y >= 0.0
-            && p.x >= 0.0
-            && p.x <= self.len
-            && p.y <= self.o(p.x) + 1e-9
+        p.is_finite() && p.y >= 0.0 && p.x >= 0.0 && p.x <= self.len && p.y <= self.o(p.x) + 1e-9
     }
 
     /// Station-plane rail-line point: the outline station `x0` whose rail point at distance `d` has `R_x = x`,
     /// and that point.
     pub fn rail_at_plane(&self, x: f64, d: f64) -> (f64, DVec2) {
         let f = |x0: f64| self.rail(x0, d).x - x;
-        let (mut a, mut b) = ((x - d.abs() - 1.0).max(0.0), (x + d.abs() + 1.0).min(self.len));
+        let (mut a, mut b) = (
+            (x - d.abs() - 1.0).max(0.0),
+            (x + d.abs() + 1.0).min(self.len),
+        );
         let (fa, fb) = (f(a), f(b));
         if fa.signum() == fb.signum() {
             let x0 = if fa.abs() < fb.abs() { a } else { b };
@@ -432,12 +431,7 @@ fn first_run(valid: &[bool]) -> Option<(usize, usize)> {
 /// Closed polygon: `top` forwards, `bot` backwards, over the samples `u`.
 fn band_polygon(u: &[f64], top: &[f64], bot: &[f64]) -> Vec<DVec2> {
     let mut pts: Vec<DVec2> = u.iter().zip(top).map(|(u, z)| DVec2::new(*u, *z)).collect();
-    pts.extend(
-        u.iter()
-            .zip(bot)
-            .rev()
-            .map(|(u, z)| DVec2::new(*u, *z)),
-    );
+    pts.extend(u.iter().zip(bot).rev().map(|(u, z)| DVec2::new(*u, *z)));
     pts
 }
 
@@ -767,7 +761,7 @@ impl Hws {
 pub fn hws_rib_stations(board: &Board) -> Vec<f64> {
     let l = board.length() * 10.0;
     let n = ((l - 9.0 * IN) / FT).floor();
-    if !(n >= 1.0) {
+    if n.is_nan() || n < 1.0 {
         return Vec::new();
     }
     (1..=n as usize).map(|k| k as f64 * FT / 10.0).collect()
@@ -1030,10 +1024,7 @@ pub fn hws_rib(board: &Board, x: f64, opts: &HwsOptions, fmt: &dyn Fn(f64) -> St
                 .collect();
             let edge: Vec<(f64, (f64, f64))> =
                 ys.iter().filter_map(|&y| core(y).map(|c| (y, c))).collect();
-            let mut path = vec![
-                DVec2::new(0.0, notch_top),
-                DVec2::new(o.f / 2.0, notch_top),
-            ];
+            let mut path = vec![DVec2::new(0.0, notch_top), DVec2::new(o.f / 2.0, notch_top)];
             path.extend(edge.iter().map(|(y, c)| DVec2::new(*y, c.0)));
             let (zt, zb) = (j.mid + j.height / 2.0, j.mid - j.height / 2.0);
             path.extend([
@@ -1043,19 +1034,17 @@ pub fn hws_rib(board: &Board, x: f64, opts: &HwsOptions, fmt: &dyn Fn(f64) -> St
                 DVec2::new(yb, zb),
             ]);
             path.extend(edge.iter().rev().map(|(y, c)| DVec2::new(*y, c.1)));
-            path.extend([
-                DVec2::new(o.f / 2.0, notch_bot),
-                DVec2::new(0.0, notch_bot),
-            ]);
+            path.extend([DVec2::new(o.f / 2.0, notch_bot), DVec2::new(0.0, notch_bot)]);
             d.closed(mirror_closed_u(&path), Style::CUT);
         }
         // Two lightening holes each side.
         let span = (yr - 1.5 * o.f - 3.0 * o.w) / 2.0;
         for a in [o.f / 2.0 + o.w, o.f / 2.0 + 2.0 * o.w + span] {
-            if let Some(h) = hole(a, span, false, |y| {
-                core(y).map(|(t, b)| (t - o.w, b + o.w))
-            }) {
-                d.closed(h.iter().map(|p| DVec2::new(-p.x, p.y)).collect(), Style::CUT);
+            if let Some(h) = hole(a, span, false, |y| core(y).map(|(t, b)| (t - o.w, b + o.w))) {
+                d.closed(
+                    h.iter().map(|p| DVec2::new(-p.x, p.y)).collect(),
+                    Style::CUT,
+                );
                 d.closed(h, Style::CUT);
             }
         }
@@ -1169,7 +1158,10 @@ pub fn hws_rail(board: &Board, opts: &HwsOptions, _fmt: &dyn Fn(f64) -> String) 
             );
         }
         // Slots for the tabs of the tail and nose pieces.
-        for p in [tail_plate(&s, &o), nose_plate(&s, &o)].into_iter().flatten() {
+        for p in [tail_plate(&s, &o), nose_plate(&s, &o)]
+            .into_iter()
+            .flatten()
+        {
             for (a, b) in p.tabs() {
                 // Where the strip ends inside a tab, the plate ends there too: cut the part that exists.
                 let (a, b) = (a.max(ra), b.min(rb));
@@ -1276,10 +1268,7 @@ fn plate_outline(s: &Surf, o: &Hws, p: &Plate) -> (Vec<DVec2>, Vec<Vec<DVec2>>) 
                 .into_iter()
                 .map(|x0| s.rail(x0, o.d + o.f + o.w))
                 .collect();
-            let valid: Vec<bool> = pts
-                .iter()
-                .map(|r| s.inside(*r) && r.y > o.w)
-                .collect();
+            let valid: Vec<bool> = pts.iter().map(|r| s.inside(*r) && r.y > o.w).collect();
             if let Some((i0, i1)) = first_run(&valid)
                 && i1 > i0
             {
@@ -1319,7 +1308,10 @@ fn plate_drawing(board: &Board, opts: &HwsOptions, nose: bool) -> Drawing {
             );
             d.closed(mirror_closed(&half), Style::CUT);
             for h in holes {
-                d.closed(h.iter().map(|q| DVec2::new(q.x, -q.y)).collect(), Style::CUT);
+                d.closed(
+                    h.iter().map(|q| DVec2::new(q.x, -q.y)).collect(),
+                    Style::CUT,
+                );
                 d.closed(h, Style::CUT);
             }
         }
@@ -1411,16 +1403,8 @@ pub fn chambered_plank(
             if top - za < 5.0 || za - bot < 5.0 {
                 continue;
             }
-            d.line(
-                DVec2::new(x - 5.0, za),
-                DVec2::new(x + 5.0, za),
-                MARK,
-            );
-            d.line(
-                DVec2::new(x, za - 5.0),
-                DVec2::new(x, za + 5.0),
-                MARK,
-            );
+            d.line(DVec2::new(x - 5.0, za), DVec2::new(x + 5.0, za), MARK);
+            d.line(DVec2::new(x, za - 5.0), DVec2::new(x, za + 5.0), MARK);
         }
     }
     if opts.grid {

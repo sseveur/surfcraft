@@ -98,11 +98,7 @@ pub(crate) fn spline_points(s: &Spline, step: f64) -> Vec<DVec2> {
 /// not repeated).
 pub(crate) fn mirror_closed(half: &[DVec2]) -> Vec<DVec2> {
     let mut pts = half.to_vec();
-    let mut back: Vec<DVec2> = half
-        .iter()
-        .rev()
-        .map(|p| DVec2::new(p.x, -p.y))
-        .collect();
+    let mut back: Vec<DVec2> = half.iter().rev().map(|p| DVec2::new(p.x, -p.y)).collect();
     if back.first().is_some_and(|p| p.y.abs() < 1e-9) {
         back.remove(0);
     }
@@ -626,7 +622,13 @@ pub fn spec_sheet(board: &Board, volume: f64, page: DVec2, fmt: &dyn Fn(f64) -> 
         fmt(board.rocker_at(l_cm - ts)),
         Anchor::Centre,
     );
-    put(col(l_cm), y, size, fmt(board.rocker_at(l_cm)), Anchor::Right);
+    put(
+        col(l_cm),
+        y,
+        size,
+        fmt(board.rocker_at(l_cm)),
+        Anchor::Right,
+    );
 
     // Cross-sections at the same scale.
     let mut section = |x: f64, cx: f64, base: f64| {
@@ -653,7 +655,13 @@ pub fn spec_sheet(board: &Board, volume: f64, page: DVec2, fmt: &dyn Fn(f64) -> 
     section(l_cm - ts, margin + 2.0 * pw / 3.0, base);
     y = base + line;
     put(margin + pw / 3.0, y, size, "Tail".into(), Anchor::Centre);
-    put(margin + 2.0 * pw / 3.0, y, size, "Nose".into(), Anchor::Centre);
+    put(
+        margin + 2.0 * pw / 3.0,
+        y,
+        size,
+        "Nose".into(),
+        Anchor::Centre,
+    );
 
     // Fins block, only when there is fin data.
     let f = board.fins;
@@ -663,7 +671,13 @@ pub fn spec_sheet(board: &Board, volume: f64, page: DVec2, fmt: &dyn Fn(f64) -> 
         put(margin, y, size, "Fins".into(), Anchor::Left);
         if !fin_type.is_empty() {
             y += line + 5.0 * PT;
-            put(margin, y, size, format!("Fin type: {fin_type}"), Anchor::Left);
+            put(
+                margin,
+                y,
+                size,
+                format!("Fin type: {fin_type}"),
+                Anchor::Left,
+            );
         }
         if f[fin::CENTER_FRONT_X] != 0.0 {
             y += line + 5.0 * PT;

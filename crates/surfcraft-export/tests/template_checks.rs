@@ -4,15 +4,10 @@ use surfcraft_core::{Board, DVec2, LengthUnit, SurfaceModel};
 use surfcraft_export::Drawing;
 use surfcraft_export::drawing::{Item, Style};
 use surfcraft_export::templates::{self, OutlineOptions};
-use surfcraft_export::woodwork::{
-    self, HwsOptions, RibJoint, SandwichOptions, paths_with_style,
-};
+use surfcraft_export::woodwork::{self, HwsOptions, RibJoint, SandwichOptions, paths_with_style};
 
 fn fixture(name: &str) -> Board {
-    let path = format!(
-        "{}/../../tests/fixtures/{name}",
-        env!("CARGO_MANIFEST_DIR")
-    );
+    let path = format!("{}/../../tests/fixtures/{name}", env!("CARGO_MANIFEST_DIR"));
     surfcraft_io::read_any("brd", &std::fs::read(path).unwrap()).unwrap()
 }
 
@@ -79,7 +74,10 @@ fn check(name: &str, d: &Drawing, needs_cut: bool) {
                 for p in points {
                     assert!(p.is_finite(), "{name}: {p:?}");
                     assert!(
-                        p.x >= -0.01 && p.y >= -0.01 && p.x <= d.width + 0.01 && p.y <= d.height + 0.01,
+                        p.x >= -0.01
+                            && p.y >= -0.01
+                            && p.x <= d.width + 0.01
+                            && p.y <= d.height + 0.01,
                         "{name}: {p:?} outside {} x {}",
                         d.width,
                         d.height
@@ -150,7 +148,11 @@ fn every_template_is_drawn_for_every_fixture_board() {
         flipped.flip();
         let mut control = board.clone();
         control.model = SurfaceModel::ControlPoint;
-        for (variant, b) in [("", &board), (" flipped", &flipped), (" control-point", &control)] {
+        for (variant, b) in [
+            ("", &board),
+            (" flipped", &flipped),
+            (" control-point", &control),
+        ] {
             for (t, d, cut) in all_templates(b, &cm) {
                 check(&format!("{name}{variant} {t}"), &d, cut);
             }
@@ -257,11 +259,17 @@ fn rib_tabs_fit_the_rail_strip_slots() {
             assert!((hi.x - lo.x - j.slot_width).abs() < 1e-6, "{name}");
             assert!(j.slot_width >= f - 1e-9 && j.slot_width < f * 1.3, "{name}");
             assert!((hi.y - lo.y - j.height).abs() < 1e-6, "{name}");
-            assert!(((lo.y + hi.y) / 2.0 - origin.y - j.mid).abs() < 1e-6, "{name}");
+            assert!(
+                ((lo.y + hi.y) / 2.0 - origin.y - j.mid).abs() < 1e-6,
+                "{name}"
+            );
             let u = (lo.x + hi.x) / 2.0;
             if last_u > f64::MIN {
                 // One foot apart along the rail line (a little more where it curves).
-                assert!(u - last_u > 304.0 && u - last_u < 304.8 * 1.15, "{name}: {u} - {last_u}");
+                assert!(
+                    u - last_u > 304.0 && u - last_u < 304.8 * 1.15,
+                    "{name}: {u} - {last_u}"
+                );
             }
             last_u = u;
         }
@@ -283,8 +291,14 @@ fn rib_tabs_fit_the_rail_strip_slots() {
                 .map(|p| p.y)
                 .collect();
             assert_eq!(tip.len(), 2, "{name} at {x}: tab tip");
-            assert!(((tip[0] - tip[1]).abs() - j.height).abs() < 1e-6, "{name} at {x}");
-            assert!(j.inner < j.outer && j.outer - j.inner >= f - 1e-6, "{name} at {x}");
+            assert!(
+                ((tip[0] - tip[1]).abs() - j.height).abs() < 1e-6,
+                "{name} at {x}"
+            );
+            assert!(
+                j.inner < j.outer && j.outer - j.inner >= f - 1e-6,
+                "{name} at {x}"
+            );
 
             let mid = (xmin + xmax) / 2.0;
             let notch: Vec<f64> = outline
@@ -298,7 +312,9 @@ fn rib_tabs_fit_the_rail_strip_slots() {
             let hole = paths_with_style(&stringer, Style::CUT)
                 .filter(|p| p.len() > 4 && p.len() != s_outline.len())
                 .find(|p| {
-                    let (a, b) = p.iter().fold((f64::MAX, f64::MIN), |(a, b), q| (a.min(q.x), b.max(q.x)));
+                    let (a, b) = p
+                        .iter()
+                        .fold((f64::MAX, f64::MIN), |(a, b), q| (a.min(q.x), b.max(q.x)));
                     a < sx && sx < b
                 })
                 .unwrap_or_else(|| panic!("{name}: no stringer hole at {x}"));
@@ -339,12 +355,22 @@ fn rail_line_is_inside_the_outline_at_the_set_distance() {
         for x in woodwork::hws_rib_stations(&b) {
             let j = woodwork::hws_rib_joint(&b, x, &o).unwrap();
             let o_x = b.outline.value_at(x) * 10.0;
-            assert!(j.outer < o_x - d + 1e-6, "{name} at {x}: {} vs {o_x}", j.outer);
+            assert!(
+                j.outer < o_x - d + 1e-6,
+                "{name} at {x}: {} vs {o_x}",
+                j.outer
+            );
             let dist = distance_to_outline(&b, DVec2::new(x * 10.0, j.outer));
-            assert!((dist - d).abs() < 0.3, "{name} at {x}: {dist} mm from the outline");
+            assert!(
+                (dist - d).abs() < 0.3,
+                "{name} at {x}: {dist} mm from the outline"
+            );
             let dist = distance_to_outline(&b, DVec2::new(x * 10.0, j.inner));
             let f = o.frame_thickness * 10.0;
-            assert!((dist - d - f).abs() < 0.3, "{name} at {x}: inner face {dist}");
+            assert!(
+                (dist - d - f).abs() < 0.3,
+                "{name} at {x}: inner face {dist}"
+            );
         }
     }
 }
@@ -400,8 +426,15 @@ fn skins_are_the_developed_surface_out_to_the_rail_line() {
                 (width - expect).abs() < 1.5,
                 "{name} {what}: {width} vs developed {expect}"
             );
-            let header = if deck { "Deck skin template" } else { "Bottom skin template" };
-            assert!(texts(&drawing).iter().any(|t| t.ends_with(header)), "{name} {what}");
+            let header = if deck {
+                "Deck skin template"
+            } else {
+                "Bottom skin template"
+            };
+            assert!(
+                texts(&drawing).iter().any(|t| t.ends_with(header)),
+                "{name} {what}"
+            );
         }
     }
 }
@@ -410,13 +443,18 @@ fn skins_are_the_developed_surface_out_to_the_rail_line() {
 fn tail_and_nose_pieces_print_and_their_tabs_have_slots() {
     for (name, b) in boards() {
         let o = HwsOptions::default();
-        for (n, label) in [("hws_tail_piece", "Tail piece"), ("hws_nose_piece", "Nose piece")] {
+        for (n, label) in [
+            ("hws_tail_piece", "Tail piece"),
+            ("hws_nose_piece", "Nose piece"),
+        ] {
             let d = woodwork::by_name(&b, n, &cm).unwrap();
             let outline = largest_cut(&d);
             assert!(outline.len() > 20, "{name} {n}");
             assert!(texts(&d).iter().any(|t| t.ends_with(label)), "{name} {n}");
             // Four tabs per plate (two each side): the outline jogs out and back eight times.
-            let (lo, hi) = outline.iter().fold((f64::MAX, f64::MIN), |(a, c), p| (a.min(p.y), c.max(p.y)));
+            let (lo, hi) = outline
+                .iter()
+                .fold((f64::MAX, f64::MIN), |(a, c), p| (a.min(p.y), c.max(p.y)));
             assert!(hi - lo > 50.0, "{name} {n}: plate width {}", hi - lo);
         }
         // The rail strip carries a slot for every tab the strip reaches: tilted bands, not the rib rectangles.
@@ -444,7 +482,11 @@ fn labels_use_the_callers_units() {
     let plank = woodwork::chambered_plank(&b, 2.54, &Default::default(), &cm);
     assert!(texts(&plank).contains(&"Plank at 2.54 cm"));
     let s = templates::sections(&b, &inches);
-    assert!(texts(&s).iter().any(|t| t.starts_with("Crossection 1 at ") && t.ends_with('"')));
+    assert!(
+        texts(&s)
+            .iter()
+            .any(|t| t.starts_with("Crossection 1 at ") && t.ends_with('"'))
+    );
     for (t, d, _) in all_templates(&b, &cm) {
         if t != "spec sheet" {
             assert!(
@@ -504,7 +546,10 @@ fn sandwich_rail_follows_the_rail_line_and_flattens() {
     for (name, b) in boards() {
         let opts = SandwichOptions::default();
         let rail = woodwork::sandwich_rail(&b, &opts, &cm);
-        assert!(texts(&rail).iter().any(|t| t.ends_with("Rail template")), "{name}");
+        assert!(
+            texts(&rail).iter().any(|t| t.ends_with("Rail template")),
+            "{name}"
+        );
         let flat = woodwork::sandwich_rail(
             &b,
             &SandwichOptions {
@@ -518,7 +563,8 @@ fn sandwich_rail_follows_the_rail_line_and_flattens() {
             let p = largest_cut(d);
             let n = p.len() / 2;
             let ys: Vec<f64> = p[..n].iter().map(|q| q.y).collect();
-            ys.iter().cloned().fold(f64::MIN, f64::max) - ys.iter().cloned().fold(f64::MAX, f64::min)
+            ys.iter().cloned().fold(f64::MIN, f64::max)
+                - ys.iter().cloned().fold(f64::MAX, f64::min)
         };
         assert!(spread(&flat) < spread(&rail), "{name}");
     }
