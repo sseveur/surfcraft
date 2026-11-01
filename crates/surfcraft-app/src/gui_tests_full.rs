@@ -509,7 +509,7 @@ fn open_save_save_as_and_backup() {
     // Open (Cmd+O) a template file, then the saved one through the menu.
     let saved = h.state().doc.board.clone();
     menu(&mut h, "File", "New…");
-    click(&mut h, "Funboard — 7'6\" mini-mal");
+    click(&mut h, "Mid-length — 7'6\" mid-length");
     click(&mut h, "Create");
     script(&mut h, &b);
     h.key_press_modifiers(Modifiers::COMMAND, Key::O);

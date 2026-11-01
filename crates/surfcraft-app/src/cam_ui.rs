@@ -154,16 +154,32 @@ pub fn window(
         .default_size([980.0, 640.0])
         .resizable(true)
         .show(ctx, |ui| {
-            egui::Panel::left("cam-settings").resizable(true).default_size(300.0).show(ui, |ui| {
-                egui::ScrollArea::vertical().show(ui, |ui| settings_ui(ui, st, set));
-            });
+            egui::Panel::left("cam-settings")
+                .resizable(true)
+                .default_size(300.0)
+                .show(ui, |ui| {
+                    egui::ScrollArea::vertical().show(ui, |ui| settings_ui(ui, st, set));
+                });
             ui.horizontal_wrapped(|ui| {
-                for job in [Job::Deck, Job::Bottom, Job::HotwireProfile, Job::HotwireOutline] {
+                for job in [
+                    Job::Deck,
+                    Job::Bottom,
+                    Job::HotwireProfile,
+                    Job::HotwireOutline,
+                ] {
                     let busy = st.running.is_some();
-                    if ui.add_enabled(!busy, egui::Button::new(job.generate_label())).clicked() {
+                    if ui
+                        .add_enabled(!busy, egui::Button::new(job.generate_label()))
+                        .clicked()
+                    {
                         st.running = Some(job);
                         st.error = None;
-                        let (b, cfg, hot, slot) = (board.clone(), st.cfg.clone(), st.hotwire.clone(), st.slot.clone());
+                        let (b, cfg, hot, slot) = (
+                            board.clone(),
+                            st.cfg.clone(),
+                            st.hotwire.clone(),
+                            st.slot.clone(),
+                        );
                         let repaint = ctx.clone();
                         std::thread::spawn(move || {
                             let r = generate(&b, &cfg, &hot, job);
@@ -180,7 +196,9 @@ pub fn window(
                 ui.colored_label(Color32::from_rgb(230, 80, 60), e);
             }
             let Some((job, rev, program)) = &st.program else {
-                ui.weak(tr("Generate a program to preview toolpaths. Check the machine settings first."));
+                ui.weak(tr(
+                    "Generate a program to preview toolpaths. Check the machine settings first.",
+                ));
                 return;
             };
             let s = program.stats();
@@ -196,24 +214,40 @@ pub fn window(
                     ],
                 ));
                 if *rev != revision {
-                    ui.colored_label(Color32::from_rgb(230, 160, 40), tr("board changed since: regenerate"));
+                    ui.colored_label(
+                        Color32::from_rgb(230, 160, 40),
+                        tr("board changed since: regenerate"),
+                    );
                 }
                 if ui.button(tr("Save G-code…")).clicked() {
-                    save = Some((format!("{title}-{}.nc", job.slug()), program.to_gcode().into_bytes()));
+                    save = Some((
+                        format!("{title}-{}.nc", job.slug()),
+                        program.to_gcode().into_bytes(),
+                    ));
                 }
             });
             // Hot-wire programs are 2D in the X/Z plane: one full-height view of the cut shape.
             let hotwire = matches!(job, Job::HotwireProfile | Job::HotwireOutline);
             if hotwire {
                 let h = ui.available_height() - 20.0;
-                ui.label(if *job == Job::HotwireOutline { tr("Plan (from above)") } else { tr("Side") });
-                ui.allocate_ui(egui::vec2(ui.available_width(), h), |ui| preview(ui, &mut st.side_view, program, false, bg));
+                ui.label(if *job == Job::HotwireOutline {
+                    tr("Plan (from above)")
+                } else {
+                    tr("Side")
+                });
+                ui.allocate_ui(egui::vec2(ui.available_width(), h), |ui| {
+                    preview(ui, &mut st.side_view, program, false, bg)
+                });
             } else {
                 let h = (ui.available_height() - 8.0) / 2.0;
                 ui.label(tr("Plan (from above)"));
-                ui.allocate_ui(egui::vec2(ui.available_width(), h - 14.0), |ui| preview(ui, &mut st.plan_view, program, true, bg));
+                ui.allocate_ui(egui::vec2(ui.available_width(), h - 14.0), |ui| {
+                    preview(ui, &mut st.plan_view, program, true, bg)
+                });
                 ui.label(tr("Side"));
-                ui.allocate_ui(egui::vec2(ui.available_width(), h - 14.0), |ui| preview(ui, &mut st.side_view, program, false, bg));
+                ui.allocate_ui(egui::vec2(ui.available_width(), h - 14.0), |ui| {
+                    preview(ui, &mut st.side_view, program, false, bg)
+                });
             }
         });
     save

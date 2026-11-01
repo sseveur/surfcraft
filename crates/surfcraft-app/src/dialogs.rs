@@ -368,6 +368,8 @@ pub fn about_window(ctx: &egui::Context, open: &mut bool) {
             ui.label(tr("Surfboard design for macOS, Windows and Linux."));
             ui.label(tr("Opens and saves BoardCAD .brd files."));
             ui.separator();
-            ui.label(tr("Free software under the MIT or Apache 2.0 licence, at your choice."));
+            ui.label(tr(
+                "Free software under the MIT or Apache 2.0 licence, at your choice.",
+            ));
         });
 }
