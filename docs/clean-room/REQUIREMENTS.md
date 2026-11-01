@@ -53,7 +53,8 @@ Rewrite this module from the knot-editing behaviour in `docs/spec/geometry.md`; 
 `crates/surfcraft-session/src/commands.rs` and the application (selection of several knots on one curve, dragging
 points or handles with the movement constraints, fine dragging, adding/removing knots, adding/moving/removing
 cross-sections — refusing a section position already used by another section — numeric entry of a handle, toggling
-continuity, and the tidy-up after an edit of a curve).
+continuity, and the tidy-up after an edit of a curve). `CurveId::label()` returns the translation keys "Outline",
+"Deck", "Bottom" and "Cross-section".
 
 ## File formats (`surfcraft-io`)
 
