@@ -771,20 +771,19 @@ impl Board {
     }
 
     /// Scale to a new length, maximum width and maximum thickness (rocker scaled with the thickness). Refused
-    /// (returns `false`, board unchanged) when a factor is not a positive finite number.
-    pub fn scale(&mut self, length: f64, width: f64, thickness: f64) -> bool {
+    /// (board unchanged) when a factor is not a positive finite number.
+    pub fn scale(&mut self, length: f64, width: f64, thickness: f64) {
         let kl = length / self.length();
         let kw = width / self.max_width();
         let kt = thickness / self.max_thickness();
         if ![kl, kw, kt].iter().all(|k| k.is_finite() && *k > 0.0) {
-            return false;
+            return;
         }
         self.outline.scale(kl, kw);
         self.deck.scale(kl, kt);
         self.bottom.scale(kl, kt);
         self.scale_section_positions(kl, length);
         self.fit_sections();
-        true
     }
 
     fn scale_section_positions(&mut self, kl: f64, length: f64) {
@@ -801,14 +800,14 @@ impl Board {
     /// Scale to a new length, maximum width and maximum thickness keeping the bottom rocker's proportions to
     /// the length: the bottom scales with the length, the deck's interior knots are raised or lowered to give
     /// the new thickness, their handles turned to follow. Refused like [`Self::scale`].
-    pub fn scale_preserving_rocker(&mut self, length: f64, width: f64, thickness: f64) -> bool {
+    pub fn scale_preserving_rocker(&mut self, length: f64, width: f64, thickness: f64) {
         let l = self.length();
         let kl = length / l;
         let kw = width / self.max_width();
         let (t_old, xm) = self.max_thickness_and_pos();
         let kt = thickness / t_old;
         if ![kl, kw, kt].iter().all(|k| k.is_finite() && *k > 0.0) {
-            return false;
+            return;
         }
         let dt = thickness - t_old;
         let n = self.deck.len();
@@ -848,7 +847,6 @@ impl Board {
         }
         self.scale_section_positions(kl, length);
         self.fit_sections();
-        true
     }
 
     /// Scale the fin marks: positions along the board by `rx`, offsets from the stringer by `ry`.

@@ -338,6 +338,11 @@ impl Spline {
         self.point_at_length(s * self.length())
     }
 
+    /// Same as [`Self::point_at_s`].
+    pub fn point_by_s(&self, s: f64) -> DVec2 {
+        self.point_at_s(s)
+    }
+
     /// Tangent angle at arc length `l`.
     pub fn tangent_at_length(&self, l: f64) -> f64 {
         let n = self.segment_count();

@@ -93,14 +93,14 @@ impl std::ops::BitOr for Locks {
 /// A control point of a cubic Bezier spline.
 ///
 /// Handles are stored as absolute positions. `continuous` asks interactive editing to keep the two handles
-/// opposite each other; evaluation never enforces it. `aux` is a flag carried by `.brd` files without a known
+/// opposite each other; evaluation never enforces it. `other` is a flag carried by `.brd` files without a known
 /// meaning; it is only preserved.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Knot {
     /// Point, previous handle and next handle, indexed by [`Handle::index`].
     pub points: [DVec2; 3],
     pub continuous: bool,
-    pub aux: bool,
+    pub other: bool,
     /// Movement factors per axis for point moves: 1 = free, 0 = frozen.
     pub axis: DVec2,
     /// Constraints of the previous and the next handle.
@@ -112,7 +112,7 @@ impl Default for Knot {
         Self {
             points: [DVec2::ZERO; 3],
             continuous: false,
-            aux: false,
+            other: false,
             axis: DVec2::ONE,
             locks: [Locks::NONE; 2],
         }
@@ -265,7 +265,7 @@ impl Knot {
             .zip(&other.points)
             .all(|(a, b)| a.x.to_bits() == b.x.to_bits() && a.y.to_bits() == b.y.to_bits())
             && self.continuous == other.continuous
-            && self.aux == other.aux
+            && self.other == other.other
     }
 
     /// Whether the handles are opposite each other within 0.02 rad, judged as files have always been judged:

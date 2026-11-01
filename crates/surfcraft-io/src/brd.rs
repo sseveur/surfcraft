@@ -157,7 +157,7 @@ fn parse_knot(line: &str) -> Option<Knot> {
         DVec2::new(hnx, hny),
     );
     k.continuous = parse_bool(c);
-    k.aux = parse_bool(aux);
+    k.other = parse_bool(aux);
     Some(k)
 }
 
@@ -478,7 +478,7 @@ fn knot_line(out: &mut String, k: &Knot) {
         num(b.x),
         num(b.y),
         k.continuous,
-        k.aux
+        k.other
     );
 }
 
@@ -620,7 +620,7 @@ mod tests {
     fn lenient_knot_lines() {
         let k = parse_knot("(cp [ 1, 2 ,3,4,5,6]   true  false )").unwrap();
         assert_eq!(k.point(), DVec2::new(1.0, 2.0));
-        assert!(k.continuous && !k.aux);
+        assert!(k.continuous && !k.other);
         assert!(parse_knot("(cp [1,2,3] true false)").is_none());
         assert!(parse_knot("(cp [1,2,3,4,5,NaN] true false)").is_none());
     }
