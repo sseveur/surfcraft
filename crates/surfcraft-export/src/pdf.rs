@@ -2,6 +2,8 @@
 
 use std::fmt::Write;
 
+use surfcraft_core::DVec2;
+
 use crate::drawing::{Anchor, Drawing, Item, Page};
 
 const PT_PER_MM: f64 = 72.0 / 25.4;
@@ -51,9 +53,37 @@ fn num(v: f64) -> String {
     }
 }
 
-fn draw(content: &mut Vec<u8>, d: &Drawing) {
+/// Whether an item can show inside `visible` (drawing coordinates, mm). Items entirely outside are left out of the
+/// page, so a drawing tiled over many pages doesn't repeat every item on every page.
+fn may_show(item: &Item, visible: (DVec2, DVec2)) -> bool {
+    let (lo, hi) = visible;
+    let (min, max, pad) = match item {
+        Item::Path { points, style, .. } => {
+            let Some(first) = points.first() else {
+                return false;
+            };
+            let (min, max) = points
+                .iter()
+                .fold((*first, *first), |(a, b), p| (a.min(*p), b.max(*p)));
+            (min, max, style.width_mm)
+        }
+        // Generous box: the text can extend its own width either side of the anchor, in any rotation.
+        Item::Text {
+            at, size_mm, text, ..
+        } => {
+            let r = (text_width_em(text) + 1.0) * size_mm;
+            (*at, *at, r)
+        }
+    };
+    min.x - pad <= hi.x && max.x + pad >= lo.x && min.y - pad <= hi.y && max.y + pad >= lo.y
+}
+
+fn draw(content: &mut Vec<u8>, d: &Drawing, visible: Option<(DVec2, DVec2)>) {
     let mut s = String::new();
     for item in &d.items {
+        if visible.is_some_and(|v| !may_show(item, v)) {
+            continue;
+        }
         match item {
             Item::Path {
                 points,
@@ -150,9 +180,11 @@ pub fn write(drawing: &Drawing, pages: &[Page], title: &str) -> Vec<u8> {
             num(page.offset.x * PT_PER_MM),
             num(page.offset.y * PT_PER_MM)
         );
-        draw(&mut content, drawing);
+        // The part of the drawing this page shows, in drawing coordinates.
+        let visible = (page.clip_min - page.offset, page.clip_max - page.offset);
+        draw(&mut content, drawing, Some(visible));
         content.extend_from_slice(b"Q\nq 1 J 1 j\n");
-        draw(&mut content, &page.furniture);
+        draw(&mut content, &page.furniture, None);
         content.extend_from_slice(b"Q\n");
         let size = page.paper * PT_PER_MM;
         objects.push(
@@ -249,5 +281,30 @@ mod tests {
             let off: usize = line[..10].parse().unwrap();
             assert!(pdf[off..].starts_with(format!("{} 0 obj", i + 1).as_bytes()));
         }
+    }
+
+    #[test]
+    fn pages_only_carry_what_they_show() {
+        // Two pieces far apart: each is printed on its own page, and no page carries the other piece.
+        let mut d = Drawing::new(2000.0, 50.0);
+        d.line(DVec2::new(0.0, 10.0), DVec2::new(100.0, 10.0), Style::CUT);
+        d.text(DVec2::new(10.0, 20.0), 4.0, "FIRSTPIECE", Anchor::Left);
+        d.line(DVec2::new(1900.0, 10.0), DVec2::new(2000.0, 10.0), Style::CUT);
+        d.text(DVec2::new(1910.0, 20.0), 4.0, "LASTPIECE", Anchor::Left);
+        d.part(DVec2::new(0.0, 0.0), DVec2::new(100.0, 50.0));
+        d.part(DVec2::new(1900.0, 0.0), DVec2::new(2000.0, 50.0));
+        let pages = tile(&d, Paper::A4, 10.0, 10.0, "test");
+        assert_eq!(pages.len(), 2);
+        let pdf = String::from_utf8_lossy(&write(&d, &pages, "test")).into_owned();
+        assert_eq!(pdf.matches("FIRSTPIECE").count(), 1);
+        assert_eq!(pdf.matches("LASTPIECE").count(), 1);
+        // A line crossing a page edge is kept on both pages.
+        let mut long = Drawing::new(600.0, 50.0);
+        long.line(DVec2::new(0.0, 10.0), DVec2::new(600.0, 10.0), Style::CUT);
+        let pages = tile(&long, Paper::A4, 10.0, 10.0, "test");
+        assert!(pages.len() >= 2);
+        let pdf = String::from_utf8_lossy(&write(&long, &pages, "test")).into_owned();
+        // The line starts at (0, 10 mm) = (0, 28.346 pt).
+        assert_eq!(pdf.matches("0 28.346 m").count(), pages.len());
     }
 }
