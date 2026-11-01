@@ -1,0 +1,102 @@
+name: Release
+
+# Builds installers for every platform when a version tag is pushed (or on demand).
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+      - name: Build universal app and dmg (ad-hoc signed)
+        run: packaging/macos/build.sh --no-install
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: target/package/*.dmg
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release -p surfcraft-app -p surfcraft-mcp
+      - name: Portable zip
+        shell: pwsh
+        run: |
+          $v = (cargo metadata --no-deps --format-version 1 | ConvertFrom-Json).packages | Where-Object name -eq 'surfcraft-app' | Select-Object -ExpandProperty version
+          New-Item -ItemType Directory -Force target/package | Out-Null
+          Compress-Archive -Path target/release/surfcraft.exe, target/release/surfcraft-mcp.exe, LICENSE-MIT, LICENSE-APACHE -DestinationPath "target/package/SurfCraft-$v-windows-portable.zip"
+          "VERSION=$v" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Installer
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          & $iscc /DVersion=$env:VERSION packaging\windows\surfcraft.iss
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: target/package/*
+
+  linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbcommon-dev libwayland-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libfuse2
+      - run: cargo build --release -p surfcraft-app -p surfcraft-mcp
+      - name: deb and rpm
+        run: |
+          cargo install cargo-deb cargo-generate-rpm --locked
+          mkdir -p target/package
+          cargo deb -p surfcraft-app --no-build -o target/package/
+          # RPM versions cannot contain '-': 4.0.0-alpha.1 becomes 4.0.0~alpha.1 (sorts before 4.0.0).
+          version=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "surfcraft-app") | .version')
+          cargo generate-rpm -p crates/surfcraft-app -o target/package/ -s "version = \"${version//-/\~}\""
+      - name: AppImage
+        run: |
+          curl -sSLo linuxdeploy https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          chmod +x linuxdeploy
+          mkdir -p AppDir/usr/bin
+          cp target/release/surfcraft-mcp AppDir/usr/bin/
+          ./linuxdeploy --appdir AppDir \
+            --executable target/release/surfcraft \
+            --desktop-file packaging/linux/org.surfcraft.SurfCraft.desktop \
+            --icon-file crates/surfcraft-app/assets/icon-256.png --icon-filename org.surfcraft.SurfCraft \
+            --output appimage
+          mv SurfCraft*.AppImage target/package/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: target/package/*
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [macos, windows, linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*

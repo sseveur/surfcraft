@@ -1,0 +1,69 @@
+[package]
+name = "surfcraft-app"
+description = "SurfCraft desktop application"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "surfcraft"
+path = "src/main.rs"
+
+[dependencies]
+surfcraft-core.workspace = true
+surfcraft-io.workspace = true
+surfcraft-export.workspace = true
+surfcraft-session.workspace = true
+surfcraft-cam.workspace = true
+serde.workspace = true
+serde_json = "1"
+eframe = { version = "0.37", default-features = false, features = [
+    "wgpu",
+    "default_fonts",
+    "accesskit",
+    "persistence",
+    "wayland",
+    "x11",
+] }
+rfd = "0.17"
+bytemuck = { version = "1", features = ["derive"] }
+glam = { workspace = true, features = ["bytemuck"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+
+[dev-dependencies]
+egui_kittest = { version = "0.37", features = ["eframe", "wgpu", "snapshot"] }
+
+[target.'cfg(windows)'.dependencies]
+# User locale for the interface language.
+windows-sys = { version = "0.61", features = ["Win32_Globalization"] }
+
+[target.'cfg(windows)'.build-dependencies]
+winresource = "0.1"
+
+# Linux packages, built in CI with cargo-deb / cargo-generate-rpm.
+[package.metadata.deb]
+name = "surfcraft"
+maintainer = "SurfCraft contributors"
+section = "graphics"
+extended-description = "Surfboard design: outline, rocker, cross-sections, volume, printable templates and CNC toolpaths. Opens and saves BoardCAD .brd files."
+assets = [
+    ["target/release/surfcraft", "usr/bin/", "755"],
+    ["target/release/surfcraft-mcp", "usr/bin/", "755"],
+    ["../../packaging/linux/org.surfcraft.SurfCraft.desktop", "usr/share/applications/", "644"],
+    ["../../packaging/linux/org.surfcraft.SurfCraft.metainfo.xml", "usr/share/metainfo/", "644"],
+    ["../../packaging/linux/org.surfcraft.SurfCraft.xml", "usr/share/mime/packages/", "644"],
+    ["assets/icon-256.png", "usr/share/icons/hicolor/256x256/apps/org.surfcraft.SurfCraft.png", "644"],
+]
+
+[package.metadata.generate-rpm]
+name = "surfcraft"
+assets = [
+    { source = "target/release/surfcraft", dest = "/usr/bin/surfcraft", mode = "755" },
+    { source = "target/release/surfcraft-mcp", dest = "/usr/bin/surfcraft-mcp", mode = "755" },
+    { source = "../../packaging/linux/org.surfcraft.SurfCraft.desktop", dest = "/usr/share/applications/org.surfcraft.SurfCraft.desktop", mode = "644" },
+    { source = "../../packaging/linux/org.surfcraft.SurfCraft.metainfo.xml", dest = "/usr/share/metainfo/org.surfcraft.SurfCraft.metainfo.xml", mode = "644" },
+    { source = "../../packaging/linux/org.surfcraft.SurfCraft.xml", dest = "/usr/share/mime/packages/org.surfcraft.SurfCraft.xml", mode = "644" },
+    { source = "assets/icon-256.png", dest = "/usr/share/icons/hicolor/256x256/apps/org.surfcraft.SurfCraft.png", mode = "644" },
+]

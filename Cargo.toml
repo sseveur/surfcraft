@@ -1,0 +1,42 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/surfcraft-core",
+    "crates/surfcraft-io",
+    "crates/surfcraft-export",
+    "crates/surfcraft-session",
+    "crates/surfcraft-cam",
+    "crates/surfcraft-app",
+    "crates/surfcraft-mcp",
+]
+
+[workspace.package]
+version = "4.0.0-alpha.1"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+rust-version = "1.95"
+authors = ["SurfCraft contributors"]
+
+[workspace.dependencies]
+surfcraft-core = { path = "crates/surfcraft-core" }
+surfcraft-io = { path = "crates/surfcraft-io" }
+surfcraft-export = { path = "crates/surfcraft-export" }
+surfcraft-session = { path = "crates/surfcraft-session" }
+surfcraft-cam = { path = "crates/surfcraft-cam" }
+glam = "0.34"
+thiserror = "2"
+rayon = "1.12"
+serde = { version = "1", features = ["derive"] }
+
+[profile.dev.package."*"]
+opt-level = 2
+
+# Geometry is evaluated millions of times (volume, meshes, templates); keep debug builds usable.
+[profile.dev.package.surfcraft-core]
+opt-level = 2
+
+[profile.dev.package.surfcraft-export]
+opt-level = 2
+
+[profile.dev.package.surfcraft-cam]
+opt-level = 2

@@ -1,0 +1,18 @@
+[package]
+name = "surfcraft-mcp"
+description = "Model Context Protocol server for SurfCraft: lets an AI assistant design boards in the app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "surfcraft-mcp"
+path = "src/main.rs"
+
+[dependencies]
+surfcraft-core.workspace = true
+surfcraft-io.workspace = true
+surfcraft-session.workspace = true
+serde_json = "1"

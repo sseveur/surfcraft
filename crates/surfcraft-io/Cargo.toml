@@ -1,0 +1,23 @@
+[package]
+name = "surfcraft-io"
+description = "SurfCraft file formats: .brd and legacy imports, mesh and 2D exports"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+
+[features]
+default = ["legacy-encryption"]
+# Read `%BRD-1.0x` files encrypted by old commercial shaping software (PBEWithMD5AndDES).
+legacy-encryption = ["dep:des", "dep:cbc", "dep:md-5"]
+
+[dependencies]
+surfcraft-core.workspace = true
+thiserror.workspace = true
+des = { version = "0.8", optional = true }
+cbc = { version = "0.1", optional = true }
+md-5 = { version = "0.10", optional = true }
+
+[dev-dependencies]
+serde_json = "1"

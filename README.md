@@ -1,0 +1,122 @@
+# SurfCraft
+
+Surfboard design for macOS, Windows and Linux: shape the outline, rocker and cross-sections, watch the volume
+update live, print full-size templates, and generate CNC toolpaths.
+
+SurfCraft is a modern rewrite of [BoardCAD](http://www.boardcad.org) 3.0.1, the open-source surfboard CAD/CAM
+program last released in 2015 (Java Swing, Java3D, Jython). It opens and saves the same `.brd` files and computes the
+same numbers: its geometry is tested against values produced by the original program.
+
+## Download
+
+Get the latest version from the [Releases page](https://github.com/sseveur/surfcraft/releases/latest).
+
+| System | File | Install |
+|---|---|---|
+| macOS (Apple Silicon and Intel) | `SurfCraft-<version>-macos.dmg` | Open the dmg and drag SurfCraft to Applications. |
+| Windows 10/11 | `SurfCraft-<version>-windows-setup.exe` | Run the installer. A portable `.zip` is also available. |
+| Ubuntu, Debian, Mint, Pop!_OS | `surfcraft_<version>_amd64.deb` | `sudo apt install ./surfcraft_*_amd64.deb` |
+| Fedora, RHEL, openSUSE | `surfcraft-<version>.x86_64.rpm` | `sudo dnf install ./surfcraft-*.rpm` (or `zypper install`) |
+| Any other Linux | `SurfCraft-x86_64.AppImage` | `chmod +x SurfCraft-*.AppImage`, then run it. |
+
+The builds are not signed with paid certificates yet, so the first launch needs one extra click:
+
+- **macOS**: if macOS says the app cannot be opened, open **System Settings → Privacy & Security** and click
+  **Open Anyway** next to SurfCraft (or run `xattr -dr com.apple.quarantine /Applications/SurfCraft.app`).
+- **Windows**: if SmartScreen appears, click **More info → Run anyway**.
+
+## Features
+
+- **Design**: outline, rocker (deck + bottom) and cross-sections as Bezier curves. Drag points and tangents
+  (Alt = fine), box select, arrow-key nudge, add/delete points, exact numeric entry in any unit
+  (`6'2"`, `18 1/2"`, `47cm`), guide points, curvature combs, rail apex and tuck-under markers.
+- **Live specs**: length, widths, thickness, rocker at standard stations, planform area, volume, centre of mass.
+- **Compare**: ghost board overlay, "original" snapshot, background photo tracing (hold T / N and click the photo's
+  tail / nose).
+- **3D**: GPU view with zebra stripes for checking fairness.
+- **New board from a template** at a target length, width, thickness and volume (litres).
+- **Weight calculator**: foam, stringer, glass, laps, resin, hot coat.
+- **Print**: outline (half or full), spin, profile and cross-section templates at true 1:1 scale, tiled and centred
+  over A4/A3/Letter/Tabloid with registration marks and a 100 mm check bar; one-page spec sheet. PDF, SVG or DXF.
+- **Wooden boards**: sandwich (core profile, rail, skins), hollow wood (stringer, ribs, rail strip, skins, nose and
+  tail pieces) and chambered plank templates.
+- **CNC (Machine menu)**: surface-splits and width-splits toolpaths for deck and bottom, bullnose/flat/STL cutters,
+  4th-axis rotating board, supports or end clamps, hot-wire profile and outline; LinuxCNC G-code with a preview and
+  machining-time estimate. Passes follow the modelled surface and stop at the rail apex on 3-axis machines. Check a
+  new program in your machine's simulator before cutting.
+- **3D model export**: STL, OBJ (mm), STEP.
+- **Files**: `.brd` (including encrypted legacy files), Shape3D `.s3d`, `.srf`, BoardCAD STEP; `.otl/.pfl/.crs` curve
+  pieces. Saving keeps a `.bak` of the previous version.
+- **Languages**: English, French, Spanish, Portuguese, Dutch, Norwegian (View → Language).
+- **Guided tour** on first launch, any time from Help → Tour of SurfCraft.
+- **AI assistant (MCP)**: Claude or another MCP client can read and edit the board while you watch (see below).
+
+## Using SurfCraft with an AI assistant (MCP)
+
+`surfcraft-mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) server installed next to the app.
+With the SurfCraft window open and **Help → Allow AI assistant control** ticked (or after the assistant calls
+`launch_app`), every tool runs in the window as a normal, undoable edit. Without a window the tools work headlessly
+on `.brd` files.
+
+Where the server is:
+
+| System | Path |
+|---|---|
+| macOS | `/Applications/SurfCraft.app/Contents/MacOS/surfcraft-mcp` |
+| Windows | `C:\Program Files\SurfCraft\surfcraft-mcp.exe` |
+| Linux (.deb / .rpm) | `/usr/bin/surfcraft-mcp` |
+
+Claude Code:
+
+```sh
+claude mcp add -s user surfcraft -- /Applications/SurfCraft.app/Contents/MacOS/surfcraft-mcp
+```
+
+Claude Desktop (`claude_desktop_config.json`):
+
+```json
+{ "mcpServers": { "surfcraft": { "command": "/Applications/SurfCraft.app/Contents/MacOS/surfcraft-mcp" } } }
+```
+
+Tools include `board_summary`, `sample_board`, `get_curve`, `set_knot`, `move_knot`, `add_knot`, `section_info`,
+`add_section`, `scale_board` (with target volume), `new_board`, `open_board`, `save_board`, `set_fins`,
+`estimate_weight`, `export`, `generate_toolpath`, `undo`/`redo`, `launch_app`, `screenshot`, `set_view`.
+
+Security: the app only listens on 127.0.0.1, and only while control is enabled; every request needs a random token
+stored in a file readable only by your user account. The server never connects to the internet.
+
+## Build from source
+
+Needs [Rust](https://rustup.rs) 1.95 or newer.
+
+```sh
+cargo run -p surfcraft-app --release          # the app
+cargo test --workspace                        # all tests, including headless GUI tests
+packaging/macos/build.sh --no-install         # macOS .app and .dmg
+```
+
+Linux needs the usual winit development packages (see `.github/workflows/ci.yml`). Windows and Linux installers are
+built by `.github/workflows/release.yml` when a `v*` tag is pushed.
+
+Command line: `surfcraft [board.brd] [--tab overview|outline|rocker|section|3d] [--screenshot out.png] [--automation]`.
+
+## Layout
+
+| Path | What |
+|---|---|
+| `crates/surfcraft-core` | Geometry: Bezier curves, cross-sections, surface models, metrics, mesh, units, weight |
+| `crates/surfcraft-io` | File formats and built-in templates |
+| `crates/surfcraft-export` | STL/OBJ, PDF/SVG/DXF writers, printable templates |
+| `crates/surfcraft-session` | Document with undo, edit operations, JSON commands, automation bridge |
+| `crates/surfcraft-cam` | Toolpaths, cutters, holding systems, G-code |
+| `crates/surfcraft-app` | Desktop app (egui/eframe + wgpu) |
+| `crates/surfcraft-mcp` | MCP server |
+| `reference/java` | Original BoardCAD 3.0.1 Java sources, translations, scripts and cutter STLs (reference only) |
+| `tools/oracle` | How the golden test values were produced from the original program |
+| `packaging` | macOS, Windows and Linux packaging |
+
+## Licence and credits
+
+GPL-3.0-or-later, same as the original (see `LICENSE`). SurfCraft is based on BoardCAD by Jonas Hörnstein,
+Ola Helenius, Håvard Nygård Jakobsen and Sven Wesley; translations by Mocoloitam, Pere Antoni Comas,
+Stephen Kitchener and Wouter Oosting.

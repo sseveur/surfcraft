@@ -1,0 +1,13 @@
+[package]
+name = "surfcraft-core"
+description = "Surfboard geometry core: Bezier outline, rocker, cross-sections, surface and metrics"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+
+[dependencies]
+glam.workspace = true
+thiserror.workspace = true
+rayon.workspace = true

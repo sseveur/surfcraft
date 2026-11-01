@@ -1,0 +1,16 @@
+[package]
+name = "surfcraft-session"
+description = "SurfCraft editing session: document with undo, edit operations, JSON command interface"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+
+[dependencies]
+surfcraft-core.workspace = true
+surfcraft-io.workspace = true
+surfcraft-export.workspace = true
+surfcraft-cam.workspace = true
+serde_json = "1"
+directories = "6"

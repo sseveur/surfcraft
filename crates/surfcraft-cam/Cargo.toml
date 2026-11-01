@@ -1,0 +1,17 @@
+[package]
+name = "surfcraft-cam"
+description = "SurfCraft CAM: toolpaths, cutter compensation, blank holding systems and G-code"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+
+[dependencies]
+surfcraft-core.workspace = true
+glam.workspace = true
+rayon.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+surfcraft-io.workspace = true
