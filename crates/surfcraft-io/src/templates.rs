@@ -11,10 +11,12 @@ pub struct Template {
 }
 
 impl Template {
-    /// The board, freshly read.
+    /// The board, freshly read, named after the template.
     pub fn board(&self) -> Board {
-        crate::brd::read_text(self.brd)
-            .unwrap_or_else(|e| panic!("built-in board {}: {e}", self.name))
+        let mut b = crate::brd::read_text(self.brd)
+            .unwrap_or_else(|e| panic!("built-in board {}: {e}", self.name));
+        b.info.name = self.name.to_owned();
+        b
     }
 }
 
