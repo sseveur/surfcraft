@@ -49,7 +49,7 @@ fn windows_1252(b: u8) -> char {
 
 /// Lines of the text with their 1-based numbers; LF, CR LF and lone CR all end a line. The flag tells whether
 /// the line was terminated (the last line of a file cut short is not).
-fn lines(text: &str) -> Vec<(usize, &str, bool)> {
+pub(crate) fn lines(text: &str) -> Vec<(usize, &str, bool)> {
     let mut out = Vec::new();
     let mut rest = text;
     let mut n = 0;
@@ -75,7 +75,7 @@ fn invalid(line: usize, what: impl std::fmt::Display) -> Error {
 }
 
 /// A real number in any decimal syntax.
-fn parse_real(s: &str) -> Option<f64> {
+pub(crate) fn parse_real(s: &str) -> Option<f64> {
     let s = s.trim();
     match s {
         "NaN" => Some(f64::NAN),
@@ -90,7 +90,7 @@ fn parse_real(s: &str) -> Option<f64> {
     }
 }
 
-fn parse_finite(s: &str) -> Option<f64> {
+pub(crate) fn parse_finite(s: &str) -> Option<f64> {
     parse_real(s).filter(|v| v.is_finite())
 }
 
@@ -177,7 +177,7 @@ fn parse_guide(line: &str) -> Option<DVec2> {
 }
 
 /// Splits `pNN : value` lines; `None` for anything else.
-fn scalar(line: &str) -> Option<(u32, &str)> {
+pub(crate) fn scalar(line: &str) -> Option<(u32, &str)> {
     let t = line.trim_start();
     let b = t.as_bytes();
     if b.len() < 3 || b[0] != b'p' || !b[1].is_ascii_digit() || !b[2].is_ascii_digit() {
@@ -190,12 +190,12 @@ fn scalar(line: &str) -> Option<(u32, &str)> {
 }
 
 /// Line cursor over the file with block parsing helpers.
-struct Reader<'a> {
-    lines: Vec<(usize, &'a str, bool)>,
-    pos: usize,
+pub(crate) struct Reader<'a> {
+    pub(crate) lines: Vec<(usize, &'a str, bool)>,
+    pub(crate) pos: usize,
 }
 
-enum End {
+pub(crate) enum End {
     /// The block's closing `)` was read.
     Closed,
     /// The file ended inside the block.
@@ -203,14 +203,14 @@ enum End {
 }
 
 impl<'a> Reader<'a> {
-    fn next(&mut self) -> Option<(usize, &'a str, bool)> {
+    pub(crate) fn next(&mut self) -> Option<(usize, &'a str, bool)> {
         let l = self.lines.get(self.pos).copied();
         self.pos += 1;
         l
     }
 
     /// Knot lines and an optional guide block up to the block's closing `)`.
-    fn curve(&mut self) -> Result<(Spline, Vec<DVec2>, End), Error> {
+    pub(crate) fn curve(&mut self) -> Result<(Spline, Vec<DVec2>, End), Error> {
         let mut knots = Vec::new();
         let mut guides = Vec::new();
         loop {
@@ -265,7 +265,7 @@ impl<'a> Reader<'a> {
     }
 
     /// Section blocks up to the closing `)` of the `p35` block.
-    fn sections(&mut self, out: &mut Vec<CrossSection>) -> Result<(), Error> {
+    pub(crate) fn sections(&mut self, out: &mut Vec<CrossSection>) -> Result<(), Error> {
         loop {
             let Some((n, line, terminated)) = self.next() else {
                 return Ok(());
