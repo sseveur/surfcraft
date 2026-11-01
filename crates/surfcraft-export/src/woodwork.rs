@@ -13,7 +13,7 @@ use surfcraft_core::{Board, DVec2, Station, surface};
 
 use crate::drawing::{Drawing, Item, Style};
 use crate::templates::{
-    HEADER, HEADER_SMALL, OVERRUN, board_name, finish, grid_over_geometry, is_imperial,
+    HEADER, HEADER_SMALL, OVERRUN, board_name, finish, grid, grid_over_geometry, is_imperial,
     mirror_closed,
 };
 
@@ -1060,7 +1060,10 @@ pub fn hws_rib(board: &Board, x: f64, opts: &HwsOptions, fmt: &dyn Fn(f64) -> St
             }
         }
     }
-    grid_over_geometry(&mut d, is_imperial(fmt));
+    // Grid over the whole rib (both halves).
+    if let Some((lo, hi)) = d.bounds() {
+        grid(&mut d, lo, hi, is_imperial(fmt));
+    }
     finish(
         d,
         &[
@@ -1168,7 +1171,9 @@ pub fn hws_rail(board: &Board, opts: &HwsOptions, _fmt: &dyn Fn(f64) -> String) 
         // Slots for the tabs of the tail and nose pieces.
         for p in [tail_plate(&s, &o), nose_plate(&s, &o)].into_iter().flatten() {
             for (a, b) in p.tabs() {
-                if !(on_strip(a) && on_strip(b)) {
+                // Where the strip ends inside a tab, the plate ends there too: cut the part that exists.
+                let (a, b) = (a.max(ra), b.min(rb));
+                if b - a < 1.0 {
                     continue;
                 }
                 let (ra, rb) = (s.rail(a, o.d), s.rail(b, o.d));
