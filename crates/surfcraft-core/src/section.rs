@@ -53,7 +53,11 @@ impl CrossSection {
                 DVec2::new(1.0, 0.1),
                 DVec2::new(1.0, 0.6),
             ),
-            Knot::new(DVec2::new(0.0, 1.0), DVec2::new(0.6, 1.0), DVec2::new(-0.5, 1.0)),
+            Knot::new(
+                DVec2::new(0.0, 1.0),
+                DVec2::new(0.6, 1.0),
+                DVec2::new(-0.5, 1.0),
+            ),
         ])
     }
 
@@ -98,7 +102,9 @@ impl CrossSection {
     /// Angle (radians) between the two handles of the knot at the tuck-under point; π for a soft, rounded
     /// release, smaller for a hard edge. 0 when no knot lies near the tuck-under point.
     pub fn release_angle(&self) -> f64 {
-        let s = self.spline.s_by_normal_reverse(TUCK_UNDER_ANGLE * DEG, true);
+        let s = self
+            .spline
+            .s_by_normal_reverse(TUCK_UNDER_ANGLE * DEG, true);
         let q = self.point_at_s(s);
         let Some(i) = nearest_knot(&self.spline, q) else {
             return 0.0;
@@ -114,7 +120,9 @@ impl CrossSection {
     /// points; 0 when apex and tuck are less than 0.18 cm apart laterally.
     pub fn tuck_radius(&self) -> f64 {
         let sa = self.spline.s_by_normal_reverse(APEX_ANGLE * DEG, true);
-        let st = self.spline.s_by_normal_reverse(TUCK_UNDER_ANGLE * DEG, true);
+        let st = self
+            .spline
+            .s_by_normal_reverse(TUCK_UNDER_ANGLE * DEG, true);
         if self.point_at_s(sa).x - self.point_at_s(st).x < 0.18 {
             return 0.0;
         }
@@ -163,7 +171,7 @@ pub(crate) fn scale_spline_to(spline: &mut Spline, thickness: f64, width: f64) {
     .max(0.1);
     let kt = (thickness / t_old).abs();
     let kw = (width / w_old).abs();
-    if !(t_old * kt > 0.1) || !(w_old * kw > 0.1) || !kt.is_finite() || !kw.is_finite() {
+    if !kt.is_finite() || !kw.is_finite() || t_old * kt <= 0.1 || w_old * kw <= 0.1 {
         return;
     }
     spline.scale(kw, kt);
@@ -258,7 +266,11 @@ mod tests {
                     DVec2::new(22.0, 1.0),
                     DVec2::new(22.0, 3.0),
                 ),
-                Knot::new(DVec2::new(0.0, 6.0), DVec2::new(10.0, 6.0), DVec2::new(-10.0, 6.0)),
+                Knot::new(
+                    DVec2::new(0.0, 6.0),
+                    DVec2::new(10.0, 6.0),
+                    DVec2::new(-10.0, 6.0),
+                ),
             ]),
         )
     }

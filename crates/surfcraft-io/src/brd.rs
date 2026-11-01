@@ -37,8 +37,9 @@ pub fn decode(bytes: &[u8]) -> String {
 
 fn windows_1252(b: u8) -> char {
     const HIGH: [char; 32] = [
-        '€', '\u{81}', '‚', 'ƒ', '„', '…', '†', '‡', 'ˆ', '‰', 'Š', '‹', 'Œ', '\u{8d}', 'Ž', '\u{8f}',
-        '\u{90}', '‘', '’', '“', '”', '•', '–', '—', '˜', '™', 'š', '›', 'œ', '\u{9d}', 'ž', 'Ÿ',
+        '€', '\u{81}', '‚', 'ƒ', '„', '…', '†', '‡', 'ˆ', '‰', 'Š', '‹', 'Œ', '\u{8d}', 'Ž',
+        '\u{8f}', '\u{90}', '‘', '’', '“', '”', '•', '–', '—', '˜', '™', 'š', '›', 'œ', '\u{9d}',
+        'ž', 'Ÿ',
     ];
     match b {
         0x80..=0x9F => HIGH[(b - 0x80) as usize],
@@ -308,7 +309,9 @@ fn scalar_field(b: &mut Board, code: u32, value: &str) -> Result<(), &'static st
     let m = &mut b.machine;
     let int = |v: &str| parse_int(v).ok_or("expected a whole number, got");
     let real = |v: &str| parse_real(v).ok_or("expected a number, got");
-    let arr = |v: &str, slots: &mut [f64]| parse_array(v, slots).map_err(|_| "expected a list of numbers, got");
+    let arr = |v: &str, slots: &mut [f64]| {
+        parse_array(v, slots).map_err(|_| "expected a list of numbers, got")
+    };
     match code {
         7 => i.version = unescape(value),
         8 => i.name = unescape(value),
@@ -377,7 +380,10 @@ pub fn read_text(text: &str) -> Result<Board, Error> {
         match code {
             32..=34 => {
                 if value != "(" {
-                    return Err(invalid(n, format!("p{code}: expected \"(\", got {value:?}")));
+                    return Err(invalid(
+                        n,
+                        format!("p{code}: expected \"(\", got {value:?}"),
+                    ));
                 }
                 let (spline, guides, end) = r.curve()?;
                 curves[(code - 32) as usize] = true;
@@ -420,8 +426,7 @@ pub fn read_text(text: &str) -> Result<Board, Error> {
             )));
         }
     }
-    b.sections
-        .sort_by(|a, c| a.position.total_cmp(&c.position));
+    b.sections.sort_by(|a, c| a.position.total_cmp(&c.position));
     finish(&mut b);
     Ok(b)
 }
@@ -647,5 +652,82 @@ mod tests {
     fn line_ends() {
         let l: Vec<&str> = lines("a\r\nb\rc\nd").iter().map(|x| x.1).collect();
         assert_eq!(l, ["a", "b", "c", "d"]);
+    }
+
+    /// Every measurement of a board the reader accepted must work (no panic, no hang).
+    fn exercise(b: &Board) {
+        use surfcraft_core::SurfaceModel;
+        for model in [SurfaceModel::SBlend, SurfaceModel::ControlPoint] {
+            let mut b = b.clone();
+            b.model = model;
+            let l = b.length();
+            let _ = (
+                b.max_width(),
+                b.max_thickness_and_pos(),
+                b.area(),
+                b.volume(),
+            );
+            let _ = (b.center_of_mass(), b.moment_of_inertia(l / 2.0, 0.0));
+            for x in [0.0, l / 3.0, l / 2.0, l] {
+                let _ = b.surface_point(x, 0.5, -90.0, 360.0);
+                let _ = b.surface_normal(x, 0.3, -90.0, 90.0);
+                let _ = b.deck_at_xy(x, 1.0);
+            }
+            for i in b.real_sections() {
+                let s = &b.sections[i];
+                let _ = (s.release_angle(), s.tuck_radius(), s.width());
+            }
+            let _ = write(&b);
+        }
+    }
+
+    const FIXTURE: &str = include_str!("../../../tests/fixtures/funboard.brd");
+
+    #[test]
+    fn truncated_and_corrupted_files_never_panic() {
+        let bytes = FIXTURE.as_bytes();
+        for cut in (0..bytes.len()).step_by(bytes.len() / 60) {
+            if let Ok(b) = read(&bytes[..cut]) {
+                exercise(&b);
+            }
+        }
+        let mut seed = 7u64;
+        let mut next = || {
+            seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            (seed >> 33) as usize
+        };
+        for _ in 0..40 {
+            let mut b = bytes.to_vec();
+            for _ in 0..1 + next() % 6 {
+                let i = next() % b.len();
+                b[i] = b"0123456789-.,()[]:e \n;#'"[next() % 24];
+            }
+            if let Ok(board) = read(&b) {
+                exercise(&board);
+            }
+        }
+    }
+
+    #[test]
+    fn degenerate_boards_never_panic() {
+        let base = read_text(FIXTURE).unwrap();
+        let mut zero_length = base.clone();
+        for k in zero_length.outline.knots_mut() {
+            for p in &mut k.points {
+                p.x = 0.0;
+            }
+        }
+        let mut one_section = base.clone();
+        one_section.sections.truncate(2);
+        let mut flat = base.clone();
+        for k in flat.deck.knots_mut() {
+            k.points = [DVec2::ZERO; 3];
+        }
+        for b in [zero_length, one_section, flat] {
+            let again = read_text(&write(&b)).unwrap();
+            exercise(&again);
+        }
     }
 }

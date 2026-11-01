@@ -70,15 +70,14 @@ pub struct Weights {
 /// Estimate the finished weight of `board` with volume `volume` (cm³, usually [`Board::volume`]).
 pub fn estimate(board: &Board, volume: f64, layup: &Layup) -> Weights {
     let l = board.length();
-    let stringer_area = simpson(|x| board.deck_at(x), 0.0, l, 20)
-        - simpson(|x| board.rocker_at(x), 0.0, l, 20);
+    let stringer_area =
+        simpson(|x| board.deck_at(x), 0.0, l, 20) - simpson(|x| board.rocker_at(x), 0.0, l, 20);
     let stringer_volume = stringer_area * layup.stringer_width;
     let stringer = stringer_volume / 1000.0 * layup.stringer_density;
     let foam_volume = volume - stringer_volume;
     let foam = foam_volume / 1000.0 * layup.foam_density;
     let deck_glass_area = 2.0 * simpson_par(|x| board.half_girth(x, true), ZERO, l - ZERO, 10);
-    let bottom_glass_area =
-        2.0 * simpson_par(|x| board.half_girth(x, false), ZERO, l - ZERO, 10);
+    let bottom_glass_area = 2.0 * simpson_par(|x| board.half_girth(x, false), ZERO, l - ZERO, 10);
     let deck_glass = deck_glass_area / 10000.0 * layup.deck_glass;
     let bottom_glass = bottom_glass_area / 10000.0 * layup.bottom_glass;
     let rail = board.outline.length();

@@ -89,12 +89,9 @@ impl Station {
         let kind = match board.model {
             SurfaceModel::ControlPoint => match board.interpolated_section(x) {
                 Some(s) => StationKind::ControlPoint(Ranged::new(s.spline, start, end, true)),
-                None => StationKind::ControlPoint(Ranged::new(
-                    fallback_at(board, x),
-                    start,
-                    end,
-                    true,
-                )),
+                None => {
+                    StationKind::ControlPoint(Ranged::new(fallback_at(board, x), start, end, true))
+                }
             },
             SurfaceModel::SBlend => sblend_kind(board, x, start, end),
         };

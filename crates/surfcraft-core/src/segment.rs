@@ -296,7 +296,7 @@ impl Segment {
             e = target - a_cur;
         }
         let good = (self.tangent_angle(t_cur) - target).abs() <= ANGLE_TOL;
-        if !good || !(t_cur >= ZERO) || !(t_cur <= ONE) {
+        if !good || t_cur.is_nan() || t_cur < ZERO || t_cur > ONE {
             let (mut lo, mut hi) = (0.0, 1.0);
             if e.is_nan() {
                 e = target - self.tangent_angle(0.5);
@@ -346,6 +346,35 @@ impl Segment {
             t1 = best_t + seg;
             n /= 2;
         }
+    }
+
+    /// Parameter of the point nearest to `q`, refined to full precision (for interactive editing; the grid
+    /// search of [`Self::nearest_t`] stops early on the first half of the segment).
+    pub fn nearest_t_precise(&self, q: DVec2) -> f64 {
+        const N: usize = 64;
+        let dist = |t: f64| self.point(t).distance_squared(q);
+        let mut best = (f64::INFINITY, 0.0);
+        for i in 0..=N {
+            let t = i as f64 / N as f64;
+            let d = dist(t);
+            if d < best.0 {
+                best = (d, t);
+            }
+        }
+        let (mut lo, mut hi) = (
+            (best.1 - 1.0 / N as f64).max(0.0),
+            (best.1 + 1.0 / N as f64).min(1.0),
+        );
+        for _ in 0..60 {
+            let a = lo + (hi - lo) / 3.0;
+            let b = hi - (hi - lo) / 3.0;
+            if dist(a) <= dist(b) {
+                hi = b;
+            } else {
+                lo = a;
+            }
+        }
+        (lo + hi) / 2.0
     }
 
     /// Parameter where the distance from `q` equals `d` (machining helper; 96-sample grid, refined).

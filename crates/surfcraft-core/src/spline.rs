@@ -198,7 +198,12 @@ impl Spline {
     // ------------------------------------------------------------------------------------ extremes
 
     /// Fold a per-segment value; a spline without segments yields its single knot's coordinate (or 0).
-    fn fold_segments(&self, f: impl Fn(&Segment) -> f64, max: bool, single: impl Fn(DVec2) -> f64) -> f64 {
+    fn fold_segments(
+        &self,
+        f: impl Fn(&Segment) -> f64,
+        max: bool,
+        single: impl Fn(DVec2) -> f64,
+    ) -> f64 {
         if self.segment_count() == 0 {
             return self.knots.first().map_or(0.0, |k| single(k.point()));
         }
@@ -413,7 +418,7 @@ impl Spline {
         let m = self.segment_count();
         let lengths = self.segment_lengths();
         let total: f64 = lengths.iter().sum();
-        if m == 0 || !(total > 0.0) {
+        if m == 0 || total.is_nan() || total <= 0.0 {
             return ZERO;
         }
         let target = angle - 90.0 * DEG;
@@ -519,6 +524,20 @@ impl Spline {
         Some(self.split_at(i, t))
     }
 
+    /// Like [`Self::split_near`], placing the new knot at the precise nearest point (interactive editing).
+    pub fn split_near_precise(&mut self, q: DVec2) -> Option<usize> {
+        let mut best: Option<(usize, f64, f64)> = None;
+        for (i, s) in self.segments().enumerate() {
+            let t = s.nearest_t_precise(q);
+            let d = s.point(t).distance(q);
+            if best.is_none_or(|b| d < b.2) {
+                best = Some((i, t, d));
+            }
+        }
+        let (i, t, _) = best?;
+        Some(self.split_at(i, t))
+    }
+
     /// Split segment `i` at parameter `t`; returns the index of the new knot.
     pub fn split_at(&mut self, i: usize, t: f64) -> usize {
         let sp = self.segment(i).split(t);
@@ -537,7 +556,7 @@ impl Spline {
         }
         let (a, k, b) = (&self.knots[i - 1], &self.knots[i], &self.knots[i + 1]);
         let tmp = Segment::new(a.point(), a.next(), b.prev(), b.point());
-        let t = tmp.nearest_t(k.point());
+        let t = tmp.nearest_t_precise(k.point());
         let knots = self.knots_mut();
         if t != 0.0 && t != 1.0 {
             let a = &mut knots[i - 1];
@@ -565,7 +584,11 @@ mod tests {
                 DVec2::new(10.0, 0.8),
                 DVec2::new(10.0, 3.2),
             ),
-            Knot::new(DVec2::new(0.0, 4.0), DVec2::new(6.0, 4.0), DVec2::new(-3.0, 4.0)),
+            Knot::new(
+                DVec2::new(0.0, 4.0),
+                DVec2::new(6.0, 4.0),
+                DVec2::new(-3.0, 4.0),
+            ),
         ])
     }
 

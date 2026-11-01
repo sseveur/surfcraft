@@ -358,12 +358,20 @@ impl Board {
 
     fn previous_index(&self, x: f64) -> Option<usize> {
         let k = self.nearest_section_index(x)?;
-        Some(if self.sections[k].position >= x { k - 1 } else { k })
+        Some(if self.sections[k].position >= x {
+            k - 1
+        } else {
+            k
+        })
     }
 
     fn next_index(&self, x: f64) -> Option<usize> {
         let k = self.nearest_section_index(x)?;
-        Some(if self.sections[k].position < x { k + 1 } else { k })
+        Some(if self.sections[k].position < x {
+            k + 1
+        } else {
+            k
+        })
     }
 
     /// Position of the section (end sections included) at or before station `x`.
@@ -392,7 +400,7 @@ impl Board {
     /// width and thickness. `None` without real sections or outside the board.
     pub fn interpolated_section(&self, x: f64) -> Option<CrossSection> {
         let n = self.sections.len();
-        if n < 3 || !(x >= 0.0) || x > self.length() {
+        if n < 3 || x.is_nan() || x < 0.0 || x > self.length() {
             return None;
         }
         let mut k = self.nearest_section_index(x)?;
@@ -464,7 +472,12 @@ impl Board {
         if self.sections.len() < 2 {
             self.ensure_end_sections();
         }
-        let at = self.sections.len().saturating_sub(1).max(1).min(self.sections.len());
+        let at = self
+            .sections
+            .len()
+            .saturating_sub(1)
+            .max(1)
+            .min(self.sections.len());
         self.sections.insert(at, s.clone());
         self.sort_sections();
         Some(self.index_of(&s))
@@ -824,7 +837,10 @@ impl Board {
         self.deck.scale(kl, 1.0);
         self.bottom.scale(kl, kl);
         // Keep the deck's ends on the bottom's ends.
-        for (di, bi) in [(0usize, 0usize), (n.saturating_sub(1), self.bottom.len().saturating_sub(1))] {
+        for (di, bi) in [
+            (0usize, 0usize),
+            (n.saturating_sub(1), self.bottom.len().saturating_sub(1)),
+        ] {
             if n == 0 || self.bottom.is_empty() {
                 break;
             }
@@ -835,11 +851,11 @@ impl Board {
         }
         let phi = dt.atan2(xm);
         let l_new = self.length();
-        for i in 1..n.saturating_sub(1) {
+        for (i, &above) in above.iter().enumerate().take(n.saturating_sub(1)).skip(1) {
             let x = clamp_soft(self.deck.knots()[i].point().x, ZERO, l_new - ZERO);
             let rocker = self.rocker_at(x);
             let k = &mut self.deck.knots_mut()[i];
-            let dy = above[i] * kt - (k.point().y - rocker);
+            let dy = above * kt - (k.point().y - rocker);
             k.translate(DVec2::new(0.0, dy));
             let turn = if xm != 0.0 { phi * (xm - x) / xm } else { 0.0 };
             k.rotate_handle(Handle::Next, turn);

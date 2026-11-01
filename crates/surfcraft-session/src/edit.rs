@@ -127,10 +127,7 @@ fn move_point(b: &mut Board, id: CurveId, i: usize, target: DVec2) {
 /// Move the grabbed handle of knot `i` by `delta` (locks apply); on a smooth knot the other handle is turned to
 /// stay opposite.
 fn move_handle(b: &mut Board, id: CurveId, i: usize, which: Handle, delta: DVec2) {
-    let Some(k) = id
-        .spline_mut(b)
-        .and_then(|s| s.knots_mut().get_mut(i))
-    else {
+    let Some(k) = id.spline_mut(b).and_then(|s| s.knots_mut().get_mut(i)) else {
         return;
     };
     let target = k.get(which) + delta;
@@ -171,22 +168,28 @@ pub fn drag(b: &mut Board, sel: &Selection, grabbed: (usize, Handle), delta: DVe
 /// Numeric entry: put the point or a handle of knot `i` at `target`, with the same rules as a drag, then
 /// restore the board's invariants.
 pub fn set_handle(b: &mut Board, id: CurveId, i: usize, which: Handle, target: DVec2) {
-    let Some(current) = id.spline(b).and_then(|s| s.knots().get(i)).map(|k| k.get(which)) else {
+    let Some(current) = id
+        .spline(b)
+        .and_then(|s| s.knots().get(i))
+        .map(|k| k.get(which))
+    else {
         return;
     };
     if !target.is_finite() {
         return;
     }
-    drag(b, &Selection::single(id, i, which), (i, which), target - current);
+    drag(
+        b,
+        &Selection::single(id, i, which),
+        (i, which),
+        target - current,
+    );
     after_edit(b, id);
 }
 
 /// Make knot `i` smooth or a corner. Making it smooth turns the next handle to point opposite the previous one.
 pub fn set_continuous(b: &mut Board, id: CurveId, i: usize, on: bool) {
-    let Some(k) = id
-        .spline_mut(b)
-        .and_then(|s| s.knots_mut().get_mut(i))
-    else {
+    let Some(k) = id.spline_mut(b).and_then(|s| s.knots_mut().get_mut(i)) else {
         return;
     };
     k.continuous = on;
@@ -201,10 +204,7 @@ pub fn set_continuous(b: &mut Board, id: CurveId, i: usize, on: bool) {
 /// Make the handles of knot `i` horizontal (or vertical with `vertical`), keeping their lengths and sides.
 /// The grabbed element decides which handle leads, as when dragging.
 pub fn make_level(b: &mut Board, id: CurveId, i: usize, grabbed: Handle, vertical: bool) {
-    let Some(k) = id
-        .spline_mut(b)
-        .and_then(|s| s.knots_mut().get_mut(i))
-    else {
+    let Some(k) = id.spline_mut(b).and_then(|s| s.knots_mut().get_mut(i)) else {
         return;
     };
     let p = k.point();
@@ -240,7 +240,7 @@ pub fn add_knot(b: &mut Board, id: CurveId, p: DVec2) -> Option<usize> {
     if !p.is_finite() {
         return None;
     }
-    let i = id.spline_mut(b)?.split_near(p)?;
+    let i = id.spline_mut(b)?.split_near_precise(p)?;
     after_edit(b, id);
     Some(i)
 }
@@ -317,7 +317,13 @@ mod tests {
     #[test]
     fn end_points_are_constrained() {
         let mut b = board();
-        set_handle(&mut b, CurveId::Outline, 0, Handle::Point, DVec2::new(5.0, 5.0));
+        set_handle(
+            &mut b,
+            CurveId::Outline,
+            0,
+            Handle::Point,
+            DVec2::new(5.0, 5.0),
+        );
         assert_eq!(point(&b, CurveId::Outline, 0), DVec2::ZERO);
         // Deck ends move vertically only, and take the bottom's end with them.
         let n = b.deck.len();
@@ -367,7 +373,10 @@ mod tests {
             knots: BTreeSet::from([1, 2]),
             handle: Handle::Prev,
         };
-        let (p1, p2) = (point(&b, CurveId::Outline, 1), point(&b, CurveId::Outline, 2));
+        let (p1, p2) = (
+            point(&b, CurveId::Outline, 1),
+            point(&b, CurveId::Outline, 2),
+        );
         drag(&mut b, &sel, (1, Handle::Prev), DVec2::new(0.5, 0.25));
         assert_eq!(point(&b, CurveId::Outline, 1), p1 + DVec2::new(0.5, 0.25));
         assert_eq!(point(&b, CurveId::Outline, 2), p2 + DVec2::new(0.5, 0.25));
@@ -389,7 +398,11 @@ mod tests {
         assert_eq!(b.outline.len(), n);
         assert!((b.width_at(160.0) - board().width_at(160.0)).abs() < 0.2);
         // End knots are never deleted.
-        assert!(!delete_knots(&mut b, CurveId::Outline, &BTreeSet::from([0, n - 1])));
+        assert!(!delete_knots(
+            &mut b,
+            CurveId::Outline,
+            &BTreeSet::from([0, n - 1])
+        ));
     }
 
     #[test]
