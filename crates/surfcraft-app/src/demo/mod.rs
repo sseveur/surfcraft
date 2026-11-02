@@ -6,7 +6,7 @@
 //! `cargo test -p surfcraft-app --release demo_overview -- --ignored --nocapture`.
 //! See `docs/videos.md`.
 
-#[allow(dead_code)] // used by the video scripts
 pub(crate) mod recorder;
 
+mod first_board;
 mod overview;
