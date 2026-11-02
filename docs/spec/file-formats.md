@@ -567,6 +567,41 @@ p35 : (
 
 (p02 above is illustrative; a writer computes it.)
 
+### 3.11 SurfCraft extensions
+
+SurfCraft stores a few things the original format has no field for under codes the original reader ignores
+(p58–p98). Each is one `pNN : value` line written after p31 and before the curve blocks; a file without them
+loads exactly as before, and the original program opens files that have them.
+
+#### p63 — foam blank
+
+The blank chosen in Fit in blank and where the board sits in it. Written only when a blank is chosen. The value
+is a space-separated list of `KEY=number` items followed by `name=` and the blank's name, which runs to the end of
+the line (it may contain spaces and `=`; line breaks are replaced by spaces). Numbers are centimetres or degrees,
+in the shortest form that reads back exactly.
+
+| Key | Meaning | Required |
+|---|---|---|
+| `L` | blank length (tip to tip) | yes |
+| `W` | widest width | yes |
+| `WP` | position of the widest width from the middle, positive toward the nose | no (0) |
+| `NW`, `TW` | width 12" (30.48 cm) from the nose / tail tip | no |
+| `T` | thickness at the middle | yes |
+| `NT`, `TT` | stringer thickness 12" from the nose / tail tip | no |
+| `NR`, `TR` | nose / tail rocker: height of the bottom at the tip above its lowest point | no (0) |
+| `NR12`, `NR24`, `TR12`, `TR24` | rocker 12" / 24" from the nose / tail tip | no |
+| `SH` | distance from the blank's tail to the board's tail; absent: board centred lengthwise | no |
+| `TI` | tilt of the board in the profile plane, degrees, positive lifts the nose; absent: 0 | no |
+| `LI` | height of the board's rocker baseline above the blank's; absent: centred between deck and bottom | no |
+
+Example:
+
+```
+p63 : L=191.77 W=52.3875 WP=0 T=6.985 NR=13.97 TR=5.23875 SH=1.5 TI=0.4 name=6'4" shortboard (US Blanks 6'4" EA)
+```
+
+Readers ignore unknown keys and ignore the whole field when `L`, `W` or `T` is missing or a number is unreadable.
+
 ---
 
 ## 4. Legacy encrypted `.brd`
