@@ -5,6 +5,7 @@ mod app_log;
 mod automation;
 mod autosave;
 mod autosave_ui;
+mod blank_ui;
 mod bugreport;
 mod bugreport_ui;
 mod cam_ui;
@@ -16,15 +17,22 @@ mod fins_ui;
 #[cfg(test)]
 mod gui_tests;
 #[cfg(test)]
+mod gui_tests_blank;
+#[cfg(test)]
 mod gui_tests_cam;
 #[cfg(test)]
 mod gui_tests_full;
 #[cfg(test)]
 mod gui_tests_infra;
 #[cfg(test)]
+mod gui_tests_measure;
+#[cfg(test)]
 mod gui_tests_numbers;
+#[cfg(test)]
+mod gui_tests_shaping;
 mod i18n;
 mod logging;
+mod measure;
 mod measure_ui;
 mod numbers_ui;
 mod panels;
@@ -32,6 +40,8 @@ mod platform;
 mod preview3d;
 mod screenshot;
 mod settings;
+mod shaping_ui;
+mod snap;
 mod tools;
 mod tour;
 mod view2d;

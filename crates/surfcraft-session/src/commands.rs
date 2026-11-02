@@ -61,9 +61,9 @@ pub struct ToolSpec {
     pub input_schema: Value,
 }
 
-type R = Result<Value, String>;
+pub(crate) type R = Result<Value, String>;
 
-fn len_schema(desc: &str) -> Value {
+pub(crate) fn len_schema(desc: &str) -> Value {
     json!({"type": ["number", "string"], "description": format!("{desc} (cm, or a string with units like \"6'2\\\"\" or \"47cm\")")})
 }
 
@@ -74,7 +74,7 @@ fn curve_schema() -> Value {
     })
 }
 
-fn obj(props: Value, required: &[&str]) -> Value {
+pub(crate) fn obj(props: Value, required: &[&str]) -> Value {
     json!({"type": "object", "properties": props, "required": required})
 }
 
@@ -91,7 +91,7 @@ fn merge(a: Value, b: Value) -> Value {
 /// All commands with descriptions and JSON input schemas.
 pub fn tool_specs() -> Vec<ToolSpec> {
     let handle = json!({"type": "string", "enum": ["point", "prev", "next"], "description": "point = the knot itself; prev/next = its tangent handles"});
-    vec![
+    let mut specs = vec![
         ToolSpec {
             name: "board_summary",
             description: "Main dimensions and volume of the open board, its metadata and cross-section positions.",
@@ -333,12 +333,15 @@ pub fn tool_specs() -> Vec<ToolSpec> {
             description: "Redo the last undone change.",
             input_schema: obj(json!({}), &[]),
         },
-    ]
+    ];
+    specs.extend(crate::shaping_commands::specs());
+    specs.extend(crate::blank_cmd::specs());
+    specs
 }
 
 // --------------------------------------------------------------------------------------------- helpers
 
-fn arg<'a>(a: &'a Value, k: &str) -> Option<&'a Value> {
+pub(crate) fn arg<'a>(a: &'a Value, k: &str) -> Option<&'a Value> {
     a.get(k).filter(|v| !v.is_null())
 }
 
@@ -346,7 +349,7 @@ fn arg<'a>(a: &'a Value, k: &str) -> Option<&'a Value> {
 /// length-proportional sampling bounded.
 const MAX_COORD: f64 = 1000.0;
 
-fn length(a: &Value, k: &str) -> Result<Option<f64>, String> {
+pub(crate) fn length(a: &Value, k: &str) -> Result<Option<f64>, String> {
     let v = match arg(a, k) {
         None => return Ok(None),
         Some(Value::Number(n)) => n.as_f64(),
@@ -366,7 +369,7 @@ fn length(a: &Value, k: &str) -> Result<Option<f64>, String> {
 }
 
 /// Optional plain number; an argument of the wrong type is an error, not silently ignored.
-fn number(a: &Value, k: &str) -> Result<Option<f64>, String> {
+pub(crate) fn number(a: &Value, k: &str) -> Result<Option<f64>, String> {
     match arg(a, k) {
         None => Ok(None),
         Some(v) => v
@@ -391,7 +394,7 @@ fn index(a: &Value, k: &str) -> Result<Option<usize>, String> {
     }
 }
 
-fn string<'a>(a: &'a Value, k: &str) -> Option<&'a str> {
+pub(crate) fn string<'a>(a: &'a Value, k: &str) -> Option<&'a str> {
     arg(a, k).and_then(Value::as_str)
 }
 
@@ -433,7 +436,7 @@ fn knot_index(board: &Board, id: CurveId, i: usize) -> Result<usize, String> {
     }
 }
 
-fn measure(ctx: &Context, cm: f64) -> Value {
+pub(crate) fn measure(ctx: &Context, cm: f64) -> Value {
     json!({"cm": (cm * 1000.0).round() / 1000.0, "text": ctx.fmt(cm)})
 }
 
@@ -1187,6 +1190,10 @@ pub fn execute(doc: &mut Document, ctx: &mut Context, name: &str, a: &Value) -> 
             doc.redo();
             Ok(json!({"redone": can}))
         }
+        "apply_bottom_contour" => crate::shaping_commands::apply_bottom_contour(doc, ctx, a),
+        "set_rails" => crate::shaping_commands::set_rails(doc, ctx, a),
+        "list_blanks" => crate::blank_cmd::list_blanks(doc, ctx),
+        "fit_blank" => crate::blank_cmd::fit_blank(doc, ctx, a),
         other => Err(format!("unknown command {other:?}")),
     }
 }

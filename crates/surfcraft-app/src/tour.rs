@@ -94,7 +94,7 @@ pub(crate) fn steps() -> Vec<Step> {
         step(
             tr("Tools"),
             tr(
-                "Select moves points (drag on empty space to select several). + Point adds a control point where you click on a curve, + Guide adds reference points. Undo and Redo cover every change. Units switches between feet and inches, centimetres and millimetres.",
+                "Select moves points (drag on empty space to select several). + Point adds a control point where you click on a curve, + Guide adds reference points. Measure (M) shows distances and angles. Undo and Redo cover every change. Units switches between feet and inches, centimetres and millimetres.",
             ),
             Target::Tools,
             None,

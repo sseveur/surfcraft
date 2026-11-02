@@ -31,6 +31,15 @@ The builds are not signed with paid certificates yet, so the first launch needs 
   (Alt = fine), box select, arrow-key nudge, add/delete points, exact numeric entry in any unit
   (`6'2"`, `18 1/2"`, `47cm`), guide points, curvature combs, rail apex and tuck-under markers. Edit → Smooth
   removes kinks (selected points, or every small kink of a curve while keeping deliberate corners).
+- **Measure tool** (M): drag or click twice in the outline, rocker or cross-section for distance, dx, dy and angle
+  in your unit (Shift = 0/45/90°); hover a curve to read width, rocker, thickness or height there; pin up to 5.
+- **Snapping** (View > Snap, toolbar Snap): dragged and placed points snap to other control points, guide points
+  or the visible grid; Shift keeps a drag on its start x or y; Alt (fine drag) never snaps.
+- **Bottom contours** (Shape menu): single concave, double concave inside a single, vee and channels over a zone
+  with fade-in and fade-out, cut into the foam (rail edge kept, stringer rocker deepened) or keeping the stringer
+  rocker, applied to every cross-section as one undo step with a preview; or flatten a range.
+- **Rails** (Shape menu): apex height (50/50, 60/40, 70/30, 80/20 presets), softness and tuck for every
+  cross-section, the same along the board or blending from tail to nose; width, thickness and contours stay.
 - **Live specs**: length, widths, thickness, rocker at standard stations, planform area, volume, centre of mass.
 - **Compare**: ghost board overlay, "original" snapshot, background photo tracing (hold T / N and click the photo's
   tail / nose). File > Compare with… tabulates the differences with another board (specs and every foot / 30 cm),
@@ -47,6 +56,9 @@ The builds are not signed with paid certificates yet, so the first launch needs 
   with FCS I, FCS II, Futures or US box footprints, printed 1:1 on the outline template with a measurement table
   (dimensions and sources in `docs/fins.md`).
 - **Weight calculator**: foam, stringer, glass, laps, resin, hot coat.
+- **Fit in blank** (Board menu): checks the board fits a foam blank (US Blanks and Surfblanks Australia library
+  with measured stations, or your own blanks in any unit), with shift, tilt and Auto fit, clearances per view and
+  the blank drawn behind the board; see [docs/blanks.md](docs/blanks.md).
 - **Print**: outline (half or full), spin, profile and cross-section templates at true 1:1 scale, tiled and centred
   over A4/A3/Letter/Tabloid with registration marks and a 100 mm check bar; one-page spec sheet. PDF, SVG or DXF.
 - **Wooden boards**: sandwich (core profile, rail, skins), hollow wood (stringer, ribs, rail strip, skins, nose and
@@ -97,8 +109,8 @@ Claude Desktop (`claude_desktop_config.json`):
 
 Tools include `board_summary`, `sample_board`, `get_curve`, `set_knot`, `move_knot`, `add_knot`, `section_info`,
 `add_section`, `scale_board` (with target volume), `set_dimension`, `new_board`, `board_from_measurements`,
-`open_board`, `save_board`, `set_fins`,
-`estimate_weight`, `suggest_volume`, `export`, `generate_toolpath`, `undo`/`redo`, `launch_app`, `screenshot`, `set_view`.
+`open_board`, `save_board`, `set_fins`, `estimate_weight`, `suggest_volume`, `list_blanks`, `fit_blank`, `export`,
+`generate_toolpath`, `apply_bottom_contour`, `set_rails`, `undo`/`redo`, `launch_app`, `screenshot`, `set_view`.
 
 Security: the app only listens on 127.0.0.1, and only while control is enabled; every request needs a random token
 stored in a file readable only by your user account. The server never connects to the internet.

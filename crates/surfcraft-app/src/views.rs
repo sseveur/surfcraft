@@ -17,6 +17,7 @@ pub enum Tool {
     Select,
     AddKnot,
     AddGuide,
+    Measure,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -32,6 +33,11 @@ struct Drag {
     grabbed: (usize, Handle),
     /// Accumulated sub-pixel motion in fine mode.
     moved: bool,
+    /// Grabbed point or handle where the drag started, and the pointer motion since (board coordinates).
+    start: DVec2,
+    accum: DVec2,
+    /// Snapping took part in this drag: the grabbed element follows `start + accum` (snapped) from now on.
+    absolute: bool,
 }
 
 struct BoxSelect {
@@ -48,12 +54,18 @@ pub struct EditorState {
     pub profile_view: ViewState,
     pub section_view: ViewState,
     pub ghost: Option<Board>,
+    /// Result previewed by a Shape menu window, drawn dashed in the Section view.
+    pub shaping_preview: Option<Board>,
     /// Photo/drawing under the outline view for tracing.
     pub background: Option<crate::tools::Background>,
     /// Latest computed centre of mass (cm from tail), for the marker.
     pub center_of_mass: Option<f64>,
     /// World position under the cursor in the hovered view, for the status bar.
     pub cursor: Option<DVec2>,
+    /// What the point under the pointer snapped to this frame, for the status bar.
+    pub snap_hint: Option<crate::snap::SnapKind>,
+    /// Measure tool dimensions and read-out.
+    pub measure: crate::measure::MeasureState,
     drag: Option<Drag>,
     boxsel: Option<BoxSelect>,
 }
@@ -69,9 +81,12 @@ impl Default for EditorState {
             profile_view: ViewState::default(),
             section_view: ViewState::default(),
             ghost: None,
+            shaping_preview: None,
             background: None,
             center_of_mass: None,
             cursor: None,
+            snap_hint: None,
+            measure: Default::default(),
             drag: None,
             boxsel: None,
         }
@@ -232,6 +247,7 @@ fn interact(
     doc: &mut Document,
     ed: &mut EditorState,
     curves: &[Editable],
+    set: &Settings,
 ) {
     let resp = &canvas.response;
     let pointer = resp.interact_pointer_pos().or(resp.hover_pos());
@@ -242,6 +258,41 @@ fn interact(
     }
     let mods = ui.input(|i| i.modifiers);
     let space = ui.input(|i| i.key_down(Key::Space));
+    let snap = curves.first().map(|e| {
+        let pane = crate::snap::Pane::of(e.id);
+        crate::snap::ViewSnap::new(ui, canvas, &doc.board, pane, e.y_scale, set.snap)
+    });
+    // Where a click with an add tool lands, snapped; shown with a ring while hovering.
+    let placed = match (&snap, ed.tool) {
+        (Some(snap), Tool::AddKnot | Tool::AddGuide) if ed.drag.is_none() => {
+            resp.hover_pos().map(|p| {
+                let s = snap.snap(
+                    snap.board(canvas.xf.to_world(p)),
+                    &|_, _| false,
+                    None,
+                    false,
+                    false,
+                );
+                snap.draw(canvas, &s, Palette::new(ui.visuals().dark_mode).selected);
+                ed.snap_hint = s.kind.or(ed.snap_hint);
+                s
+            })
+        }
+        _ => None,
+    };
+    if let Some(snap) = &snap {
+        let active = ed.tool == Tool::Measure;
+        crate::measure::view(
+            ui,
+            canvas,
+            &doc.board,
+            &mut ed.measure,
+            &mut ed.snap_hint,
+            active,
+            snap,
+            set,
+        );
+    }
 
     // Hover feedback.
     if ed.drag.is_none()
@@ -264,7 +315,7 @@ fn interact(
                         .iter()
                         .find(|e| e.id == id)
                         .map_or(1.0, |e| e.y_scale);
-                    let target = DVec2::new(world.x, world.y / ys);
+                    let target = placed.map_or(DVec2::new(world.x, world.y / ys), |s| s.pos);
                     let mut new_index = None;
                     doc.edit(|b| new_index = edit::add_knot(b, id, target));
                     if let Some(i) = new_index {
@@ -275,7 +326,7 @@ fn interact(
             Tool::AddGuide => {
                 if let Some(e) = curves.first() {
                     let id = e.id;
-                    let target = DVec2::new(world.x, world.y / e.y_scale);
+                    let target = placed.map_or(DVec2::new(world.x, world.y / e.y_scale), |s| s.pos);
                     doc.edit(|b| {
                         if let Some(g) = id.guides_mut(b) {
                             g.push(target);
@@ -288,6 +339,7 @@ fn interact(
                 None if !mods.shift && !mods.command => ed.selection = None,
                 None => {}
             },
+            Tool::Measure => {}
         }
     }
 
@@ -304,11 +356,18 @@ fn interact(
                     } else if let Some(s) = ed.selection.as_mut() {
                         s.handle = which;
                     }
+                    let start = id
+                        .spline(&doc.board)
+                        .and_then(|s| s.knots().get(i))
+                        .map_or(DVec2::ZERO, |k| k.get(which));
                     ed.drag = Some(Drag {
                         before: doc.board.clone(),
                         curve: id,
                         grabbed: (i, which),
                         moved: false,
+                        start,
+                        accum: DVec2::ZERO,
+                        absolute: false,
                     });
                 }
                 None => {
@@ -335,10 +394,45 @@ fn interact(
                 canvas.xf.len_to_world(d.x) * fine,
                 -canvas.xf.len_to_world(d.y) * fine / ys,
             );
-            if let Some(sel) = ed.selection.clone() {
+            drag.accum += delta;
+            if !drag.absolute
+                && let Some(sel) = ed.selection.clone()
+            {
                 edit::drag(&mut doc.board, &sel, drag.grabbed, delta);
                 drag.moved = true;
                 doc.touch();
+            }
+        }
+        // Snapping (or Shift) moves the grabbed element to its snapped target instead.
+        if let Some(snap) = &snap {
+            drag.absolute |= snap.drag_snaps() || mods.shift;
+            if drag.absolute
+                && let Some(sel) = ed.selection.clone()
+            {
+                let dragged = |c: CurveId, i: usize| {
+                    c == sel.curve && (i == drag.grabbed.0 || sel.knots.contains(&i))
+                };
+                let s = snap.snap(
+                    drag.start + drag.accum,
+                    &dragged,
+                    Some(drag.start),
+                    mods.shift,
+                    false,
+                );
+                snap.draw(canvas, &s, Palette::new(ui.visuals().dark_mode).selected);
+                ed.snap_hint = s.kind.or(ed.snap_hint);
+                let current = sel
+                    .curve
+                    .spline(&doc.board)
+                    .and_then(|sp| sp.knots().get(drag.grabbed.0))
+                    .map(|k| k.get(drag.grabbed.1));
+                if let Some(current) = current
+                    && s.pos != current
+                {
+                    edit::drag(&mut doc.board, &sel, drag.grabbed, s.pos - current);
+                    drag.moved = true;
+                    doc.touch();
+                }
             }
         }
     }
@@ -605,6 +699,7 @@ pub fn outline(
             return;
         }
     }
+    crate::blank_ui::draw_outline(&canvas, doc, set);
     let board = &doc.board;
     if v.center_of_mass
         && let Some(com) = ed.center_of_mass
@@ -698,7 +793,7 @@ pub fn outline(
             pal,
         );
     }
-    interact(ui, &canvas, doc, ed, &editable);
+    interact(ui, &canvas, doc, ed, &editable, set);
     section_click(ui, &canvas, doc, ed);
 }
 
@@ -760,6 +855,7 @@ pub fn profile(
             pal.grid,
         );
     }
+    crate::blank_ui::draw_profile(&canvas, doc, set, ys);
     let board = &doc.board;
     let disp = |p: DVec2| DVec2::new(p.x, p.y * ys);
     canvas.segment(
@@ -856,7 +952,7 @@ pub fn profile(
             }
         }
     }
-    interact(ui, &canvas, doc, ed, &editable);
+    interact(ui, &canvas, doc, ed, &editable, set);
     section_click(ui, &canvas, doc, ed);
 }
 
@@ -918,6 +1014,13 @@ pub fn section(
         let st = Stroke::new(1.2, pal.ghost);
         canvas.dashed(sample(&gs.spline, 24, ident), st);
         canvas.dashed(sample(&gs.spline, 24, mirror_x), st);
+    }
+    if let Some(p) = &ed.shaping_preview
+        && let Some(ps) = crate::shaping_ui::section_at(p, board.sections[idx].position)
+    {
+        let st = Stroke::new(2.0, pal.accent);
+        canvas.dashed(sample(&ps.spline, 32, ident), st);
+        canvas.dashed(sample(&ps.spline, 32, mirror_x), st);
     }
     let cs = &board.sections[idx];
     let stroke = Stroke::new(2.0, pal.curve);
@@ -994,7 +1097,7 @@ pub fn section(
     if v.control_points {
         draw_knots(&canvas, &cs.spline, editable[0], ed.selection.as_ref(), pal);
     }
-    interact(ui, &canvas, doc, ed, &editable);
+    interact(ui, &canvas, doc, ed, &editable, set);
 }
 
 fn section_toolbar(ui: &mut egui::Ui, doc: &mut Document, ed: &mut EditorState, set: &Settings) {

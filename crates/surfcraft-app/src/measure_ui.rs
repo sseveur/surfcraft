@@ -26,11 +26,11 @@ pub enum MeasureAction {
 
 fn tail_label(t: TailShape) -> &'static str {
     match t {
-        TailShape::Pin => tr("Pin"),
-        TailShape::Round => tr("Round"),
-        TailShape::Squash => tr("Squash"),
-        TailShape::Square => tr("Square"),
-        TailShape::Swallow => tr("Swallow"),
+        TailShape::Pin => tr("Pin tail"),
+        TailShape::Round => tr("Round tail"),
+        TailShape::Squash => tr("Squash tail"),
+        TailShape::Square => tr("Square tail"),
+        TailShape::Swallow => tr("Swallow tail"),
     }
 }
 

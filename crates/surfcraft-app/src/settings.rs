@@ -120,10 +120,16 @@ pub struct Settings {
     pub language: Option<crate::i18n::Language>,
     /// The first-launch tour was finished or closed.
     pub tour_done: bool,
+    /// Last used Shape menu parameters (bottom contours, rails).
+    pub shaping: crate::shaping_ui::ShapingPrefs,
     /// Also log debug-level events (edits, clicks, view changes) to help reproduce a bug.
     pub detailed_logging: bool,
     /// Minutes between autosaves of unsaved changes; 0 = off.
     pub autosave_minutes: u32,
+    /// Your own foam blanks and whether the board's blank is drawn (Fit in blank).
+    pub blanks: crate::blank_ui::BlankPrefs,
+    /// Snapping in the 2D views (View > Snap).
+    pub snap: crate::snap::SnapSettings,
 }
 
 impl Default for Settings {
@@ -140,8 +146,11 @@ impl Default for Settings {
             profile_exaggeration: 1.0,
             language: None,
             tour_done: false,
+            shaping: Default::default(),
             detailed_logging: false,
             autosave_minutes: 2,
+            blanks: Default::default(),
+            snap: Default::default(),
         }
     }
 }

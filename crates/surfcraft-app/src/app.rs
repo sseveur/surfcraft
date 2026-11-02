@@ -511,7 +511,11 @@ impl SurfCraftApp {
                 self.ed.fit_all();
                 self.orbit.reset();
             }
+            if ctx.input(|i| i.key_pressed(Key::M) && i.modifiers.is_none()) {
+                self.ed.tool = Tool::Measure;
+            }
             if ctx.input(|i| i.key_pressed(Key::Escape)) {
+                self.ed.measure.cancel();
                 self.ed.tool = Tool::Select;
                 self.ed.selection = None;
             }
@@ -741,6 +745,8 @@ impl SurfCraftApp {
                 ui.radio_value(&mut self.ed.tool, Tool::Select, tr("Select and move"));
                 ui.radio_value(&mut self.ed.tool, Tool::AddKnot, tr("Add control point"));
                 ui.radio_value(&mut self.ed.tool, Tool::AddGuide, tr("Add guide point"));
+                ui.radio_value(&mut self.ed.tool, Tool::Measure, tr("Measure distances"));
+                crate::measure::edit_menu(ui, &mut self.ed.measure);
                 ui.separator();
                 if ui
                     .add_enabled(
@@ -804,6 +810,8 @@ impl SurfCraftApp {
                 ui.checkbox(&mut v.original, tr("Original board"));
                 ui.checkbox(&mut v.center_of_mass, tr("Centre of mass"));
                 ui.checkbox(&mut v.background_image, tr("Background image"));
+                ui.checkbox(&mut self.set.blanks.show, tr("Foam blank"));
+                crate::snap::menu(ui, &mut self.set.snap);
                 if let Some(bg) = self.ed.background.as_mut() {
                     ui.add(egui::Slider::new(&mut bg.opacity, 0.05..=1.0).text(tr("Image opacity")));
                 }
@@ -868,6 +876,13 @@ impl SurfCraftApp {
                 {
                     self.dialogs.volume_advisor = true;
                 }
+                if ui
+                    .button(tr("Fit in blank…"))
+                    .on_hover_text(tr("Check that the board fits inside a foam blank before you buy it"))
+                    .clicked()
+                {
+                    self.dialogs.blank.open = true;
+                }
                 if ui.button(tr("Guide points…")).clicked() {
                     self.dialogs.guides = true;
                 }
@@ -895,6 +910,22 @@ impl SurfCraftApp {
                 }
             });
             self.tour_targets.board = Some(board.response.rect);
+            ui.menu_button(tr("Shape"), |ui| {
+                if ui
+                    .button(tr("Bottom contours…"))
+                    .on_hover_text(tr("Concaves, vee and channels along the board, applied to every cross-section in a zone."))
+                    .clicked()
+                {
+                    self.dialogs.shaping.open_contours();
+                }
+                if ui
+                    .button(tr("Rails…"))
+                    .on_hover_text(tr("Rail shape for every cross-section: apex height (50/50, 60/40, 70/30), softness and tuck."))
+                    .clicked()
+                {
+                    self.dialogs.shaping.open_rails();
+                }
+            });
             let machine = ui.menu_button(tr("Machine"), |ui| {
                 if ui
                     .button(tr("Machine (CAM)…"))
@@ -988,6 +1019,12 @@ impl SurfCraftApp {
                 ui.selectable_value(&mut self.ed.tool, Tool::AddGuide, tr("+ Guide"))
                     .rect,
             );
+            grow(
+                ui.selectable_value(&mut self.ed.tool, Tool::Measure, tr("Measure"))
+                    .on_hover_text(tr("Measure (M): drag, or click twice, for the distance, dx, dy and angle; Shift keeps it horizontal, vertical or at 45°. Hover a curve to read the width, rocker or thickness there. Esc clears; Pin keeps up to 5."))
+                    .rect,
+            );
+            grow(crate::snap::toolbar(ui, &mut self.set.snap).rect);
             ui.separator();
             let undo = ui.add_enabled(self.doc.can_undo(), egui::Button::new(tr("Undo")));
             grow(undo.rect);
@@ -1024,6 +1061,10 @@ impl SurfCraftApp {
                     self.status = None;
                 }
             }
+            if let Some(k) = self.ed.snap_hint.take() {
+                ui.label(k.label());
+            }
+            crate::measure::status_bar(ui, &mut self.ed.measure, &self.set);
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if let Some(c) = self.ed.cursor {
                     ui.monospace(format!("{}  {}", self.set.fmt(c.x), self.set.fmt(c.y)));
@@ -1252,6 +1293,7 @@ impl eframe::App for SurfCraftApp {
                 &self.set,
             );
         }
+        crate::blank_ui::window(&ctx, &mut self.dialogs.blank, &mut self.doc, &mut self.set);
         if self.dialogs.guides {
             let curve = self
                 .ed
@@ -1308,6 +1350,15 @@ impl eframe::App for SurfCraftApp {
             ) {
                 self.save_export(&name, &bytes);
             }
+        }
+        if let Some(msg) = crate::shaping_ui::windows(
+            &ctx,
+            &mut self.dialogs.shaping,
+            &mut self.doc,
+            &mut self.ed,
+            &mut self.set,
+        ) {
+            self.notify(msg);
         }
         self.compare_window(&ctx);
         self.bug_report_window(&ctx);
