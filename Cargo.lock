@@ -3115,6 +3115,7 @@ dependencies = [
 name = "surfcraft-export"
 version = "4.0.0-alpha.1"
 dependencies = [
+ "serde_json",
  "surfcraft-core",
  "surfcraft-io",
 ]

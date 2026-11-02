@@ -307,6 +307,14 @@ fn invalid_inputs_are_errors() {
             "export",
             json!({"what": "rail", "format": "pdf", "path": "/tmp/x.pdf"}),
         ),
+        (
+            "export",
+            json!({"what": "model", "format": "3mf", "path": "/tmp/x.3mf", "scale": 0}),
+        ),
+        (
+            "export",
+            json!({"what": "model", "format": "glb", "path": "/tmp/x.glb", "scale": "big"}),
+        ),
         ("set_surface_model", json!({})),
         ("set_surface_model", json!({"model": "loft"})),
         ("does_not_exist", json!({})),
@@ -1118,6 +1126,33 @@ fn every_export_is_structurally_valid() {
                 assert!(i >= 1 && i <= nv, "OBJ index {i} of {nv}");
             }
         }
+        // 3MF and GLB: same mesh as the STL, at 1:10.
+        let p = dir.join(format!("t{t}.3mf"));
+        ok(
+            &mut d,
+            &mut c,
+            "export",
+            json!({"what": "model", "format": "3mf", "path": p, "scale": 0.1}),
+        );
+        let entries = surfcraft_export::zip::read(&std::fs::read(&p).unwrap()).unwrap();
+        let xml = String::from_utf8(entries[2].1.clone()).unwrap();
+        assert_eq!(xml.matches("<triangle ").count(), n, "3MF triangles");
+        assert!(xml.contains("Scale 1:10<"));
+        let p = dir.join(format!("t{t}.glb"));
+        ok(
+            &mut d,
+            &mut c,
+            "export",
+            json!({"what": "model", "format": "glb", "path": p}),
+        );
+        let (gl, _) = surfcraft_export::gltf::read(&std::fs::read(&p).unwrap()).unwrap();
+        assert_eq!(
+            gl["accessors"][2]["count"].as_u64().unwrap() as usize,
+            3 * n
+        );
+        let z = gl["accessors"][0]["max"][2].as_f64().unwrap()
+            - gl["accessors"][0]["min"][2].as_f64().unwrap();
+        assert!((z * 100.0 - d.board.length()).abs() < 0.3, "GLB in metres");
         // STEP re-imports to the same knots.
         let p = dir.join(format!("t{t}.stp"));
         ok(

@@ -364,3 +364,8 @@ Smooths every corner that turns by less than 30°. Bigger corners, such as a squ
 No kinks to smooth. = Ingen knekker å glatte.
 Smoothed {0} points. = {0} punkter glattet.
 Smoothed 1 point. = 1 punkt glattet.
+3MF (3D printing, mm) = 3MF (3D-utskrift, mm)
+glTF binary .glb (web, AR, metres) = glTF binær .glb (nett, AR, meter)
+Scale = Skala
+Full size, or a scale model for 3D printing (1:10 is a tenth of the size) = Full størrelse, eller en skalamodell for 3D-utskrift (1:10 er en tiendedel av størrelsen)
+Custom scale = Egendefinert skala

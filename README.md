@@ -45,7 +45,8 @@ The builds are not signed with paid certificates yet, so the first launch needs 
   4th-axis rotating board, supports or end clamps, hot-wire profile and outline; LinuxCNC G-code with a preview and
   machining-time estimate. Passes follow the modelled surface and stop at the rail apex on 3-axis machines. Check a
   new program in your machine's simulator before cutting.
-- **3D model export**: STL, OBJ (mm), STEP.
+- **3D model export**: STL, OBJ (mm), 3MF for 3D printing, glTF binary `.glb` (web/AR viewers), STEP; full size or
+  as a scale model (1:5, 1:10, custom).
 - **Files**: `.brd` (including encrypted legacy files), Shape3D `.s3d`, `.srf`, BoardCAD STEP; `.otl/.pfl/.crs` curve
   pieces. Saving keeps a `.bak` of the previous version.
 - **Languages**: English, French, Spanish, Portuguese, Dutch, Norwegian (View → Language).
@@ -107,7 +108,7 @@ Command line: `surfcraft [board.brd] [--tab overview|outline|rocker|section|3d] 
 |---|---|
 | `crates/surfcraft-core` | Geometry: Bezier curves, cross-sections, surface models, metrics, mesh, units, weight |
 | `crates/surfcraft-io` | File formats and built-in templates |
-| `crates/surfcraft-export` | STL/OBJ, PDF/SVG/DXF writers, printable templates |
+| `crates/surfcraft-export` | STL/OBJ/3MF/glTF, PDF/SVG/DXF writers, printable templates |
 | `crates/surfcraft-session` | Document with undo, edit operations, JSON commands, automation bridge |
 | `crates/surfcraft-cam` | Toolpaths, cutters, holding systems, G-code |
 | `crates/surfcraft-app` | Desktop app (egui/eframe + wgpu) |

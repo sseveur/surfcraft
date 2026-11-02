@@ -364,3 +364,8 @@ Smooths every corner that turns by less than 30°. Bigger corners, such as a squ
 No kinks to smooth. = No hay quiebres que suavizar.
 Smoothed {0} points. = {0} puntos suavizados.
 Smoothed 1 point. = 1 punto suavizado.
+3MF (3D printing, mm) = 3MF (impresión 3D, mm)
+glTF binary .glb (web, AR, metres) = glTF binario .glb (web, RA, metros)
+Scale = Escala
+Full size, or a scale model for 3D printing (1:10 is a tenth of the size) = Tamaño real, o maqueta a escala para impresión 3D (1:10 es una décima parte del tamaño)
+Custom scale = Escala personalizada

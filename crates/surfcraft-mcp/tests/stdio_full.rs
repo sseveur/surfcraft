@@ -189,6 +189,8 @@ fn every_tool_runs_headless() {
         ("spec_sheet", "pdf"),
         ("model", "stl"),
         ("model", "obj"),
+        ("model", "3mf"),
+        ("model", "glb"),
         ("model", "step"),
     ] {
         let p = d.join(format!("mcp-{what}.{format}"));

@@ -364,3 +364,8 @@ Smooths every corner that turns by less than 30°. Bigger corners, such as a squ
 No kinks to smooth. = Geen knikken om glad te maken.
 Smoothed {0} points. = {0} punten gladgemaakt.
 Smoothed 1 point. = 1 punt gladgemaakt.
+3MF (3D printing, mm) = 3MF (3D-printen, mm)
+glTF binary .glb (web, AR, metres) = glTF binair .glb (web, AR, meter)
+Scale = Schaal
+Full size, or a scale model for 3D printing (1:10 is a tenth of the size) = Ware grootte, of een schaalmodel voor 3D-printen (1:10 is een tiende van de grootte)
+Custom scale = Aangepaste schaal

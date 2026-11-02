@@ -364,3 +364,8 @@ Smooths every corner that turns by less than 30°. Bigger corners, such as a squ
 No kinks to smooth. = Aucune cassure à lisser.
 Smoothed {0} points. = {0} points lissés.
 Smoothed 1 point. = 1 point lissé.
+3MF (3D printing, mm) = 3MF (impression 3D, mm)
+glTF binary .glb (web, AR, metres) = glTF binaire .glb (web, RA, mètres)
+Scale = Échelle
+Full size, or a scale model for 3D printing (1:10 is a tenth of the size) = Taille réelle, ou maquette à l'échelle pour l'impression 3D (1:10 donne un dixième de la taille)
+Custom scale = Échelle personnalisée
