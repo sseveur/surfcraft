@@ -4,6 +4,21 @@ use surfcraft_core::Mesh;
 
 const MM_PER_CM: f64 = 10.0;
 
+/// Common model scales for scale models: (label, factor).
+pub const SCALES: [(&str, f64); 4] = [("1:1", 1.0), ("1:5", 0.2), ("1:10", 0.1), ("1:20", 0.05)];
+
+/// A copy of the mesh scaled about the origin (normals are unchanged by a uniform scale).
+pub fn scaled(mesh: &Mesh, factor: f64) -> Mesh {
+    if factor == 1.0 {
+        return mesh.clone();
+    }
+    Mesh {
+        positions: mesh.positions.iter().map(|p| *p * factor).collect(),
+        normals: mesh.normals.clone(),
+        triangles: mesh.triangles.clone(),
+    }
+}
+
 /// Binary STL.
 pub fn stl(mesh: &Mesh, name: &str) -> Vec<u8> {
     let mut out = Vec::with_capacity(84 + mesh.triangles.len() * 50);

@@ -122,6 +122,10 @@ pub struct Settings {
     pub tour_done: bool,
     /// Last used Shape menu parameters (bottom contours, rails).
     pub shaping: crate::shaping_ui::ShapingPrefs,
+    /// Also log debug-level events (edits, clicks, view changes) to help reproduce a bug.
+    pub detailed_logging: bool,
+    /// Minutes between autosaves of unsaved changes; 0 = off.
+    pub autosave_minutes: u32,
 }
 
 impl Default for Settings {
@@ -139,6 +143,8 @@ impl Default for Settings {
             language: None,
             tour_done: false,
             shaping: Default::default(),
+            detailed_logging: false,
+            autosave_minutes: 2,
         }
     }
 }

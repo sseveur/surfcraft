@@ -2,8 +2,10 @@
 
 pub mod automation;
 pub mod commands;
+pub mod compare;
 pub mod document;
 pub mod edit;
+mod fins_cmd;
 pub mod shaping;
 mod shaping_commands;
 

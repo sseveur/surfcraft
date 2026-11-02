@@ -131,6 +131,11 @@ impl Server {
                         continue; // dropped: closes the socket
                     }
                     open.fetch_add(1, Ordering::AcqRel);
+                    let peer = stream
+                        .peer_addr()
+                        .map(|a| a.to_string())
+                        .unwrap_or_default();
+                    log::info!("automation client connected from {peer}");
                     let tx = tx.clone();
                     let token = token.clone();
                     let wake = wake.clone();
@@ -138,6 +143,7 @@ impl Server {
                     std::thread::spawn(move || {
                         serve(stream, &token, &tx, &*wake);
                         open.fetch_sub(1, Ordering::AcqRel);
+                        log::info!("automation client {peer} disconnected");
                     });
                 }
             })?;
@@ -198,6 +204,7 @@ fn serve(stream: TcpStream, token: &str, tx: &Sender<Pending>, wake: &(dyn Fn() 
             Err(e) => Err(format!("bad request: {e}")),
             Ok(req) if req["token"].as_str() != Some(token) => {
                 bad_tokens += 1;
+                log::warn!("automation request with a wrong token rejected");
                 if bad_tokens >= MAX_BAD_TOKENS {
                     let _ = writeln!(writer, "{}", json!({"ok": false, "error": "invalid token"}));
                     return;

@@ -1,3 +1,4 @@
 /target/
 *.dmg
 .DS_Store
+.claude/

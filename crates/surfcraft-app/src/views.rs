@@ -659,15 +659,7 @@ pub fn outline(
         draw_curvature(&canvas, &board.outline, ident, 300.0, pal.accent);
     }
     if v.fins {
-        let f = &board.fins;
-        let fs = Stroke::new(3.0, pal.fin);
-        if f[0] != 0.0 || f[2] != 0.0 {
-            canvas.segment(DVec2::new(f[0], f[1]), DVec2::new(f[2], f[3]), fs);
-            canvas.segment(DVec2::new(f[0], -f[1]), DVec2::new(f[2], -f[3]), fs);
-        }
-        if f[4] != 0.0 || f[5] != 0.0 {
-            canvas.segment(DVec2::new(f[4], 0.0), DVec2::new(f[5], 0.0), fs);
-        }
+        crate::fins_ui::draw_outline(&canvas, board, pal.fin);
     }
     if v.measurements {
         for x in [FOOT, length / 2.0, length - FOOT] {

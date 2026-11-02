@@ -15,3 +15,4 @@ surfcraft-cam.workspace = true
 serde_json = "1"
 serde.workspace = true
 directories = "6"
+log = "0.4"

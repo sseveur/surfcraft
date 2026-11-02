@@ -75,6 +75,10 @@ impl SurfCraftApp {
             let repaint = ctx.clone();
             match Server::start(move || repaint.request_repaint()) {
                 Ok(server) => {
+                    log::info!(
+                        "AI assistant control on, listening on 127.0.0.1:{}",
+                        server.endpoint.port
+                    );
                     self.notify(trf(
                         "AI assistant control on (127.0.0.1:{0})",
                         &[&server.endpoint.port],
@@ -84,10 +88,14 @@ impl SurfCraftApp {
                         shots: Vec::new(),
                     });
                 }
-                Err(e) => self.notify(trf("Could not start automation: {0}", &[&e])),
+                Err(e) => {
+                    log::error!("could not start automation: {e}");
+                    self.notify(trf("Could not start automation: {0}", &[&e]));
+                }
             }
         } else {
             self.automation = None; // dropping withdraws the endpoint file
+            log::info!("AI assistant control off");
             self.notify(tr("AI assistant control off"));
         }
     }
@@ -112,6 +120,7 @@ impl SurfCraftApp {
         }
         let incoming: Vec<Pending> = auto.server.requests.try_iter().collect();
         for p in incoming {
+            log::debug!("automation command {}", p.cmd);
             if p.cmd == "screenshot" {
                 let slot = Shot::default();
                 let s2 = slot.clone();
@@ -128,6 +137,9 @@ impl SurfCraftApp {
                 continue;
             }
             let result = self.run_command(&p.cmd, &p.args);
+            if let Err(e) = &result {
+                log::info!("automation command {} failed: {e}", p.cmd);
+            }
             p.respond(result);
         }
     }
@@ -199,6 +211,7 @@ impl SurfCraftApp {
                 let r = commands::execute(&mut self.doc, &mut c, cmd, args);
                 self.ed.current_section = c.current_section;
                 if replaced && r.is_ok() {
+                    self.autosave_document_closed();
                     let cur = self.ed.current_section;
                     self.ed.reset_for(&self.doc.board);
                     self.ed.current_section = cur;

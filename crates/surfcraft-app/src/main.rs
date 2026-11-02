@@ -1,11 +1,18 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod app;
+mod app_log;
 mod automation;
+mod autosave;
+mod autosave_ui;
+mod bugreport;
+mod bugreport_ui;
 mod cam_ui;
+mod compare_ui;
 mod compute;
 mod dialogs;
 mod export_ui;
+mod fins_ui;
 #[cfg(test)]
 mod gui_tests;
 #[cfg(test)]
@@ -13,9 +20,13 @@ mod gui_tests_cam;
 #[cfg(test)]
 mod gui_tests_full;
 #[cfg(test)]
+mod gui_tests_infra;
+#[cfg(test)]
 mod gui_tests_shaping;
 mod i18n;
+mod logging;
 mod panels;
+mod platform;
 mod preview3d;
 mod screenshot;
 mod settings;
@@ -25,6 +36,7 @@ mod tour;
 mod view2d;
 mod viewer3d;
 mod views;
+mod volume_ui;
 
 use std::path::PathBuf;
 
@@ -79,6 +91,12 @@ fn migrate_old_settings() {
 fn main() -> eframe::Result {
     let args = parse_args();
     migrate_old_settings();
+    if let Some(base) = logging::data_dir()
+        && let Err(e) = logging::init(&base)
+    {
+        eprintln!("no log file: {e}");
+    }
+    log::info!("{} starting", logging::app_line());
     let options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default()
             .with_title("SurfCraft")

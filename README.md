@@ -37,9 +37,15 @@ The builds are not signed with paid certificates yet, so the first launch needs 
   cross-section, the same along the board or blending from tail to nose; width, thickness and contours stay.
 - **Live specs**: length, widths, thickness, rocker at standard stations, planform area, volume, centre of mass.
 - **Compare**: ghost board overlay, "original" snapshot, background photo tracing (hold T / N and click the photo's
-  tail / nose).
+  tail / nose). File > Compare with… tabulates the differences with another board (specs and every foot / 30 cm),
+  copyable as CSV.
 - **3D**: GPU view with zebra stripes for checking fairness.
 - **New board from a template** at a target length, width, thickness and volume (litres).
+- **Volume advisor** (Board menu, and "Suggest volume" in New board): a starting-point volume range from the
+  rider's weight, skill, fitness, age, waves and board type (Guild factor method, see `docs/volume-advisor.md`).
+- **Fins** (Board > Fins): single, twin, twin + trailer, thruster, quad, 2+1 and 5-fin presets placed for the board,
+  with FCS I, FCS II, Futures or US box footprints, printed 1:1 on the outline template with a measurement table
+  (dimensions and sources in `docs/fins.md`).
 - **Weight calculator**: foam, stringer, glass, laps, resin, hot coat.
 - **Print**: outline (half or full), spin, profile and cross-section templates at true 1:1 scale, tiled and centred
   over A4/A3/Letter/Tabloid with registration marks and a 100 mm check bar; one-page spec sheet. PDF, SVG or DXF.
@@ -49,11 +55,17 @@ The builds are not signed with paid certificates yet, so the first launch needs 
   4th-axis rotating board, supports or end clamps, hot-wire profile and outline; LinuxCNC G-code with a preview and
   machining-time estimate. Passes follow the modelled surface and stop at the rail apex on 3-axis machines. Check a
   new program in your machine's simulator before cutting.
-- **3D model export**: STL, OBJ (mm), STEP.
+- **3D model export**: STL, OBJ (mm), 3MF for 3D printing, glTF binary `.glb` (web/AR viewers), STEP; full size or
+  as a scale model (1:5, 1:10, custom).
 - **Files**: `.brd` (including encrypted legacy files), Shape3D `.s3d`, `.srf`, BoardCAD STEP; `.otl/.pfl/.crs` curve
   pieces. Saving keeps a `.bak` of the previous version.
+- **Autosave and crash recovery**: unsaved changes are copied every 2 minutes (File → Autosave every…, 0 = off) to
+  SurfCraft's own folder, never into your file; after a crash SurfCraft offers to recover, save or discard them.
 - **Languages**: English, French, Spanish, Portuguese, Dutch, Norwegian (View → Language).
 - **Guided tour** on first launch, any time from Help → Tour of SurfCraft.
+- **Report a bug** (Help menu): saves a zip with the recent log, system information and optionally the board, then
+  opens a prefilled GitHub issue or e-mail for you to send. A daily log is kept for 14 days (Help → Open log folder;
+  Help → Detailed logging records every edit and click).
 - **AI assistant (MCP)**: Claude or another MCP client can read and edit the board while you watch (see below).
 
 ## Using SurfCraft with an AI assistant (MCP)
@@ -85,11 +97,22 @@ Claude Desktop (`claude_desktop_config.json`):
 
 Tools include `board_summary`, `sample_board`, `get_curve`, `set_knot`, `move_knot`, `add_knot`, `section_info`,
 `add_section`, `scale_board` (with target volume), `new_board`, `open_board`, `save_board`, `set_fins`,
-`estimate_weight`, `export`, `generate_toolpath`, `apply_bottom_contour`, `set_rails`, `undo`/`redo`, `launch_app`,
-`screenshot`, `set_view`.
+`estimate_weight`, `suggest_volume`, `export`, `generate_toolpath`, `apply_bottom_contour`, `set_rails`, `undo`/`redo`,
+`launch_app`, `screenshot`, `set_view`.
 
 Security: the app only listens on 127.0.0.1, and only while control is enabled; every request needs a random token
 stored in a file readable only by your user account. The server never connects to the internet.
+
+## Reporting a bug
+
+Help → **Report a bug…** writes `SurfCraft-bug-report-<date>-<time>.zip` to your Downloads folder and shows it,
+then opens a new [GitHub issue](https://github.com/sseveur/surfcraft/issues) or an e-mail with your description and
+system information filled in: attach the zip and send. Choose how much of the log to include (1 hour to all) and
+preview it first; the board and a screenshot are optional. Your home folder is written as `~`, and SurfCraft sends
+nothing by itself.
+
+For a problem that is hard to describe, tick Help → **Detailed logging**, reproduce the problem, then report it.
+The log files are in the `logs` folder of SurfCraft's data folder (Help → Open log folder).
 
 ## Build from source
 
@@ -112,7 +135,7 @@ Command line: `surfcraft [board.brd] [--tab overview|outline|rocker|section|3d] 
 |---|---|
 | `crates/surfcraft-core` | Geometry: Bezier curves, cross-sections, surface models, metrics, mesh, units, weight |
 | `crates/surfcraft-io` | File formats and built-in templates |
-| `crates/surfcraft-export` | STL/OBJ, PDF/SVG/DXF writers, printable templates |
+| `crates/surfcraft-export` | STL/OBJ/3MF/glTF, PDF/SVG/DXF writers, printable templates |
 | `crates/surfcraft-session` | Document with undo, edit operations, JSON commands, automation bridge |
 | `crates/surfcraft-cam` | Toolpaths, cutters, holding systems, G-code |
 | `crates/surfcraft-app` | Desktop app (egui/eframe + wgpu) |
