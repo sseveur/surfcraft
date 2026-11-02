@@ -12,8 +12,6 @@ mod bugreport_ui;
 mod cam_ui;
 mod compare_ui;
 mod compute;
-#[cfg(test)]
-mod demo;
 mod dialogs;
 mod export_ui;
 mod fins_ui;
