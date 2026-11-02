@@ -114,5 +114,5 @@ distance, for example 3.5° (1/4")), the cant, the base, the depth and the box.
 
 ## Next
 
-[Tutorial 4: fit in blank and CNC](README.md) (coming): choosing a foam blank, Auto fit, toolpaths and G-code.
+[Tutorial 4: fit in a blank and cut it on a CNC](04-blank-and-cnc.md): choosing a foam blank, Auto fit, toolpaths and G-code.
 Back to [Tutorial 2: rocker and cross-sections](02-rocker-and-sections.md).

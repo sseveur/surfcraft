@@ -121,4 +121,4 @@ makes the stringer thinner and raises the stringer rocker by about its depth: he
 
 ## Next
 
-Tutorial 6: asymmetric boards (coming). All tutorials: [README](README.md).
+Next: [Tutorial 6: asymmetric boards](06-asymmetric.md). All tutorials: [README](README.md).
