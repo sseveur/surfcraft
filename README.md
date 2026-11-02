@@ -37,6 +37,8 @@ The builds are not signed with paid certificates yet, so the first launch needs 
   copyable as CSV.
 - **3D**: GPU view with zebra stripes for checking fairness.
 - **New board from a template** at a target length, width, thickness and volume (litres).
+- **Volume advisor** (Board menu, and "Suggest volume" in New board): a starting-point volume range from the
+  rider's weight, skill, fitness, age, waves and board type (Guild factor method, see `docs/volume-advisor.md`).
 - **Weight calculator**: foam, stringer, glass, laps, resin, hot coat.
 - **Print**: outline (half or full), spin, profile and cross-section templates at true 1:1 scale, tiled and centred
   over A4/A3/Letter/Tabloid with registration marks and a 100 mm check bar; one-page spec sheet. PDF, SVG or DXF.
@@ -83,7 +85,7 @@ Claude Desktop (`claude_desktop_config.json`):
 
 Tools include `board_summary`, `sample_board`, `get_curve`, `set_knot`, `move_knot`, `add_knot`, `section_info`,
 `add_section`, `scale_board` (with target volume), `new_board`, `open_board`, `save_board`, `set_fins`,
-`estimate_weight`, `export`, `generate_toolpath`, `undo`/`redo`, `launch_app`, `screenshot`, `set_view`.
+`estimate_weight`, `suggest_volume`, `export`, `generate_toolpath`, `undo`/`redo`, `launch_app`, `screenshot`, `set_view`.
 
 Security: the app only listens on 127.0.0.1, and only while control is enabled; every request needs a random token
 stored in a file readable only by your user account. The server never connects to the internet.

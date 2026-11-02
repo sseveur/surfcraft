@@ -258,6 +258,21 @@ pub fn tool_specs() -> Vec<ToolSpec> {
             ),
         },
         ToolSpec {
+            name: "suggest_volume",
+            description: "Starting-point board volume (litres) for a rider by the Guild factor method (weight x factor by skill), adjusted for age, fitness, waves and board type; also reports the open board's volume. Give weight_kg or weight_lb.",
+            input_schema: obj(
+                json!({
+                    "weight_kg": {"type": "number"}, "weight_lb": {"type": "number"},
+                    "skill": {"type": "string", "enum": ["beginner", "intermediate", "advanced", "pro"]},
+                    "fitness": {"type": "string", "enum": ["low", "average", "high"]},
+                    "waves": {"type": "string", "enum": ["small", "average", "powerful"]},
+                    "board_type": {"type": "string", "enum": ["shortboard", "fish", "mid_length", "longboard"]},
+                    "age": {"type": "integer", "description": "Years (optional)"}
+                }),
+                &[],
+            ),
+        },
+        ToolSpec {
             name: "estimate_weight",
             description: "Finished weight estimate (kg) for a foam/stringer/glass layup. Optional overrides: foam_density, stringer_density (kg/L), deck_glass, bottom_glass (kg/m²), resin_ratio.",
             input_schema: obj(
@@ -907,6 +922,83 @@ pub fn execute(doc: &mut Document, ctx: &mut Context, name: &str, a: &Value) -> 
             }
             doc.edit(|b| b.fins = fins);
             Ok(json!({"fins": fins}))
+        }
+        "suggest_volume" => {
+            use surfcraft_core::rider::{BoardType, Fitness, Rider, Skill, Waves, suggest_volume};
+            let weight_kg = match (number(a, "weight_kg")?, number(a, "weight_lb")?) {
+                (Some(kg), None) => kg,
+                (None, Some(lb)) => lb / surfcraft_core::units::POUNDS_PER_KG,
+                _ => return Err("give weight_kg or weight_lb".into()),
+            };
+            fn pick<T: Copy>(
+                a: &Value,
+                k: &str,
+                options: &[(&str, T)],
+                default: T,
+            ) -> Result<T, String> {
+                match string(a, k) {
+                    None => Ok(default),
+                    Some(s) => options
+                        .iter()
+                        .find(|(n, _)| n.eq_ignore_ascii_case(s))
+                        .map(|o| o.1)
+                        .ok_or_else(|| format!("{k}: unknown value {s:?}")),
+                }
+            }
+            let rider = Rider {
+                weight_kg,
+                age: index(a, "age")?.unwrap_or(0).min(150) as u32,
+                skill: pick(
+                    a,
+                    "skill",
+                    &[
+                        ("beginner", Skill::Beginner),
+                        ("intermediate", Skill::Intermediate),
+                        ("advanced", Skill::Advanced),
+                        ("pro", Skill::Pro),
+                    ],
+                    Skill::Intermediate,
+                )?,
+                fitness: pick(
+                    a,
+                    "fitness",
+                    &[
+                        ("low", Fitness::Low),
+                        ("average", Fitness::Average),
+                        ("high", Fitness::High),
+                    ],
+                    Fitness::Average,
+                )?,
+                waves: pick(
+                    a,
+                    "waves",
+                    &[
+                        ("small", Waves::Small),
+                        ("average", Waves::Average),
+                        ("powerful", Waves::Powerful),
+                    ],
+                    Waves::Average,
+                )?,
+                board: pick(
+                    a,
+                    "board_type",
+                    &[
+                        ("shortboard", BoardType::Shortboard),
+                        ("fish", BoardType::Fish),
+                        ("mid_length", BoardType::MidLength),
+                        ("longboard", BoardType::Longboard),
+                    ],
+                    BoardType::Shortboard,
+                )?,
+            };
+            let advice = suggest_volume(&rider).ok_or("weight must be between 10 and 250 kg")?;
+            let r = |v: f64| (v * 10.0).round() / 10.0;
+            let board = doc.board.volume() / 1000.0;
+            Ok(json!({
+                "min_litres": r(advice.min), "max_litres": r(advice.max), "middle_litres": r(advice.middle()),
+                "board_litres": r(board), "board_in_range": advice.contains(board),
+                "note": "A starting point (Guild factor method); adjust to taste. scale_board with volume_litres applies it.",
+            }))
         }
         "estimate_weight" => {
             let mut l = Layup::defaults_for(&doc.board);

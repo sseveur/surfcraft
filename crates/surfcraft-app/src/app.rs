@@ -784,6 +784,13 @@ impl SurfCraftApp {
                 if ui.button(tr("Weight calculator…")).clicked() {
                     self.dialogs.weight = Some(crate::tools::WeightState::new(&self.doc.board));
                 }
+                if ui
+                    .button(tr("Volume advisor…"))
+                    .on_hover_text(tr("Suggested volume for a rider's weight, skill and waves"))
+                    .clicked()
+                {
+                    self.dialogs.volume_advisor = true;
+                }
                 if ui.button(tr("Guide points…")).clicked() {
                     self.dialogs.guides = true;
                 }
@@ -1153,6 +1160,15 @@ impl eframe::App for SurfCraftApp {
             .filter(|r| r.revision == self.doc.revision)
             .map(|r| r.specs.volume);
         crate::tools::weight_window(&ctx, &mut self.dialogs.weight, &self.doc, volume, &self.set);
+        if self.dialogs.volume_advisor {
+            crate::volume_ui::advisor_window(
+                &ctx,
+                &mut self.dialogs.volume_advisor,
+                &mut self.doc,
+                volume,
+                &self.set,
+            );
+        }
         if self.dialogs.guides {
             let curve = self
                 .ed

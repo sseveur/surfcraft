@@ -7,6 +7,7 @@ pub mod board;
 pub mod knot;
 pub mod math;
 pub mod mesh;
+pub mod rider;
 pub mod section;
 pub mod segment;
 pub mod spline;

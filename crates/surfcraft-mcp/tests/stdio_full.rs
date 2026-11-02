@@ -172,6 +172,11 @@ fn every_tool_runs_headless() {
         "set_fins",
         json!({"side_rear_x": "4 1/2\"", "splay_degrees": 4}),
     );
+    let v = m.ok(
+        "suggest_volume",
+        json!({"weight_lb": 180, "skill": "advanced", "waves": "small"}),
+    );
+    assert!(v["middle_litres"].as_f64().unwrap() > 25.0);
     let w = m.ok("estimate_weight", json!({}));
     assert!(w["total_kg"].as_f64().unwrap() > 1.0);
     m.ok("set_surface_model", json!({"model": "control_point"}));

@@ -23,6 +23,7 @@ pub struct Dialogs {
     pub cam: bool,
     pub cam_state: crate::cam_ui::CamState,
     pub compare: crate::compare_ui::CompareState,
+    pub volume_advisor: bool,
 }
 
 /// Scale `board` to the given overall size.
@@ -145,6 +146,7 @@ pub fn new_board_window(
                     );
                     ui.end_row();
                 });
+                crate::volume_ui::suggest_in_new_board(ui, &mut nb.litres, set);
                 ui.separator();
                 ui.horizontal(|ui| {
                     if ui.button(tr("Create")).clicked() {

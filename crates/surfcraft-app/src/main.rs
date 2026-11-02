@@ -23,6 +23,7 @@ mod tour;
 mod view2d;
 mod viewer3d;
 mod views;
+mod volume_ui;
 
 use std::path::PathBuf;
 

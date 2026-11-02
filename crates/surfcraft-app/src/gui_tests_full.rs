@@ -335,6 +335,7 @@ fn every_menu_lists_its_items() {
                 "Board info…",
                 "Fins…",
                 "Weight calculator…",
+                "Volume advisor…",
                 "Guide points…",
                 "Flip nose and tail",
                 "Put lowest rocker point at zero",
