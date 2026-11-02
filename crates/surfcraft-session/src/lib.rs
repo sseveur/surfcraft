@@ -1,6 +1,7 @@
 //! Editing session shared by the GUI and the automation/MCP interface.
 
 pub mod automation;
+mod blank_cmd;
 pub mod commands;
 pub mod compare;
 pub mod document;

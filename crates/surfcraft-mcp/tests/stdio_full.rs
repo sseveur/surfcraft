@@ -184,6 +184,16 @@ fn every_tool_runs_headless() {
     assert_eq!(f["setup"]["fins"].as_array().unwrap().len(), 5, "{f}");
     let w = m.ok("estimate_weight", json!({}));
     assert!(w["total_kg"].as_f64().unwrap() > 1.0);
+    let lib = m.ok("list_blanks", json!({}));
+    assert!(lib["library"].as_array().unwrap().len() >= 15, "{lib}");
+    let fit = m.ok(
+        "fit_blank",
+        json!({"blank": "10'2\" longboard", "auto": true}),
+    );
+    assert!(
+        fit["fits"].is_boolean() && fit["deck"]["min"]["cm"].is_number(),
+        "{fit}"
+    );
     m.ok("set_surface_model", json!({"model": "control_point"}));
     m.ok("set_surface_model", json!({"model": "sblend"}));
     m.ok("flip_board", json!({}));

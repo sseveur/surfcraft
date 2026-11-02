@@ -187,8 +187,8 @@ fn tool_specs_are_complete_and_unique() {
     let specs = tool_specs();
     assert_eq!(
         specs.len(),
-        29,
-        "command count (25 + generate_toolpath + suggest_volume + apply_bottom_contour + set_rails)"
+        31,
+        "command count (25 + generate_toolpath + suggest_volume + apply_bottom_contour + set_rails + list_blanks + fit_blank)"
     );
     let mut names: Vec<_> = specs.iter().map(|s| s.name).collect();
     names.sort();
@@ -473,6 +473,8 @@ fn read_only_commands_do_not_touch_history() {
             "suggest_volume",
             json!({"weight_kg": 75, "skill": "advanced", "board_type": "fish"}),
         ),
+        ("list_blanks", json!({})),
+        ("fit_blank", json!({"blank": "9'4\"", "auto": true})),
     ] {
         ok(&mut d, &mut c, n, a);
     }
@@ -1518,5 +1520,88 @@ fn set_fins_places_presets_with_boxes() {
         json!({"preset": "quad", "side_rear_x": 20}),
     ] {
         err(&mut d, &mut c, "set_fins", bad);
+    }
+}
+
+#[test]
+fn fit_blank_reports_and_stores() {
+    let (mut d, mut c) = session(0);
+    let lib = ok(&mut d, &mut c, "list_blanks", json!({}));
+    assert!(lib["library"].as_array().unwrap().len() >= 15);
+    assert!(lib["board_blank"].is_null());
+    // The 6' shortboard template fits a 6'5" R blank once placed (auto), not centred, and not a 5'10" one.
+    let r = ok(
+        &mut d,
+        &mut c,
+        "fit_blank",
+        json!({"blank": "US Blanks 6'5\" R", "auto": true}),
+    );
+    assert_eq!(r["fits"], true, "{r}");
+    assert!(r["nose_spare"]["cm"].as_f64().unwrap() > 0.0);
+    assert!(r["problems"].as_array().unwrap().is_empty());
+    let r = ok(
+        &mut d,
+        &mut c,
+        "fit_blank",
+        json!({"blank": "US Blanks 6'5\" R"}),
+    );
+    assert_eq!(r["fits"], false, "{r}");
+    assert!(!r["problems"].as_array().unwrap().is_empty());
+    let r = ok(&mut d, &mut c, "fit_blank", json!({"blank": "5'10\" fish"}));
+    assert_eq!(r["fits"], false);
+    assert!(
+        r["problems"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|p| p["view"] == "length")
+    );
+    // Explicit dimensions with units; a thin blank fails in deck/bottom.
+    let r = ok(
+        &mut d,
+        &mut c,
+        "fit_blank",
+        json!({"length": "6'6\"", "width": "22\"", "thickness": "1 1/2\"", "nose_rocker": "5\"", "tail_rocker": "2\""}),
+    );
+    assert_eq!(r["fits"], false);
+    assert!(r["deck"]["min"]["cm"].as_f64().unwrap() < 0.0);
+    // Auto never does worse than centred.
+    let a = ok(
+        &mut d,
+        &mut c,
+        "fit_blank",
+        json!({"blank": "6'5\" shortboard", "auto": true}),
+    );
+    let m = ok(
+        &mut d,
+        &mut c,
+        "fit_blank",
+        json!({"blank": "6'5\" shortboard"}),
+    );
+    let min = |v: &Value| v["min_clearance"]["cm"].as_f64().unwrap();
+    assert!(min(&a) >= min(&m) - 1e-3);
+    assert!(!d.can_undo());
+    // Store: one undo step, then fit_blank with no blank uses the stored one.
+    ok(
+        &mut d,
+        &mut c,
+        "fit_blank",
+        json!({"blank": "6'5\" shortboard", "tail_offset": "1\"", "tilt": 0.5, "store": true}),
+    );
+    let s = d.board.blank.clone().unwrap();
+    assert!((s.placement.tail_offset.unwrap() - 2.54).abs() < 1e-9);
+    let r = ok(&mut d, &mut c, "fit_blank", json!({}));
+    assert_eq!(r["placement"]["tilt_degrees"], 0.5);
+    assert!(d.can_undo());
+    ok(&mut d, &mut c, "undo", json!({}));
+    assert!(d.board.blank.is_none());
+    for bad in [
+        json!({}),
+        json!({"blank": "no such blank"}),
+        json!({"length": "6'"}),
+        json!({"blank": "6'5\" shortboard", "tilt": 90}),
+        json!({"length": "6'", "width": "80\"", "thickness": "3\""}),
+    ] {
+        err(&mut d, &mut c, "fit_blank", bad);
     }
 }

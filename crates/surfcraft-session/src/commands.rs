@@ -333,6 +333,7 @@ pub fn tool_specs() -> Vec<ToolSpec> {
         },
     ];
     specs.extend(crate::shaping_commands::specs());
+    specs.extend(crate::blank_cmd::specs());
     specs
 }
 
@@ -1187,6 +1188,8 @@ pub fn execute(doc: &mut Document, ctx: &mut Context, name: &str, a: &Value) -> 
         }
         "apply_bottom_contour" => crate::shaping_commands::apply_bottom_contour(doc, ctx, a),
         "set_rails" => crate::shaping_commands::set_rails(doc, ctx, a),
+        "list_blanks" => crate::blank_cmd::list_blanks(doc, ctx),
+        "fit_blank" => crate::blank_cmd::fit_blank(doc, ctx, a),
         other => Err(format!("unknown command {other:?}")),
     }
 }
