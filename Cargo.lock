@@ -3150,6 +3150,7 @@ version = "4.0.0-alpha.1"
 dependencies = [
  "directories",
  "log",
+ "serde",
  "serde_json",
  "surfcraft-cam",
  "surfcraft-core",

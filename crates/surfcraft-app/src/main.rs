@@ -21,6 +21,8 @@ mod gui_tests_cam;
 mod gui_tests_full;
 #[cfg(test)]
 mod gui_tests_infra;
+#[cfg(test)]
+mod gui_tests_shaping;
 mod i18n;
 mod logging;
 mod panels;
@@ -28,6 +30,7 @@ mod platform;
 mod preview3d;
 mod screenshot;
 mod settings;
+mod shaping_ui;
 mod tools;
 mod tour;
 mod view2d;
