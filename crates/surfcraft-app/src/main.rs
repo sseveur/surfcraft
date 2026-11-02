@@ -3,6 +3,7 @@
 mod app;
 mod automation;
 mod cam_ui;
+mod compare_ui;
 mod compute;
 mod dialogs;
 mod export_ui;

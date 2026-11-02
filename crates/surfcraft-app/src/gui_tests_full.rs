@@ -283,6 +283,7 @@ fn every_menu_lists_its_items() {
                 "Save and set as original",
                 "Open ghost board…",
                 "Close ghost board",
+                "Compare with…",
                 "Print & export…",
                 "Import curves (.otl/.pfl/.crs)…",
                 "Load background image…",

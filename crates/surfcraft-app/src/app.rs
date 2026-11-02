@@ -274,7 +274,7 @@ impl SurfCraftApp {
     }
 
     /// Native open dialog, or the next scripted path in tests and automation.
-    fn pick_file(&mut self, what: &str, exts: &[&str]) -> Option<PathBuf> {
+    pub(crate) fn pick_file(&mut self, what: &str, exts: &[&str]) -> Option<PathBuf> {
         if let Some(q) = self.scripted_dialogs.as_mut() {
             return q.pop_front();
         }
@@ -572,6 +572,15 @@ impl SurfCraftApp {
                     .clicked()
                 {
                     self.ed.ghost = None;
+                }
+                if ui
+                    .button(tr("Compare with…"))
+                    .on_hover_text(tr(
+                        "Table of the differences with another board (or the ghost board)",
+                    ))
+                    .clicked()
+                {
+                    self.compare_with();
                 }
                 ui.separator();
                 if ui
@@ -1201,6 +1210,7 @@ impl eframe::App for SurfCraftApp {
                 self.save_export(&name, &bytes);
             }
         }
+        self.compare_window(&ctx);
         let tour = self.tour.show(&ctx, &self.tour_targets);
         if let Some(tab) = tour.tab {
             self.tab = tab;

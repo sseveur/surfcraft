@@ -33,7 +33,8 @@ The builds are not signed with paid certificates yet, so the first launch needs 
   removes kinks (selected points, or every small kink of a curve while keeping deliberate corners).
 - **Live specs**: length, widths, thickness, rocker at standard stations, planform area, volume, centre of mass.
 - **Compare**: ghost board overlay, "original" snapshot, background photo tracing (hold T / N and click the photo's
-  tail / nose).
+  tail / nose). File > Compare with… tabulates the differences with another board (specs and every foot / 30 cm),
+  copyable as CSV.
 - **3D**: GPU view with zebra stripes for checking fairness.
 - **New board from a template** at a target length, width, thickness and volume (litres).
 - **Weight calculator**: foam, stringer, glass, laps, resin, hot coat.
