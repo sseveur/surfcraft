@@ -187,6 +187,9 @@ fn every_tool_runs_headless() {
         c["volume_after_litres"].as_f64().unwrap() > c["volume_before_litres"].as_f64().unwrap()
     );
     m.fails("apply_bottom_contour", json!({"type": "spiral"}));
+    let r = m.ok("set_rails", json!({"preset": "60/40", "tuck": "1/4\""}));
+    assert!(r["sections_changed"].as_u64().unwrap() > 0, "{r}");
+    m.fails("set_rails", json!({"apex": 2}));
     assert_eq!(m.ok("undo", json!({}))["undone"], true);
     assert_eq!(m.ok("redo", json!({}))["redone"], true);
     for (what, format) in [

@@ -1042,6 +1042,7 @@ pub fn execute(doc: &mut Document, ctx: &mut Context, name: &str, a: &Value) -> 
             Ok(json!({"redone": can}))
         }
         "apply_bottom_contour" => crate::shaping_commands::apply_bottom_contour(doc, ctx, a),
+        "set_rails" => crate::shaping_commands::set_rails(doc, ctx, a),
         other => Err(format!("unknown command {other:?}")),
     }
 }

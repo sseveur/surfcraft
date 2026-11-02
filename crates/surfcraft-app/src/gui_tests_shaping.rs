@@ -1,4 +1,4 @@
-//! QA of the Shape menu windows (bottom contours), driven through their widgets with egui_kittest.
+//! QA of the Shape menu windows (bottom contours, rails), driven through their widgets with egui_kittest.
 //! Screenshots go to `target/gui-shots/shape-*.png`.
 
 use eframe::egui::{self, Modifiers, accesskit::Role};
@@ -68,10 +68,11 @@ fn undo_depth(h: &mut H) -> usize {
 }
 
 #[test]
-fn shape_menu_lists_the_tools() {
+fn shape_menu_lists_both_tools() {
     let mut h = harness();
     click(&mut h, "Shape");
     assert!(h.query_by_label("Bottom contours…").is_some());
+    assert!(h.query_by_label("Rails…").is_some());
 }
 
 #[test]
@@ -157,12 +158,39 @@ fn contours_window_add_zone_channels() {
 }
 
 #[test]
-fn closing_a_window_drops_its_preview() {
+fn rails_window_preset_preview_apply_undo() {
     let mut h = harness();
-    open(&mut h, "Bottom contours…");
+    set_tab(&mut h, Tab::Section);
+    open(&mut h, "Rails…");
+    assert!(h.state().dialogs.shaping.rails_open);
+    let before = h.state().doc.board.clone();
+    click(&mut h, "70/30");
+    assert!((h.state().set.shaping.rails.middle.apex - 0.3).abs() < 1e-9);
     click(&mut h, "Preview");
     assert!(h.state().ed.shaping_preview.is_some());
-    h.state_mut().dialogs.shaping.contours_open = false;
+    snap(&mut h, "shape-rails-preview");
+    click(&mut h, "Apply");
+    assert_ne!(h.state().doc.board, before);
+    assert_eq!(undo_depth(&mut h), 1);
+    h.state_mut().doc.undo();
+    h.run_steps(2);
+    assert_eq!(h.state().doc.board, before);
+    // Zoned rails: three columns of presets.
+    click(&mut h, "Blend tail, middle and nose");
+    assert!(h.state().set.shaping.rails.zoned);
+    assert_eq!(h.get_all_by_label("80/20").count(), 3);
+    click(&mut h, "Apply");
+    assert_ne!(h.state().doc.board, before);
+    snap(&mut h, "shape-rails-zoned");
+}
+
+#[test]
+fn closing_a_window_drops_its_preview() {
+    let mut h = harness();
+    open(&mut h, "Rails…");
+    click(&mut h, "Preview");
+    assert!(h.state().ed.shaping_preview.is_some());
+    h.state_mut().dialogs.shaping.rails_open = false;
     h.run_steps(2);
     assert!(h.state().ed.shaping_preview.is_none());
 }

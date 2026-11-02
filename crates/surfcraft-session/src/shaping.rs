@@ -1,4 +1,4 @@
-//! Section-shaping tools: bottom contours (concaves, vee, channels), applied to every
+//! Section-shaping tools: bottom contours (concaves, vee, channels) and rail shapes, applied to every
 //! cross-section in a range of the board at once.
 //!
 //! A cross-section is a half section in its own frame: it starts at the bottom centre (on the stringer, the height
@@ -25,10 +25,18 @@
 //! volume) and a vee raises it (removing a little). The rail outboard of the run-out keeps its shape: its lower
 //! part, up to the rail apex, is stretched or compressed vertically to meet the new run-out height; the apex and
 //! the deck do not move. Contours fade in and out along the board over the given lengths.
+//!
+//! **Rails.** The rail between the bottom near the edge and the deck at `band` in from the edge is rebuilt from
+//! four knots: the bottom, the edge (tuck), the apex at the widest point, and the deck. The rail height is the
+//! distance from the bottom line (extended to the edge) up to the deck at the band; the apex sits at `apex` of that
+//! height (0.5 for a 50/50 rail, 0.4 for 60/40, 0.3 for 70/30). `tuck` is how far the edge sits inboard of the
+//! apex; `softness` goes from a hard edge (the rail leaves the bottom at a steep angle, 0) to a soft, rounded rail
+//! (the rail rises tangentially from the bottom, 1). Width, stringer thickness and the bottom contour inboard of
+//! the rail are kept.
 
 use serde::{Deserialize, Serialize};
 use surfcraft_core::math::DEG;
-use surfcraft_core::section::APEX_ANGLE;
+use surfcraft_core::section::{APEX_ANGLE, TUCK_UNDER_ANGLE};
 use surfcraft_core::{Board, CrossSection, DVec2, Knot, Segment, Spline};
 
 use crate::edit::{self, CurveId};
@@ -368,6 +376,15 @@ fn bottom_segment(s: &Spline, u: f64) -> Option<(usize, f64)> {
     let i = (0..s.segment_count()).find(|&i| {
         let (a, b) = (s.knots()[i].point().x, s.knots()[i + 1].point().x);
         a <= u && u <= b
+    })?;
+    Some((i, solve_x(&s.segment(i), u)))
+}
+
+/// Segment of the deck (searching from the deck centre) containing lateral distance `u`, and the parameter.
+fn deck_segment(s: &Spline, u: f64) -> Option<(usize, f64)> {
+    let i = (0..s.segment_count()).rev().find(|&i| {
+        let (a, b) = (s.knots()[i].point().x, s.knots()[i + 1].point().x);
+        b <= u && u <= a
     })?;
     Some((i, solve_x(&s.segment(i), u)))
 }
@@ -788,6 +805,342 @@ pub fn remove_contours(
     Ok(report)
 }
 
+// ============================================================================================ rails
+
+/// Rail shape parameters. Lengths in cm.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct RailSpec {
+    /// Apex height as a fraction of the rail height, from the bottom (0.5 = 50/50, 0.4 = 60/40, 0.3 = 70/30).
+    pub apex: f64,
+    /// 0 = hard edge, 1 = soft, fully rounded rail.
+    pub softness: f64,
+    /// How far the edge sits inboard of the apex.
+    pub tuck: f64,
+    /// Distance in from the edge where the rail meets the deck.
+    pub band: f64,
+}
+
+impl Default for RailSpec {
+    fn default() -> Self {
+        RAIL_PRESETS[1].1
+    }
+}
+
+/// Named rail presets: `(name, spec)`.
+pub const RAIL_PRESETS: [(&str, RailSpec); 4] = [
+    (
+        "50/50",
+        RailSpec {
+            apex: 0.5,
+            softness: 0.9,
+            tuck: 0.3,
+            band: 7.0,
+        },
+    ),
+    (
+        "60/40",
+        RailSpec {
+            apex: 0.4,
+            softness: 0.55,
+            tuck: 0.6,
+            band: 6.5,
+        },
+    ),
+    (
+        "70/30",
+        RailSpec {
+            apex: 0.3,
+            softness: 0.3,
+            tuck: 0.8,
+            band: 6.0,
+        },
+    ),
+    (
+        "80/20",
+        RailSpec {
+            apex: 0.2,
+            softness: 0.1,
+            tuck: 1.0,
+            band: 6.0,
+        },
+    ),
+];
+
+impl RailSpec {
+    pub fn preset(name: &str) -> Option<RailSpec> {
+        RAIL_PRESETS.iter().find(|p| p.0 == name).map(|p| p.1)
+    }
+
+    pub fn validate(&self) -> Result<(), String> {
+        if !(self.apex.is_finite() && (0.1..=0.9).contains(&self.apex)) {
+            return Err("apex: fraction of the rail height between 0.1 and 0.9".into());
+        }
+        if !(self.softness.is_finite() && (0.0..=1.0).contains(&self.softness)) {
+            return Err("softness: between 0 (hard) and 1 (soft)".into());
+        }
+        if !(self.tuck.is_finite() && (0.0..=5.0).contains(&self.tuck)) {
+            return Err("tuck: between 0 and 5 cm".into());
+        }
+        if !(self.band.is_finite() && (1.0..=30.0).contains(&self.band)) {
+            return Err("band: between 1 and 30 cm".into());
+        }
+        Ok(())
+    }
+
+    fn lerp(&self, o: &RailSpec, t: f64) -> RailSpec {
+        let m = |a: f64, b: f64| a + (b - a) * t;
+        RailSpec {
+            apex: m(self.apex, o.apex),
+            softness: m(self.softness, o.softness),
+            tuck: m(self.tuck, o.tuck),
+            band: m(self.band, o.band),
+        }
+    }
+}
+
+/// Rails along the board: one spec everywhere, or tail / middle / nose specs that blend.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct RailParams {
+    pub middle: RailSpec,
+    pub tail: RailSpec,
+    pub nose: RailSpec,
+    /// Use the tail and nose specs (otherwise `middle` everywhere).
+    pub zoned: bool,
+    /// Only shape sections between these stations (cm from tail); `None` = the whole board.
+    pub range: Option<(f64, f64)>,
+}
+
+impl Default for RailParams {
+    fn default() -> Self {
+        Self {
+            middle: RAIL_PRESETS[1].1,
+            tail: RAIL_PRESETS[2].1,
+            nose: RAIL_PRESETS[0].1,
+            zoned: false,
+            range: None,
+        }
+    }
+}
+
+impl RailParams {
+    /// A single spec along the whole board.
+    pub fn uniform(spec: RailSpec) -> Self {
+        Self {
+            middle: spec,
+            tail: spec,
+            nose: spec,
+            zoned: false,
+            range: None,
+        }
+    }
+
+    pub fn validate(&self) -> Result<(), String> {
+        self.middle.validate()?;
+        if self.zoned {
+            self.tail.validate()?;
+            self.nose.validate()?;
+        }
+        if let Some((a, e)) = self.range
+            && !(a.is_finite() && e.is_finite() && a >= 0.0 && e > a && e <= MAX_LEN)
+        {
+            return Err("range: start and end from the tail, end beyond start".into());
+        }
+        Ok(())
+    }
+
+    /// The spec at station `x` of a board of length `l`: the tail spec up to 20 % of the length, the middle one
+    /// at half, the nose one from 80 %, blended linearly in between.
+    pub fn spec_at(&self, x: f64, l: f64) -> RailSpec {
+        if !self.zoned || l <= 0.0 {
+            return self.middle;
+        }
+        let u = x / l;
+        if u <= 0.2 {
+            self.tail
+        } else if u < 0.5 {
+            self.tail.lerp(&self.middle, (u - 0.2) / 0.3)
+        } else if u < 0.8 {
+            self.middle.lerp(&self.nose, (u - 0.5) / 0.3)
+        } else {
+            self.nose
+        }
+    }
+}
+
+/// Handle length factor of a cubic quarter ellipse.
+const KAPPA: f64 = 0.5523;
+
+/// Rebuild the rail of one section to `spec`. Returns `Ok(false)` when nothing changed.
+pub fn rail_section(cs: &mut CrossSection, spec: &RailSpec) -> Result<bool, &'static str> {
+    let sp = cs.spline.clone();
+    if sp.len() < 3 {
+        return Ok(false);
+    }
+    let o = sp.knots()[0].point();
+    let hw = sp.max_x();
+    if hw - o.x < 3.0 {
+        return Err("section too narrow");
+    }
+    let apex0 = apex_of(cs);
+    let band = spec.band.clamp(0.5, 0.45 * (hw - o.x));
+    let u_d = hw - band;
+    let (id, td) = deck_segment(&sp, u_d).ok_or("no deck at the rail band")?;
+    let dseg = sp.segment(id);
+    let d_pt = dseg.point(td);
+    if d_pt.y <= apex0.y {
+        return Err("the rail band reaches below the apex");
+    }
+    // Outward direction along the deck at D (the curve runs inward there).
+    let d_out = (-dseg.derivative(td)).normalize_or_zero();
+    if d_out.x <= 0.0 {
+        return Err("deck turns back at the rail band");
+    }
+    // Bottom side: start of the rail, moved inward while the bottom is already turning up into the old rail.
+    let mut u_b = (hw - (spec.tuck + 0.5 + spec.softness * 0.5 * band))
+        .clamp(o.x + 0.3 * (hw - o.x), hw - 0.6);
+    let (ib, tb, b_pt, m_b) = loop {
+        let (ib, tb) = bottom_segment(&sp, u_b).ok_or("no bottom at the rail")?;
+        let bseg = sp.segment(ib);
+        let d = bseg.derivative(tb);
+        let m = if d.x > 1e-12 {
+            d.y / d.x
+        } else {
+            f64::INFINITY
+        };
+        if m.abs() <= 0.3 || u_b <= o.x + 0.3 * (hw - o.x) {
+            break (ib, tb, bseg.point(tb), m);
+        }
+        u_b -= 0.25;
+    };
+    if !m_b.is_finite() || m_b.abs() > 1.0 {
+        return Err("the bottom is too steep near the rail");
+    }
+    if ib > id || (ib == id && tb >= td) || b_pt.y >= apex0.y {
+        return Err("bottom and deck limits overlap");
+    }
+    let bottom_line = |x: f64| b_pt.y + m_b * (x - u_b);
+    let y_edge = bottom_line(hw);
+    let h = d_pt.y - y_edge;
+    if h < 0.3 {
+        return Err("rail too thin");
+    }
+    let y_a = y_edge + spec.apex * h;
+    let h_lo = y_a - y_edge;
+    let x_c = (hw - spec.tuck - spec.softness * (0.8 * h_lo).min(hw - spec.tuck - u_b - 0.3))
+        .clamp(u_b + 0.3, hw - 0.02);
+    let c_pt = DVec2::new(x_c, bottom_line(x_c));
+    let bdir = DVec2::new(1.0, m_b).normalize();
+    let theta = m_b.atan() + (1.0 - spec.softness) * 70.0 * DEG;
+    let l_c = KAPPA * ((1.0 - spec.softness) * 0.7 * h_lo + spec.softness * (hw - x_c));
+    let mut c_next = c_pt + l_c * DVec2::new(theta.cos(), theta.sin());
+    c_next.x = c_next.x.min(hw);
+    let mut knot_c = Knot::new(c_pt, c_pt - (x_c - u_b) / 3.0 * bdir, c_next);
+    knot_c.continuous = knot_c.is_geometrically_continuous();
+    let a_pt = DVec2::new(hw, y_a);
+    let lo_len = KAPPA * h_lo * (0.6 + 0.4 * spec.softness);
+    let up_len = KAPPA * (d_pt.y - y_a);
+    let knot_a = Knot::smooth(
+        a_pt,
+        a_pt - DVec2::new(0.0, lo_len),
+        a_pt + DVec2::new(0.0, up_len),
+    );
+    // Deck handle towards the apex; never dipping below a fifth of the upper rail.
+    let mut d_len = KAPPA * (hw - u_d) / d_out.x.max(0.3);
+    let floor = y_a + 0.2 * (d_pt.y - y_a);
+    if d_out.y < 0.0 && d_pt.y + d_len * d_out.y < floor {
+        d_len = (d_pt.y - floor) / -d_out.y;
+    }
+
+    let mut s = sp.clone();
+    // Split at the deck point first (later on the curve), then at the bottom point; the second split may shift
+    // the deck knot by one, so find it again by position.
+    let jd = split_or_existing(&mut s, id, td);
+    let jb = split_or_existing(&mut s, ib, tb);
+    let jd = (jb + 1..s.len())
+        .find(|&i| s.knots()[i].point().distance(d_pt) < 1e-6)
+        .unwrap_or(jd);
+    if jd <= jb {
+        return Err("bottom and deck limits overlap");
+    }
+    let mut knots = s.knots().to_vec();
+    {
+        let kb = &mut knots[jb];
+        let len = (x_c - u_b) / 3.0;
+        kb.set(surfcraft_core::Handle::Next, b_pt + len * bdir);
+        kb.continuous = kb.is_geometrically_continuous();
+    }
+    {
+        let kd = &mut knots[jd];
+        kd.set(surfcraft_core::Handle::Prev, d_pt + d_len * d_out);
+        kd.continuous = kd.is_geometrically_continuous();
+    }
+    knots.splice(jb + 1..jd, [knot_c, knot_a]);
+    let mut result = cs.clone();
+    result.spline = Spline::from_knots(knots);
+    if !section_valid(&result, cs) {
+        return Err("the rail would make an invalid section");
+    }
+    let changed = result.spline != cs.spline;
+    *cs = result;
+    Ok(changed)
+}
+
+/// Rebuild the rails of every section in range. One call = one edit.
+pub fn apply_rails(b: &mut Board, p: &RailParams) -> Result<ShapeReport, String> {
+    p.validate()?;
+    if b.real_sections().is_empty() || b.length() <= 0.0 {
+        return Err("the board has no cross-sections".into());
+    }
+    let l = b.length();
+    let mut report = ShapeReport {
+        volume_before: b.volume(),
+        ..Default::default()
+    };
+    for i in b.real_sections() {
+        let x = b.sections[i].position;
+        if let Some((a, e)) = p.range
+            && !(a..=e).contains(&x)
+        {
+            continue;
+        }
+        let mut cs = b.sections[i].clone();
+        match rail_section(&mut cs, &p.spec_at(x, l)) {
+            Ok(true) => {
+                b.sections[i] = cs;
+                report.sections_changed += 1;
+            }
+            Ok(false) => {}
+            Err(_) => report.skipped.push(x),
+        }
+    }
+    if report.sections_changed > 0 {
+        edit::after_edit(b, CurveId::Section(1));
+    }
+    report.volume_after = b.volume();
+    Ok(report)
+}
+
+/// Measured rail of a section, with the points the Section view marks (rail apex and tuck-under point): the
+/// apex height above the tuck-under point as a fraction of the rail height (tuck-under point up to the deck at
+/// `band` in from the edge), and the horizontal distance from the apex in to the tuck-under point.
+pub fn measure_rail(cs: &CrossSection, band: f64) -> Option<(f64, f64)> {
+    let sp = &cs.spline;
+    let o = sp.first()?.point();
+    let hw = sp.max_x();
+    if hw - o.x < 3.0 {
+        return None;
+    }
+    let apex = apex_of(cs);
+    let tuck = cs.point_at_s(sp.s_by_normal_reverse(TUCK_UNDER_ANGLE * DEG, true));
+    let u_d = hw - band.clamp(0.5, 0.45 * (hw - o.x));
+    let (id, td) = deck_segment(sp, u_d)?;
+    let top = sp.segment(id).point(td).y;
+    let h = top - tuck.y;
+    (h > 0.0).then(|| ((apex.y - tuck.y) / h, apex.x - tuck.x))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1036,5 +1389,94 @@ mod tests {
         }
         assert!(apply_contours(&mut b, &[], 15.0).is_err());
         assert_eq!(b, before);
+    }
+
+    #[test]
+    fn rail_presets_on_every_template() {
+        for (t, b0) in boards().into_iter().enumerate() {
+            let l = b0.length();
+            let v0 = b0.volume();
+            for (name, spec) in RAIL_PRESETS {
+                let mut b = b0.clone();
+                let r = apply_rails(&mut b, &RailParams::uniform(spec)).unwrap();
+                assert!(r.sections_changed > 0, "{t} {name}");
+                assert!(r.skipped.is_empty(), "{t} {name} skipped {:?}", r.skipped);
+                let dv = r.volume_after - v0;
+                assert!(dv.abs() < 0.06 * v0, "{t} {name} {dv}");
+                for i in 1..20 {
+                    let x = l * i as f64 / 20.0;
+                    assert!((b.width_at(x) - b0.width_at(x)).abs() < 1e-9);
+                    assert!((b.thickness_at(x) - b0.thickness_at(x)).abs() < 1e-9);
+                }
+                for (s, s0) in b.sections[b.real_sections()]
+                    .iter()
+                    .zip(&b0.sections[b0.real_sections()])
+                {
+                    assert!(!self_intersects(&s.spline));
+                    assert!((s.width() - b0.width_at(s.position).max(0.5)).abs() < 1e-6);
+                    assert!((s.center_thickness() - b0.thickness_at(s.position)).abs() < 1e-6);
+                    // The bottom inboard of the rail is untouched.
+                    let u = 0.3 * s.spline.max_x();
+                    assert!((s.bottom_at(u) - s0.bottom_at(u)).abs() < 1e-3);
+                    let (apex, _) = measure_rail(s, spec.band).unwrap();
+                    assert!(
+                        (apex - spec.apex).abs() < 0.08,
+                        "{t} {name} at {}: apex {apex}",
+                        s.position
+                    );
+                }
+                let mesh = Mesh::of_board(&b, MeshDetail::PREVIEW);
+                assert!(mesh.positions.iter().all(|p| p.is_finite()));
+            }
+        }
+    }
+
+    #[test]
+    fn harder_rails_have_sharper_release() {
+        let cs0 = mid_section(&boards()[0]);
+        let mut soft = cs0.clone();
+        rail_section(&mut soft, &RailSpec::preset("50/50").unwrap()).unwrap();
+        let mut hard = cs0.clone();
+        rail_section(&mut hard, &RailSpec::preset("80/20").unwrap()).unwrap();
+        assert!(
+            hard.release_angle() < soft.release_angle() - 0.3,
+            "{} vs {}",
+            hard.release_angle(),
+            soft.release_angle()
+        );
+        assert!(apex_of(&hard).y < apex_of(&soft).y);
+    }
+
+    #[test]
+    fn zoned_rails_blend() {
+        let p = RailParams {
+            zoned: true,
+            ..Default::default()
+        };
+        let l = 200.0;
+        assert_eq!(p.spec_at(10.0, l), p.tail);
+        assert_eq!(p.spec_at(100.0, l), p.middle);
+        assert_eq!(p.spec_at(190.0, l), p.nose);
+        let s = p.spec_at(70.0, l);
+        assert!(s.apex > p.tail.apex && s.apex < p.middle.apex);
+        let mut b = boards()[2].clone();
+        let r = apply_rails(&mut b, &p).unwrap();
+        assert!(r.sections_changed > 0 && r.skipped.is_empty(), "{r:?}");
+    }
+
+    #[test]
+    fn contours_then_rails_keep_the_contour() {
+        let mut b = boards()[0].clone();
+        let z = ContourZone::for_board(ContourKind::SingleConcave, &b);
+        apply_contours(&mut b, &[z], DEFAULT_SPACING).unwrap();
+        let before = b.clone();
+        apply_rails(&mut b, &RailParams::uniform(RAIL_PRESETS[2].1)).unwrap();
+        for (s, s0) in b.sections.iter().zip(&before.sections).skip(1) {
+            if s.is_end_section() {
+                continue;
+            }
+            let u = 0.5 * s.spline.max_x();
+            assert!((s.bottom_at(u) - s0.bottom_at(u)).abs() < 1e-4);
+        }
     }
 }

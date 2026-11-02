@@ -810,6 +810,13 @@ impl SurfCraftApp {
                 {
                     self.dialogs.shaping.open_contours();
                 }
+                if ui
+                    .button(tr("Rails…"))
+                    .on_hover_text(tr("Rail shape for every cross-section: apex height (50/50, 60/40, 70/30), softness and tuck."))
+                    .clicked()
+                {
+                    self.dialogs.shaping.open_rails();
+                }
             });
             let machine = ui.menu_button(tr("Machine"), |ui| {
                 if ui

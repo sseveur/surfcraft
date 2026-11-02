@@ -1,4 +1,4 @@
-//! Shape menu window: bottom contours (concaves, vee, channels), applied to every cross-section in a
+//! Shape menu windows: bottom contours (concaves, vee, channels) and rails, applied to every cross-section in a
 //! range. The geometry lives in `surfcraft_session::shaping`; these windows edit the parameters, preview the
 //! result (in the window and as a dashed overlay in the Section view) and apply it as one undo step.
 
@@ -7,7 +7,8 @@ use serde::{Deserialize, Serialize};
 use surfcraft_core::section::{APEX_ANGLE, TUCK_UNDER_ANGLE};
 use surfcraft_core::{Board, CrossSection, DVec2};
 use surfcraft_session::shaping::{
-    self, ContourKind, ContourZone, DEFAULT_SPACING, RunOut, ShapeReport,
+    self, ContourKind, ContourZone, DEFAULT_SPACING, RAIL_PRESETS, RailParams, RailSpec, RunOut,
+    ShapeReport,
 };
 
 use crate::document::Document;
@@ -24,6 +25,7 @@ pub struct ShapingPrefs {
     pub zones: Vec<ContourZone>,
     /// Largest gap between sections inside a contour zone (cm).
     pub spacing: f64,
+    pub rails: RailParams,
 }
 
 impl Default for ShapingPrefs {
@@ -31,6 +33,7 @@ impl Default for ShapingPrefs {
         Self {
             zones: vec![ContourZone::default()],
             spacing: DEFAULT_SPACING,
+            rails: RailParams::default(),
         }
     }
 }
@@ -38,6 +41,7 @@ impl Default for ShapingPrefs {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Tool {
     Contours,
+    Rails,
 }
 
 /// A computed preview: the board it was computed from (revision) and the result.
@@ -51,10 +55,12 @@ struct Preview {
 #[derive(Default)]
 pub struct ShapingState {
     pub contours_open: bool,
+    pub rails_open: bool,
     preview: Option<Preview>,
     /// Range of "Remove contours" (cm from tail); `None` until the window first opens.
     remove_range: Option<(f64, f64)>,
     contour_view: ViewState,
+    rail_view: ViewState,
     error: Option<String>,
 }
 
@@ -62,6 +68,11 @@ impl ShapingState {
     pub fn open_contours(&mut self) {
         self.contours_open = true;
         self.contour_view.needs_fit = true;
+    }
+
+    pub fn open_rails(&mut self) {
+        self.rails_open = true;
+        self.rail_view.needs_fit = true;
     }
 }
 
@@ -113,7 +124,7 @@ fn report_text(r: &ShapeReport) -> String {
     s
 }
 
-/// Show the Shape windows. Returns a status message after an apply.
+/// Show both windows. Returns a status message after an apply.
 pub fn windows(
     ctx: &egui::Context,
     st: &mut ShapingState,
@@ -125,6 +136,7 @@ pub fn windows(
     if let Some(p) = &st.preview {
         let open = match p.tool {
             Tool::Contours => st.contours_open,
+            Tool::Rails => st.rails_open,
         };
         if p.revision != doc.revision || !open {
             st.preview = None;
@@ -133,6 +145,9 @@ pub fn windows(
     let mut msg = None;
     if st.contours_open {
         msg = contours_window(ctx, st, doc, ed, set).or(msg);
+    }
+    if st.rails_open {
+        msg = rails_window(ctx, st, doc, ed, set).or(msg);
     }
     ed.shaping_preview = st.preview.as_ref().map(|p| p.board.clone());
     msg
@@ -452,6 +467,156 @@ fn contours_window(
     set.shaping = prefs;
     if !open {
         st.contours_open = false;
+    }
+    msg
+}
+
+fn apex_ratio(apex: f64) -> String {
+    let lo = (apex * 100.0).round();
+    format!("{:.0}/{:.0}", 100.0 - lo, lo)
+}
+
+/// One column of rail parameters; returns whether anything changed.
+fn rail_column(ui: &mut egui::Ui, id: &str, s: &mut RailSpec, set: &Settings) -> bool {
+    let mut changed = false;
+    ui.vertical(|ui| {
+        ui.horizontal_wrapped(|ui| {
+            for (name, p) in RAIL_PRESETS {
+                if ui.small_button(name).clicked() {
+                    *s = p;
+                    changed = true;
+                }
+            }
+        });
+        ui.label(trf("Apex height ({0})", &[&apex_ratio(s.apex)]));
+        changed |= ui
+            .add(egui::Slider::new(&mut s.apex, 0.1..=0.9).fixed_decimals(2))
+            .on_hover_text(tr(
+                "Apex height as a fraction of the rail height, from the bottom: 0.5 for 50/50, 0.4 for 60/40, 0.3 for 70/30.",
+            ))
+            .changed();
+        ui.label(tr("Softness (hard edge to round)"));
+        changed |= ui
+            .add(egui::Slider::new(&mut s.softness, 0.0..=1.0).fixed_decimals(2))
+            .changed();
+        ui.label(tr("Tuck (edge in from the apex)"));
+        if let Some(v) = length_field(ui, (id, "tuck"), s.tuck, set) {
+            s.tuck = v.clamp(0.0, 5.0);
+            changed = true;
+        }
+        ui.label(tr("Rail band (deck, in from the edge)"));
+        if let Some(v) = length_field(ui, (id, "band"), s.band, set) {
+            s.band = v.clamp(1.0, 30.0);
+            changed = true;
+        }
+    });
+    changed
+}
+
+fn rails_window(
+    ctx: &egui::Context,
+    st: &mut ShapingState,
+    doc: &mut Document,
+    ed: &EditorState,
+    set: &mut Settings,
+) -> Option<String> {
+    let mut open = true;
+    let mut msg = None;
+    let l = doc.board.length();
+    // Copy out so the settings can be read (units) while the parameters are edited.
+    let mut p = set.shaping.rails.clone();
+    egui::Window::new(tr("Rails"))
+        .id(egui::Id::unique("rails-window"))
+        .open(&mut open)
+        .default_size([520.0, 560.0])
+        .resizable(true)
+        .show(ctx, |ui| {
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                ui.weak(tr(
+                    "Rebuilds the rail of every cross-section: apex height, softness and tuck. Width, thickness and the bottom contour stay.",
+                ));
+                let mut changed = ui
+                    .checkbox(&mut p.zoned, tr("Blend tail, middle and nose"))
+                    .changed();
+                ui.columns(if p.zoned { 3 } else { 1 }, |cols| {
+                    if p.zoned {
+                        cols[0].strong(tr("Tail"));
+                        changed |= rail_column(&mut cols[0], "rail-tail", &mut p.tail, set);
+                        cols[1].strong(tr("Middle"));
+                        changed |= rail_column(&mut cols[1], "rail-mid", &mut p.middle, set);
+                        cols[2].strong(tr("Nose"));
+                        changed |= rail_column(&mut cols[2], "rail-nose", &mut p.nose, set);
+                    } else {
+                        changed |= rail_column(&mut cols[0], "rail-mid", &mut p.middle, set);
+                    }
+                });
+                ui.separator();
+                let mut whole = p.range.is_none();
+                if ui.checkbox(&mut whole, tr("Whole board")).changed() {
+                    p.range = if whole { None } else { Some((0.0, l)) };
+                    changed = true;
+                }
+                if let Some((a, e)) = &mut p.range {
+                    egui::Grid::new("rail-range").num_columns(2).show(ui, |ui| {
+                        changed |= len_row(ui, tr("Start (from tail)"), "rail-a", a, 0.0, set);
+                        changed |= len_row(ui, tr("End (from tail)"), "rail-e", e, 0.0, set);
+                    });
+                }
+                if changed {
+                    st.preview = None;
+                    st.error = None;
+                }
+                ui.separator();
+                ui.horizontal(|ui| {
+                    if ui
+                        .button(tr("Preview"))
+                        .on_hover_text(tr("Shows the result as a dashed curve in the Section view and below."))
+                        .clicked()
+                    {
+                        let mut b = doc.board.clone();
+                        match shaping::apply_rails(&mut b, &p) {
+                            Ok(report) => {
+                                st.preview = Some(Preview {
+                                    tool: Tool::Rails,
+                                    revision: doc.revision,
+                                    board: b,
+                                    report,
+                                });
+                                st.error = None;
+                            }
+                            Err(e) => st.error = Some(e),
+                        }
+                    }
+                    if ui
+                        .button(tr("Apply"))
+                        .on_hover_text(tr("Changes the board as one undo step."))
+                        .clicked()
+                    {
+                        let mut b = doc.board.clone();
+                        match shaping::apply_rails(&mut b, &p) {
+                            Ok(r) => {
+                                doc.edit(|d| *d = b);
+                                st.preview = None;
+                                st.error = None;
+                                msg = Some(report_text(&r));
+                            }
+                            Err(e) => st.error = Some(e),
+                        }
+                    }
+                });
+                if let Some(e) = &st.error {
+                    ui.colored_label(Color32::from_rgb(230, 80, 60), e);
+                }
+                if let Some(pv) = st.preview.as_ref().filter(|pv| pv.tool == Tool::Rails) {
+                    ui.label(report_text(&pv.report));
+                }
+                let preview = st.preview.as_ref().filter(|pv| pv.tool == Tool::Rails);
+                preview_canvas(ui, &mut st.rail_view, doc, ed, preview, set);
+            });
+        });
+    set.shaping.rails = p;
+    if !open {
+        st.rails_open = false;
     }
     msg
 }

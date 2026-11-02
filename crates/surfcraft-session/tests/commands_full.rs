@@ -187,8 +187,8 @@ fn tool_specs_are_complete_and_unique() {
     let specs = tool_specs();
     assert_eq!(
         specs.len(),
-        27,
-        "command count (25 + generate_toolpath + apply_bottom_contour)"
+        28,
+        "command count (25 + generate_toolpath + apply_bottom_contour + set_rails)"
     );
     let mut names: Vec<_> = specs.iter().map(|s| s.name).collect();
     names.sort();
@@ -340,6 +340,12 @@ fn invalid_inputs_are_errors() {
             "apply_bottom_contour",
             json!({"type": "single_concave", "section_spacing": 0.1}),
         ),
+        ("set_rails", json!({"preset": "90/10"})),
+        ("set_rails", json!({"apex": 1.5})),
+        ("set_rails", json!({"softness": "soft"})),
+        ("set_rails", json!({"tuck": "a lot"})),
+        ("set_rails", json!({"tail": 3})),
+        ("set_rails", json!({"start": 100, "end": 20})),
         ("does_not_exist", json!({})),
     ];
     for (name, a) in cases {
@@ -416,6 +422,7 @@ fn undo_after_every_command_restores_exact_board() {
                 "apply_bottom_contour",
                 json!({"type": "single_concave", "depth": "1/8\"", "end": "4'"}),
             ),
+            ("set_rails", json!({"preset": "70/30"})),
         ]
     };
     for (t, template) in TEMPLATES.iter().enumerate() {
@@ -1296,7 +1303,7 @@ fn double_minus_is_rejected() {
     assert_eq!(LengthUnit::Centimetres.parse("--3"), None);
 }
 
-/// Shaping tools on every template: every contour type as one undo step, volumes reported,
+/// Shaping tools on every template: every contour type and rail preset as one undo step, volumes reported,
 /// widths and stringer thickness kept, mesh and CAM still work.
 #[test]
 fn shaping_commands_on_every_template() {
@@ -1309,7 +1316,15 @@ fn shaping_commands_on_every_template() {
             json!({"type": "channels", "channel_count": 3, "channel_width": "3/4\"", "end": "18\""}),
             json!({"type": "remove"}),
         ];
-        let cases = kinds.into_iter().map(|a| ("apply_bottom_contour", a));
+        let rails = ["50/50", "60/40", "70/30", "80/20"]
+            .map(|p| json!({"preset": p}))
+            .into_iter()
+            .chain([json!({"apex": 0.45, "softness": 0.5, "tuck": "1/4\"",
+                "tail": {"preset": "80/20"}, "nose": {"softness": 1}, "start": "1'", "end": "5'"})]);
+        let cases = kinds
+            .into_iter()
+            .map(|a| ("apply_bottom_contour", a))
+            .chain(rails.map(|a| ("set_rails", a)));
         for (name, a) in cases {
             let (mut d, mut c) = session(t);
             let before = d.board.clone();
@@ -1351,6 +1366,7 @@ fn shaped_board_still_machines() {
             "apply_bottom_contour",
             json!({"type": "double_concave", "end": "3'"}),
         );
+        ok(&mut d, &mut c, "set_rails", json!({"preset": "70/30"}));
         let r = ok(
             &mut d,
             &mut c,
