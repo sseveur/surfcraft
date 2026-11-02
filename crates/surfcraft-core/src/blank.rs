@@ -1,22 +1,23 @@
 //! Foam blanks: the dimensions a blank maker publishes, an approximate shape built from them, and the check
 //! that a board fits inside one.
 //!
-//! A catalogue gives a handful of numbers (length, widest width and where it is, the widths 12" from each end,
-//! the thickness at the centre, the nose and tail rocker and sometimes the rocker 12" / 24" from each end). The
-//! blank's outline, bottom and deck are rebuilt from them as smooth, shape-preserving curves:
+//! A catalogue gives the length, the widest width (and where it is), the thickness at the middle and the nose
+//! and tail rocker; measurement drawings add the width, thickness and rocker at stations measured from each tip
+//! (6", 12", 18", 24", ...). The blank's outline, bottom and deck are rebuilt from these as monotone cubics
+//! through the published points (they never overshoot the data). Where a side has no station data, typical
+//! stations are added, with proportions measured on the US Blanks drawings of the built-in library
+//! (`docs/blanks.md`):
 //!
-//! * **Outline**: a monotone cubic through the tail tip, the tail width 12" up, the wide point, the nose width
-//!   12" down and the nose tip, with rounded corners at both ends. Missing 12" widths are estimated from the
-//!   width with typical blank proportions; the tip widths are extrapolated from the 12" widths.
-//! * **Bottom (rocker)**: zero at a flat point and rising to the published nose and tail rocker. Between the
-//!   flat point and the tips the rocker grows as a power of the distance (exponent 2.5, or the exponent that
-//!   matches the innermost published station); published 12"/24" stations are passed through exactly. The flat
-//!   point is placed where both sides have the same curvature scale, which puts it a little behind the middle
-//!   on a typical blank.
-//! * **Deck**: the bottom plus a thickness that is the published centre thickness at the middle and thins
-//!   toward the ends (to [`TIP_THICKNESS`] of it at the tips, following a power of 2.5 of the distance from the
-//!   middle), unless the thickness 12" from an end is published. Blanks are moulded this way, but the real taper
-//!   varies between moulds: treat thickness clearances within a few millimetres of the tips with care.
+//! * **Outline**: half-widths at the tip, 12" and 24" from the nose of 33 %, 100 % and 100 % - 30 % of the
+//!   missing width relative to the 12" width, which is 70 % (nose) / 74 % (tail) of the widest width when not
+//!   given. Ends without a measured tip width are extrapolated from the two outermost stations; both ends close
+//!   with a rounded cap.
+//! * **Bottom (rocker)**: zero at a flat point (the middle, or between the innermost rocker stations), rising
+//!   to the nose and tail rocker as a power of the distance (2.7 toward the nose, 2.2 toward the tail, or the
+//!   exponent through the innermost published station); published stations are matched exactly.
+//! * **Deck**: bottom plus the thickness, the published thickness at the middle thinning to 37 % (nose) /
+//!   43 % (tail) at the tips through 67 % / 69 % at 12" and 88 % / 87 % at 24" when no thickness stations are
+//!   given.
 //!
 //! The fit check places the board in the blank (lengthwise offset, tilt in the profile plane, height) and
 //! compares, at stations along the board, the board's outline with the blank's outline and the board's deck
@@ -27,47 +28,45 @@ use std::fmt::Write as _;
 use glam::DVec2;
 
 use crate::board::Board;
-use crate::units::FOOT;
+use crate::units::{FOOT, INCH};
 
-/// Thickness at the tips relative to the centre thickness, when the catalogue gives no end thickness.
-pub const TIP_THICKNESS: f64 = 0.5;
-/// Exponent of the default rocker curve (rocker grows as distance^ROCKER_POWER from the flat point).
-const ROCKER_POWER: f64 = 2.5;
-/// Exponent of the thickness taper.
-const TAPER_POWER: f64 = 2.5;
 /// Typical 12" widths relative to the widest width (used when the catalogue gives none).
-pub const NOSE_12_RATIO: f64 = 0.62;
+pub const NOSE_12_RATIO: f64 = 0.70;
 pub const TAIL_12_RATIO: f64 = 0.74;
-/// Clearances above this (cm) count as touching, not as poking out: rounding of the published numbers.
+/// Clearances above this (cm) count as touching, not as poking out.
 const TOLERANCE: f64 = 1e-6;
+
+/// Measurements at one station of a blank, measured from the nose or the tail tip. Lengths in cm.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct BlankStation {
+    /// Measured from the nose tip (else from the tail tip).
+    pub from_nose: bool,
+    /// Distance from that tip.
+    pub dist: f64,
+    pub width: Option<f64>,
+    /// Thickness on the stringer.
+    pub thickness: Option<f64>,
+    /// Height of the bottom above its lowest point.
+    pub rocker: Option<f64>,
+}
 
 /// A blank as a catalogue describes it. Lengths in cm.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Blank {
     pub name: String,
+    /// Length tip to tip.
     pub length: f64,
     /// Widest width.
     pub width: f64,
     /// Position of the widest width from the middle of the blank, positive toward the nose.
     pub wide_point: f64,
-    /// Width 12" from the nose tip.
-    pub nose_width: Option<f64>,
-    /// Width 12" from the tail tip.
-    pub tail_width: Option<f64>,
-    /// Thickness at the middle.
+    /// Thickness at the middle (the thickest point).
     pub thickness: f64,
-    /// Thickness on the stringer 12" from the nose / tail tip.
-    pub nose_thickness: Option<f64>,
-    pub tail_thickness: Option<f64>,
     /// Height of the bottom at the nose / tail tip above its lowest point.
     pub nose_rocker: f64,
     pub tail_rocker: f64,
-    /// Rocker 12" and 24" from the nose tip.
-    pub nose_rocker_12: Option<f64>,
-    pub nose_rocker_24: Option<f64>,
-    /// Rocker 12" and 24" from the tail tip.
-    pub tail_rocker_12: Option<f64>,
-    pub tail_rocker_24: Option<f64>,
+    /// Measurements at stations (any order).
+    pub stations: Vec<BlankStation>,
 }
 
 impl Default for Blank {
@@ -77,17 +76,82 @@ impl Default for Blank {
             length: 193.0,
             width: 56.0,
             wide_point: 0.0,
-            nose_width: None,
-            tail_width: None,
             thickness: 8.0,
-            nose_thickness: None,
-            tail_thickness: None,
             nose_rocker: 12.0,
             tail_rocker: 6.0,
-            nose_rocker_12: None,
-            nose_rocker_24: None,
-            tail_rocker_12: None,
-            tail_rocker_24: None,
+            stations: Vec::new(),
+        }
+    }
+}
+
+/// Which measurement of a station.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Measure {
+    Width,
+    Thickness,
+    Rocker,
+}
+
+impl BlankStation {
+    fn get(&self, m: Measure) -> Option<f64> {
+        match m {
+            Measure::Width => self.width,
+            Measure::Thickness => self.thickness,
+            Measure::Rocker => self.rocker,
+        }
+    }
+
+    fn slot(&mut self, m: Measure) -> &mut Option<f64> {
+        match m {
+            Measure::Width => &mut self.width,
+            Measure::Thickness => &mut self.thickness,
+            Measure::Rocker => &mut self.rocker,
+        }
+    }
+}
+
+impl Blank {
+    /// A measurement at the station `dist` from the nose or tail tip.
+    pub fn station(&self, from_nose: bool, dist: f64, m: Measure) -> Option<f64> {
+        self.stations
+            .iter()
+            .find(|s| s.from_nose == from_nose && (s.dist - dist).abs() < 1e-6)
+            .and_then(|s| s.get(m))
+    }
+
+    /// Set or clear a measurement at a station (the station is added or removed as needed).
+    pub fn set_station(&mut self, from_nose: bool, dist: f64, m: Measure, v: Option<f64>) {
+        let i = self
+            .stations
+            .iter()
+            .position(|s| s.from_nose == from_nose && (s.dist - dist).abs() < 1e-6);
+        let i = match (i, v) {
+            (Some(i), _) => i,
+            (None, None) => return,
+            (None, Some(_)) => {
+                self.stations.push(BlankStation {
+                    from_nose,
+                    dist,
+                    width: None,
+                    thickness: None,
+                    rocker: None,
+                });
+                self.stations.len() - 1
+            }
+        };
+        *self.stations[i].slot(m) = v;
+        let s = &self.stations[i];
+        if s.width.is_none() && s.thickness.is_none() && s.rocker.is_none() {
+            self.stations.remove(i);
+        }
+    }
+
+    /// x (from the tail) of a station.
+    pub fn station_x(&self, s: &BlankStation) -> f64 {
+        if s.from_nose {
+            self.length - s.dist
+        } else {
+            s.dist
         }
     }
 }
@@ -117,23 +181,20 @@ pub struct BlankSetup {
 impl Blank {
     /// Problems with the numbers, if any (human-readable, English).
     pub fn validate(&self) -> Result<(), String> {
-        let all = [
-            Some(self.length),
-            Some(self.width),
-            Some(self.wide_point),
-            self.nose_width,
-            self.tail_width,
-            Some(self.thickness),
-            self.nose_thickness,
-            self.tail_thickness,
-            Some(self.nose_rocker),
-            Some(self.tail_rocker),
-            self.nose_rocker_12,
-            self.nose_rocker_24,
-            self.tail_rocker_12,
-            self.tail_rocker_24,
+        let main = [
+            self.length,
+            self.width,
+            self.wide_point,
+            self.thickness,
+            self.nose_rocker,
+            self.tail_rocker,
         ];
-        if all.iter().flatten().any(|v| !v.is_finite()) {
+        let st = self
+            .stations
+            .iter()
+            .flat_map(|s| [Some(s.dist), s.width, s.thickness, s.rocker])
+            .flatten();
+        if main.iter().copied().chain(st).any(|v| !v.is_finite()) {
             return Err("every dimension must be a number".into());
         }
         if !(30.0..=1000.0).contains(&self.length) {
@@ -147,23 +208,8 @@ impl Blank {
                 "the wide point must be within a quarter of the length from the middle".into(),
             );
         }
-        for w in [self.nose_width, self.tail_width].into_iter().flatten() {
-            if w <= 0.0 || w > self.width {
-                return Err("the 12\" widths must be positive and not wider than the blank".into());
-            }
-        }
         if !(1.0..=60.0).contains(&self.thickness) {
             return Err("thickness must be between 1 cm and 60 cm".into());
-        }
-        for t in [self.nose_thickness, self.tail_thickness]
-            .into_iter()
-            .flatten()
-        {
-            if t <= 0.0 || t > self.thickness {
-                return Err(
-                    "the 12\" thicknesses must be positive and not thicker than the centre".into(),
-                );
-            }
         }
         if self.nose_rocker < 0.0 || self.tail_rocker < 0.0 {
             return Err("rocker cannot be negative".into());
@@ -171,78 +217,78 @@ impl Blank {
         if self.nose_rocker.max(self.tail_rocker) > self.length / 3.0 {
             return Err("rocker is larger than a third of the length".into());
         }
-        let check = |tip: f64, r12: Option<f64>, r24: Option<f64>| -> Result<(), String> {
-            let mut last = tip;
-            for r in [r12, r24].into_iter().flatten() {
-                if r < 0.0 || r > last {
-                    return Err(
-                        "rocker must decrease from the tip to the 12\" and 24\" stations".into(),
-                    );
-                }
-                last = r;
+        for s in &self.stations {
+            if s.dist < 0.0 || s.dist > self.length * 0.75 {
+                return Err("stations must be on the blank".into());
             }
-            Ok(())
-        };
-        check(self.nose_rocker, self.nose_rocker_12, self.nose_rocker_24)?;
-        check(self.tail_rocker, self.tail_rocker_12, self.tail_rocker_24)?;
+            if s.width.is_some_and(|w| w <= 0.0 || w > self.width * 1.0001) {
+                return Err("station widths must be positive and not wider than the blank".into());
+            }
+            if s.thickness
+                .is_some_and(|t| t <= 0.0 || t > self.thickness * 1.0001)
+            {
+                return Err(
+                    "station thicknesses must be positive and not thicker than the middle".into(),
+                );
+            }
+            if s.rocker.is_some_and(|r| r < 0.0) {
+                return Err("rocker cannot be negative".into());
+            }
+        }
+        // Rocker decreases from each tip toward the middle.
+        for nose in [true, false] {
+            let mut pts: Vec<(f64, f64)> = self
+                .stations
+                .iter()
+                .filter(|s| s.from_nose == nose)
+                .filter_map(|s| s.rocker.map(|r| (s.dist, r)))
+                .collect();
+            pts.push((
+                0.0,
+                if nose {
+                    self.nose_rocker
+                } else {
+                    self.tail_rocker
+                },
+            ));
+            pts.sort_by(|a, b| a.0.total_cmp(&b.0));
+            if pts.windows(2).any(|w| w[1].1 > w[0].1 + 1e-9) {
+                return Err("rocker must decrease from each tip toward the middle".into());
+            }
+        }
         Ok(())
     }
 }
 
 // ------------------------------------------------------------------------------------------- file format
 
-/// Keys of the compact one-line form, in writing order.
-const KEYS: [&str; 14] = [
-    "L", "W", "WP", "NW", "TW", "T", "NT", "TT", "NR", "TR", "NR12", "NR24", "TR12", "TR24",
-];
-
 impl Blank {
-    fn fields(&self) -> [Option<f64>; 14] {
-        [
-            Some(self.length),
-            Some(self.width),
-            Some(self.wide_point),
-            self.nose_width,
-            self.tail_width,
-            Some(self.thickness),
-            self.nose_thickness,
-            self.tail_thickness,
-            Some(self.nose_rocker),
-            Some(self.tail_rocker),
-            self.nose_rocker_12,
-            self.nose_rocker_24,
-            self.tail_rocker_12,
-            self.tail_rocker_24,
-        ]
-    }
-
-    fn fields_mut(&mut self) -> [FieldMut<'_>; 14] {
-        [
-            FieldMut::Req(&mut self.length),
-            FieldMut::Req(&mut self.width),
-            FieldMut::Req(&mut self.wide_point),
-            FieldMut::Opt(&mut self.nose_width),
-            FieldMut::Opt(&mut self.tail_width),
-            FieldMut::Req(&mut self.thickness),
-            FieldMut::Opt(&mut self.nose_thickness),
-            FieldMut::Opt(&mut self.tail_thickness),
-            FieldMut::Req(&mut self.nose_rocker),
-            FieldMut::Req(&mut self.tail_rocker),
-            FieldMut::Opt(&mut self.nose_rocker_12),
-            FieldMut::Opt(&mut self.nose_rocker_24),
-            FieldMut::Opt(&mut self.tail_rocker_12),
-            FieldMut::Opt(&mut self.tail_rocker_24),
-        ]
-    }
-
-    /// One-line form `L=… W=… … name=…` (cm, shortest round-trip digits; the name is last and runs to the end
-    /// of the line). Used for the `.brd` field and the saved user blanks.
+    /// One-line form `L=… W=… WP=… T=… NR=… TR=… S=N,dist,width,thickness,rocker … name=…` (cm, shortest
+    /// round-trip digits, empty for a missing station value; the name is last and runs to the end of the
+    /// line). Used for the `.brd` field and the saved user blanks.
     pub fn to_compact(&self) -> String {
         let mut s = String::new();
-        for (k, v) in KEYS.iter().zip(self.fields()) {
-            if let Some(v) = v {
-                let _ = write!(s, "{k}={v} ");
-            }
+        for (k, v) in [
+            ("L", self.length),
+            ("W", self.width),
+            ("WP", self.wide_point),
+            ("T", self.thickness),
+            ("NR", self.nose_rocker),
+            ("TR", self.tail_rocker),
+        ] {
+            let _ = write!(s, "{k}={v} ");
+        }
+        let opt = |v: Option<f64>| v.map(|v| v.to_string()).unwrap_or_default();
+        for st in &self.stations {
+            let _ = write!(
+                s,
+                "S={},{},{},{},{} ",
+                if st.from_nose { "N" } else { "T" },
+                st.dist,
+                opt(st.width),
+                opt(st.thickness),
+                opt(st.rocker)
+            );
         }
         s.push_str("name=");
         s.push_str(&one_line(&self.name));
@@ -254,39 +300,53 @@ impl Blank {
         let (head, name) = split_name(text);
         let mut b = Blank {
             name: name.trim().to_string(),
+            wide_point: 0.0,
             nose_rocker: 0.0,
             tail_rocker: 0.0,
             ..Blank::default()
         };
-        let mut seen = [false; 14];
+        let mut seen = (false, false, false);
+        let num = |v: &str| v.parse::<f64>().ok().filter(|v| v.is_finite());
         for tok in head.split_whitespace() {
             let Some((k, v)) = tok.split_once('=') else {
                 continue;
             };
-            let Some(i) = KEYS.iter().position(|key| *key == k) else {
-                continue;
-            };
-            let v: f64 = v.parse().ok().filter(|v: &f64| v.is_finite())?;
-            seen[i] = true;
-            match &mut b.fields_mut()[i] {
-                FieldMut::Req(f) => **f = v,
-                FieldMut::Opt(f) => **f = Some(v),
+            match k {
+                "L" => (b.length, seen.0) = (num(v)?, true),
+                "W" => (b.width, seen.1) = (num(v)?, true),
+                "T" => (b.thickness, seen.2) = (num(v)?, true),
+                "WP" => b.wide_point = num(v)?,
+                "NR" => b.nose_rocker = num(v)?,
+                "TR" => b.tail_rocker = num(v)?,
+                "S" => {
+                    let f: Vec<&str> = v.split(',').collect();
+                    let [end, dist, w, t, r] = f[..] else {
+                        return None;
+                    };
+                    let opt = |s: &str| {
+                        if s.is_empty() {
+                            Some(None)
+                        } else {
+                            num(s).map(Some)
+                        }
+                    };
+                    b.stations.push(BlankStation {
+                        from_nose: match end {
+                            "N" => true,
+                            "T" => false,
+                            _ => return None,
+                        },
+                        dist: num(dist)?,
+                        width: opt(w)?,
+                        thickness: opt(t)?,
+                        rocker: opt(r)?,
+                    });
+                }
+                _ => {}
             }
         }
-        // Length, width and thickness.
-        if !(seen[0] && seen[1] && seen[5]) {
-            return None;
-        }
-        if !seen[2] {
-            b.wide_point = 0.0;
-        }
-        Some(b)
+        (seen.0 && seen.1 && seen.2).then_some(b)
     }
-}
-
-enum FieldMut<'a> {
-    Req(&'a mut f64),
-    Opt(&'a mut Option<f64>),
 }
 
 fn one_line(s: &str) -> String {
@@ -349,7 +409,7 @@ impl BlankSetup {
 
 // ------------------------------------------------------------------------------------------- curves
 
-/// Monotone piecewise cubic (Fritsch-Carlson) through points with increasing x: never overshoots the data, so
+/// Monotone piecewise cubic (Fritsch-Carlson, three-point slopes) through points with increasing x: never overshoots the data, so
 /// monotone data gives a monotone curve.
 struct Pchip {
     x: Vec<f64>,
@@ -361,7 +421,7 @@ impl Pchip {
     fn new(pts: &[(f64, f64)]) -> Self {
         let mut pts: Vec<(f64, f64)> = pts.to_vec();
         pts.sort_by(|a, b| a.0.total_cmp(&b.0));
-        pts.dedup_by(|a, b| (a.0 - b.0).abs() < 1e-9);
+        pts.dedup_by(|a, b| (a.0 - b.0).abs() < 1e-6);
         let x: Vec<f64> = pts.iter().map(|p| p.0).collect();
         let y: Vec<f64> = pts.iter().map(|p| p.1).collect();
         let n = x.len();
@@ -372,11 +432,10 @@ impl Pchip {
             if n == 2 {
                 m = vec![d[0], d[0]];
             } else {
+                // Three-point slopes (zero at a local extreme of the data), later limited for monotonicity.
                 for k in 1..n - 1 {
                     if d[k - 1] * d[k] > 0.0 {
-                        let w1 = 2.0 * h[k] + h[k - 1];
-                        let w2 = h[k] + 2.0 * h[k - 1];
-                        m[k] = (w1 + w2) / (w1 / d[k - 1] + w2 / d[k]);
+                        m[k] = (h[k] * d[k - 1] + h[k - 1] * d[k]) / (h[k - 1] + h[k]);
                     }
                 }
                 let end = |h0: f64, h1: f64, d0: f64, d1: f64| {
@@ -391,6 +450,27 @@ impl Pchip {
                 };
                 m[0] = end(h[0], h[1], d[0], d[1]);
                 m[n - 1] = end(h[n - 2], h[n - 3], d[n - 2], d[n - 3]);
+                // Fritsch-Carlson limiter: keeps each piece monotone (no overshoot).
+                for k in 0..n - 1 {
+                    if d[k] == 0.0 {
+                        m[k] = 0.0;
+                        m[k + 1] = 0.0;
+                        continue;
+                    }
+                    let (a, b) = (m[k] / d[k], m[k + 1] / d[k]);
+                    if a < 0.0 {
+                        m[k] = 0.0;
+                    }
+                    if b < 0.0 {
+                        m[k + 1] = 0.0;
+                    }
+                    let r = a * a + b * b;
+                    if r > 9.0 {
+                        let t = 3.0 / r.sqrt();
+                        m[k] = t * a * d[k];
+                        m[k + 1] = t * b * d[k];
+                    }
+                }
             }
         }
         Self { x, y, m }
@@ -445,11 +525,10 @@ impl BlankShape {
         let mut bottom = Vec::with_capacity(SAMPLES + 1);
         let mut deck = Vec::with_capacity(SAMPLES + 1);
         for x in xs {
-            let h = half_fn(x).max(0.0);
             let z = rocker.at(x).max(0.0);
-            half.push(h);
+            half.push(half_fn(x).max(0.0));
             bottom.push(z);
-            deck.push(z + thick(x).max(0.0));
+            deck.push(z + thick.at(x).max(0.0));
         }
         Self {
             length: l,
@@ -508,43 +587,94 @@ impl BlankShape {
     }
 }
 
-fn outline_curve(b: &Blank, l: f64) -> impl Fn(f64) -> f64 {
+/// Published values of one measurement on one side, as (distance from the tip, value), nearest the tip first.
+/// Stations closer than 1 cm to `limit` (the distance from the tip to the middle or the wide point) or beyond
+/// it are left out.
+fn side_points(b: &Blank, nose: bool, m: Measure, limit: f64) -> Vec<(f64, f64)> {
+    let mut v: Vec<(f64, f64)> = b
+        .stations
+        .iter()
+        .filter(|s| s.from_nose == nose && s.dist < limit - 1.0)
+        .filter_map(|s| s.get(m).map(|v| (s.dist, v)))
+        .collect();
+    v.sort_by(|a, c| a.0.total_cmp(&c.0));
+    v
+}
+
+/// Value at the tip extrapolated from the two stations nearest it, kept between `lo` and the nearest value.
+fn extrapolate_tip(pts: &[(f64, f64)], lo: f64) -> f64 {
+    match pts {
+        [(d1, v1), (d2, v2), ..] => {
+            let slope = (v2 - v1) / (d2 - d1);
+            (v1 - slope * d1).clamp(lo.min(*v1), *v1)
+        }
+        [(_, v1)] => v1 * 0.5,
+        [] => lo,
+    }
+}
+
+fn outline_curve(b: &Blank, l: f64) -> impl Fn(f64) -> f64 + use<> {
     let w2 = b.width / 2.0;
     let xw = (l / 2.0 + b.wide_point).clamp(0.25 * l, 0.75 * l);
-    let ht = b.tail_width.unwrap_or(b.width * TAIL_12_RATIO) / 2.0;
-    let hn = b.nose_width.unwrap_or(b.width * NOSE_12_RATIO) / 2.0;
-    // Each side narrows from the wide point as a power of the distance, h = w2 - (w2 - tip) * u^p (u = 0 at the
-    // wide point, 1 at the tip), with the exponent that passes through the 12" width. The tail tip width is
-    // extrapolated from the slope between the wide point and the 12" station; the nose closes to a point.
-    let (span_t, span_n) = (xw, l - xw);
-    let tail_tip = if FOOT < xw - 2.0 {
-        let s = (w2 - ht) / (xw - FOOT);
-        (ht - 1.6 * s * FOOT).clamp(0.2 * w2, ht * 0.98)
-    } else {
-        0.5 * w2
+    let mut pts = vec![(xw, w2)];
+    // Tip half-widths, and whether each was measured (else extrapolated: a round end).
+    let mut tips = [(0.0, true); 2];
+    for (k, nose) in [true, false].into_iter().enumerate() {
+        let span = if nose { l - xw } else { xw };
+        let x_of = |d: f64| if nose { l - d } else { d };
+        let mut side: Vec<(f64, f64)> = side_points(b, nose, Measure::Width, span)
+            .into_iter()
+            .map(|(d, w)| (d, w / 2.0))
+            .collect();
+        if side.is_empty() {
+            // Typical proportions (US Blanks drawings): 12" width, then the tip and 24" relative to it.
+            let ratio = if nose { NOSE_12_RATIO } else { TAIL_12_RATIO };
+            let h12 = w2 * ratio;
+            let tip = h12 * if nose { 0.33 } else { 0.54 };
+            for (d, h) in [
+                (0.0, tip),
+                (FOOT, h12),
+                (2.0 * FOOT, h12 + 0.7 * (w2 - h12)),
+            ] {
+                if d < span - 1.0 {
+                    side.push((d, h));
+                }
+            }
+        }
+        let measured = side.first().is_some_and(|p| p.0 <= 0.0);
+        if !measured {
+            let tip = extrapolate_tip(&side, 0.0);
+            side.insert(0, (0.0, tip));
+        }
+        tips[k] = (side[0].1, measured);
+        pts.extend(side.iter().map(|&(d, h)| (x_of(d), h)));
+    }
+    let p = Pchip::new(&pts);
+    // Rounded ends: a quarter ellipse closes the outline over `r` at each tip. A measured tip width is the
+    // width at the very end (only the corners are rounded); an extrapolated one makes a round end, at most to
+    // the first station.
+    let station_gap = |nose: bool| {
+        side_points(b, nose, Measure::Width, l)
+            .iter()
+            .map(|s| s.0)
+            .find(|&d| d > 0.5)
+            .unwrap_or(FOOT)
     };
-    let power = |h12: f64, tip: f64, span: f64, default: f64| {
-        let u = (span - FOOT) / span;
-        let r = (w2 - h12) / (w2 - tip);
-        if u > 0.05 && r > 0.0 && r < 1.0 {
-            (r.ln() / u.ln()).clamp(1.2, 8.0)
+    let radius = |(tip, measured): (f64, bool), nose: bool| {
+        if measured {
+            tip.clamp(0.1, 1.5)
         } else {
-            default
+            tip.clamp(0.5, 15.0).min(0.9 * station_gap(nose))
         }
     };
-    let pt = power(ht, tail_tip, span_t, 3.0);
-    let pn = power(hn, 0.0, span_n, 2.5);
-    // Rounded tail corners: a quarter ellipse closes the outline over `rt`.
-    let rt = (0.4 * tail_tip).clamp(1.0, 8.0).min(l / 4.0);
+    let (rn, rt) = (radius(tips[0], true), radius(tips[1], false));
     move |x: f64| {
-        let mut h = if x >= xw {
-            w2 * (1.0 - ((x - xw) / span_n).clamp(0.0, 1.0).powf(pn))
-        } else {
-            w2 - (w2 - tail_tip) * ((xw - x) / span_t).clamp(0.0, 1.0).powf(pt)
-        };
-        if x < rt {
-            let u = ((rt - x) / rt).min(1.0);
-            h *= (1.0 - u * u).max(0.0).sqrt();
+        let mut h = p.at(x);
+        for (r, d) in [(rn, l - x), (rt, x)] {
+            if d < r {
+                let u = 1.0 - d.max(0.0) / r;
+                h *= (1.0 - u * u).max(0.0).sqrt();
+            }
         }
         h
     }
@@ -553,86 +683,90 @@ fn outline_curve(b: &Blank, l: f64) -> impl Fn(f64) -> f64 {
 /// Rocker curve and the position of its lowest point.
 fn rocker_curve(b: &Blank, l: f64) -> (Pchip, f64) {
     let (nr, tr) = (b.nose_rocker.max(0.0), b.tail_rocker.max(0.0));
-    let x0 = if nr + tr <= 0.0 {
-        l / 2.0
-    } else {
-        let (a, c) = (tr.powf(1.0 / ROCKER_POWER), nr.powf(1.0 / ROCKER_POWER));
-        l * a / (a + c)
-    }
-    .clamp(0.3 * l, 0.7 * l);
+    let nose = side_points(b, true, Measure::Rocker, l * 0.75);
+    let tail = side_points(b, false, Measure::Rocker, l * 0.75);
+    // Flat point: between the innermost stations of both sides, nearer the lower one (as for a parabola);
+    // else the middle, kept clear of the stations.
+    let inner_n = nose.last().map(|&(d, v)| (l - d, v));
+    let inner_t = tail.last().copied();
+    let x0 = match (inner_t, inner_n) {
+        (Some((xa, va)), Some((xb, vb))) if xb > xa => {
+            let (sa, sb) = (va.max(0.0).sqrt(), vb.max(0.0).sqrt());
+            if sa + sb > 0.0 {
+                xa + (xb - xa) * sa / (sa + sb)
+            } else {
+                (xa + xb) / 2.0
+            }
+        }
+        _ => {
+            let lo = inner_t.map_or(0.25 * l, |p| p.0 + 2.0);
+            let hi = inner_n.map_or(0.75 * l, |p| p.0 - 2.0);
+            (l / 2.0).clamp(lo.min(hi), hi.max(lo))
+        }
+    };
     let mut pts = vec![(x0, 0.0)];
-    // One side: tip rocker, stations (distance from the tip, value), the span from the flat point to the tip,
-    // and a mapping from "distance from the flat point" to x.
-    let mut side =
-        |tip: f64, stations: [(f64, Option<f64>); 2], span: f64, at: &dyn Fn(f64) -> f64| {
-            pts.push((at(span), tip));
-            // Stations that lie clearly between the flat point and the tip, innermost last.
-            let given: Vec<(f64, f64)> = stations
-                .iter()
-                .filter_map(|&(d, v)| v.map(|v| (span - d, v)))
-                .filter(|&(u, _)| u > 2.0 && u < span - 1.0)
-                .collect();
-            for &(u, v) in &given {
-                pts.push((at(u), v));
-            }
-            let inner = given.iter().copied().min_by(|a, c| a.0.total_cmp(&c.0));
-            // Exponent through the innermost station, else the default.
-            let p = match inner {
-                Some((u, v)) if tip > 0.0 && v > 0.0 && v < tip => {
-                    ((v / tip).ln() / (u / span).ln()).clamp(1.2, 6.0)
-                }
-                _ => ROCKER_POWER,
-            };
-            let limit = inner.map_or(span, |(u, _)| u);
+    for (tip, side, span, power, at) in [
+        (
+            nr,
+            &nose,
+            l - x0,
+            2.7,
+            &(|u: f64| x0 + u) as &dyn Fn(f64) -> f64,
+        ),
+        (tr, &tail, x0, 2.2, &|u: f64| x0 - u),
+    ] {
+        pts.push((at(span), tip));
+        // Stations as (distance from the flat point, value).
+        let given: Vec<(f64, f64)> = side
+            .iter()
+            .map(|&(d, v)| (span - d, v))
+            .filter(|&(u, _)| u > 0.5 && u < span)
+            .collect();
+        for &(u, v) in &given {
+            pts.push((at(u), v));
+        }
+        let inner = given.iter().copied().min_by(|a, c| a.0.total_cmp(&c.0));
+        // Power curve from the flat point to the innermost station (or the tip).
+        let (u1, v1) = inner.unwrap_or((span, tip));
+        if v1 > 0.0 {
             for f in [0.2, 0.4, 0.6, 0.8] {
-                let u = f * span;
-                if u < limit - 2.0 {
-                    let v = match inner {
-                        // Scale so the power curve passes exactly through the station.
-                        Some((ui, vi)) => vi * (u / ui).powf(p),
-                        None => tip * (u / span).powf(p),
-                    };
-                    pts.push((at(u), v));
+                let u = f * u1;
+                if u < u1 - 1.0 {
+                    pts.push((at(u), v1 * f.powf(power)));
                 }
             }
-        };
-    side(
-        nr,
-        [(FOOT, b.nose_rocker_12), (2.0 * FOOT, b.nose_rocker_24)],
-        l - x0,
-        &|u| x0 + u,
-    );
-    side(
-        tr,
-        [(FOOT, b.tail_rocker_12), (2.0 * FOOT, b.tail_rocker_24)],
-        x0,
-        &|u| x0 - u,
-    );
+        }
+    }
     (Pchip::new(&pts), x0)
 }
 
-fn thickness_curve(b: &Blank, l: f64) -> impl Fn(f64) -> f64 {
+fn thickness_curve(b: &Blank, l: f64) -> Pchip {
     let t = b.thickness;
     let xm = l / 2.0;
-    // Thickness fraction lost at the tip, per side: from the 12" thickness when given.
-    let loss = |t12: Option<f64>, half: f64| -> f64 {
-        match t12 {
-            Some(t12) if half > FOOT + 1.0 => {
-                let s = (half - FOOT) / half;
-                ((1.0 - t12 / t) / s.powf(TAPER_POWER)).clamp(0.0, 0.9)
+    let mut pts = vec![(xm, t)];
+    for nose in [true, false] {
+        let x_of = |d: f64| if nose { l - d } else { d };
+        let mut side = side_points(b, nose, Measure::Thickness, xm);
+        if side.is_empty() {
+            // Typical taper (US Blanks drawings), as fractions of the middle thickness.
+            let f = if nose {
+                [0.37, 0.67, 0.88]
+            } else {
+                [0.43, 0.69, 0.87]
+            };
+            for (d, f) in [(0.0, f[0]), (FOOT, f[1]), (2.0 * FOOT, f[2])] {
+                if d < xm - 1.0 {
+                    side.push((d, t * f));
+                }
             }
-            _ => 1.0 - TIP_THICKNESS,
         }
-    };
-    let (kn, kt) = (loss(b.nose_thickness, l - xm), loss(b.tail_thickness, xm));
-    move |x: f64| {
-        let (s, k) = if x >= xm {
-            ((x - xm) / (l - xm), kn)
-        } else {
-            ((xm - x) / xm, kt)
-        };
-        t * (1.0 - k * s.clamp(0.0, 1.0).powf(TAPER_POWER))
+        if side.first().is_none_or(|p| p.0 > 0.0) {
+            let tip = extrapolate_tip(&side, 0.2 * t);
+            side.insert(0, (0.0, tip));
+        }
+        pts.extend(side.iter().map(|&(d, v)| (x_of(d), v)));
     }
+    Pchip::new(&pts)
 }
 
 // ------------------------------------------------------------------------------------------- fit
@@ -960,9 +1094,9 @@ pub fn auto_fit_samples(board: &BoardSamples, shape: &BlankShape) -> Placement {
     }
 }
 
-/// A blank that holds `board` with the given margins all round: length, widths at 12" and the widest, the
-/// centre thickness and rockers taken from the board. Useful for tests and as a starting point for a new
-/// blank.
+/// A blank that holds `board` with the given margins all round: the board's length, widths, thicknesses and
+/// rocker at stations 6", 12", 18", 24", 36" and 48" from each end (where the board is long enough), plus the
+/// margins, and the widths and thicknesses at the tips. Useful for tests and as a starting point for a new blank.
 pub fn blank_around(
     board: &Board,
     length_margin: f64,
@@ -970,134 +1104,367 @@ pub fn blank_around(
     thickness_margin: f64,
 ) -> Blank {
     let l = board.length();
-    Blank {
+    let lb = l + 2.0 * length_margin;
+    let mut b = Blank {
         name: board.info.name.clone(),
-        length: l + 2.0 * length_margin,
+        length: lb,
         width: board.max_width() + 2.0 * width_margin,
         wide_point: board.max_width_pos() - l / 2.0,
-        nose_width: Some(board.width_at(l - FOOT) + 2.0 * width_margin),
-        tail_width: Some(board.width_at(FOOT) + 2.0 * width_margin),
         thickness: board.max_thickness() + 2.0 * thickness_margin,
-        nose_thickness: None,
-        tail_thickness: None,
         nose_rocker: board.rocker_at(l - 0.005),
         tail_rocker: board.rocker_at(0.001),
-        nose_rocker_12: None,
-        nose_rocker_24: None,
-        tail_rocker_12: None,
-        tail_rocker_24: None,
+        stations: Vec::new(),
+    };
+    // At the tips, the widest the board gets within 4 cm (rounded tail corners).
+    let width = |x: f64, d: f64| {
+        if d > 0.0 {
+            return board.width_at(x);
+        }
+        (0..=20)
+            .map(|i| {
+                let t = 4.0 * i as f64 / 20.0;
+                board.width_at(if x < l / 2.0 { x + t } else { x - t })
+            })
+            .fold(0.0, f64::max)
+    };
+    for nose in [true, false] {
+        for inches in [0.0, 6.0, 12.0, 18.0, 24.0, 36.0, 48.0] {
+            let d = inches * INCH;
+            if d > l / 2.0 - 10.0 {
+                break;
+            }
+            // Station on the blank, and the matching board station.
+            let x = if nose {
+                l - d + length_margin
+            } else {
+                d - length_margin
+            };
+            // Just inside the board at the tips (a square tail starts with a vertical edge).
+            let x = x.clamp(0.5, l - 0.5);
+            b.stations.push(BlankStation {
+                from_nose: nose,
+                dist: d,
+                width: Some(width(x, d) + 2.0 * width_margin),
+                thickness: Some((board.thickness_at(x) + 2.0 * thickness_margin).min(b.thickness)),
+                // The tip rocker is the main field.
+                rocker: (d > 0.0).then(|| board.rocker_at(x)),
+            });
+        }
     }
+    b
 }
 
 // ------------------------------------------------------------------------------------------- library
 
-/// Built-in blanks: published catalogue numbers (sources in `docs/blanks.md`). Lengths in inches as
-/// published, converted to cm on use.
+/// Built-in blank: published catalogue numbers (sources in `docs/blanks.md`), inches as published.
 struct Entry {
     name: &'static str,
-    /// Length (tip to tip), widest width, centre thickness, nose and tail rocker, inches.
-    dims: [f64; 5],
-}
-
-const fn e(name: &'static str, dims: [f64; 5]) -> Entry {
-    Entry { name, dims }
+    /// Length (tip to tip), widest width, wide point from the middle (+ toward the nose), thickness at the
+    /// middle, nose rocker, tail rocker.
+    dims: [f64; 6],
+    /// Nose stations then tail stations: (distance from the tip, width, thickness, rocker); negative = not
+    /// published.
+    nose: &'static [[f64; 4]],
+    tail: &'static [[f64; 4]],
 }
 
 const LIBRARY: &[Entry] = &[
-    // US Blanks (California): "tip-to-tip deck length", max width, max thickness, natural rocker N / T.
-    e(
-        "5'10\" fish (US Blanks 5'10\" RP)",
-        [70.75, 24.875, 2.9375, 4.625, 1.9375],
-    ),
-    e(
-        "6'0\" shortboard (US Blanks 6'0\" R)",
-        [71.75, 21.1875, 3.0625, 4.4375, 2.125],
-    ),
-    e(
-        "6'2\" shortboard (US Blanks 6'2\" P)",
-        [73.875, 20.5, 2.5, 4.4375, 2.25],
-    ),
-    e(
-        "6'4\" shortboard (US Blanks 6'4\" EA)",
-        [75.5, 20.625, 2.75, 5.5, 2.0625],
-    ),
-    e(
-        "6'5\" shortboard (US Blanks 6'5\" R)",
-        [76.75, 21.75, 3.25, 4.6875, 2.25],
-    ),
-    e(
-        "6'8\" fish / hybrid (US Blanks 6'8\" RP)",
-        [80.75, 25.125, 3.0, 5.0, 2.125],
-    ),
-    e(
-        "7'5\" funboard (US Blanks 7'5\" A)",
-        [87.4375, 21.875, 3.0, 6.0, 2.125],
-    ),
-    e(
-        "7'8\" step-up (US Blanks 7'8\" EA)",
-        [92.1875, 21.875, 3.0, 6.1875, 2.625],
-    ),
-    e(
-        "8'0\" mid-length (US Blanks 8'0\" H)",
-        [95.875, 23.625, 3.3125, 4.625, 1.9375],
-    ),
-    e(
-        "9'2\" gun (US Blanks 9'2\" A)",
-        [110.0, 22.25, 3.5, 7.625, 2.75],
-    ),
-    e(
-        "9'4\" longboard (US Blanks 9'4\" B)",
-        [111.0625, 25.0625, 3.3125, 4.75, 3.5],
-    ),
-    e(
-        "10'2\" longboard (US Blanks 10'2\" B)",
-        [121.25, 25.1875, 3.5, 4.8125, 3.4375],
-    ),
-    // Generic sizes between the catalogue blanks above (interpolated, not a manufacturer's numbers).
-    e(
-        "Generic 5'8\" shortboard (estimate)",
-        [69.0, 21.0, 2.75, 4.25, 2.0],
-    ),
-    e(
-        "Generic 7'0\" step-up (estimate)",
-        [84.5, 21.25, 3.0, 5.75, 2.375],
-    ),
-    e(
-        "Generic 8'6\" mid-length (estimate)",
-        [102.0, 23.5, 3.375, 5.0, 2.5],
-    ),
-    e(
-        "Generic 9'8\" longboard (estimate)",
-        [116.0, 25.0, 3.375, 4.75, 3.5],
-    ),
+    // US Blanks (California): tip-to-tip deck length, max width, max thickness and natural rocker from the
+    // blank's page; stations from its "with Measurements" drawing.
+    Entry {
+        name: "5'10\" fish (US Blanks 5'10\" RP)",
+        dims: [70.75, 24.875, 0.0, 2.9375, 4.625, 1.9375],
+        nose: &[
+            [0.0, 8.0, 1.25, 4.625],
+            [6.0, 14.8125, 1.6875, 2.625],
+            [12.0, 19.3125, 2.1875, 1.375],
+            [18.0, 22.1875, 2.5625, 0.625],
+            [24.0, 23.875, 2.75, 0.25],
+        ],
+        tail: &[
+            [0.0, 14.0, 1.3125, 1.9375],
+            [6.0, 17.75, 1.75, 1.3125],
+            [12.0, 20.375, 2.1875, 0.875],
+            [18.0, 22.5, 2.5, 0.5],
+            [24.0, 23.75, 2.75, 0.25],
+        ],
+    },
+    Entry {
+        name: "6'0\" shortboard (US Blanks 6'0\" R)",
+        dims: [71.75, 21.1875, 0.0, 3.0, 4.4375, 2.125],
+        nose: &[
+            [0.0, 5.0, 1.25, 4.4375],
+            [6.0, 12.375, 1.625, 2.4375],
+            [12.0, 16.375, 2.1875, 1.375],
+            [18.0, 18.875, 2.5625, 0.75],
+            [24.0, 20.4375, 2.8125, 0.3125],
+        ],
+        tail: &[
+            [0.0, 8.5, 1.25, 2.125],
+            [6.0, 13.75, 1.75, 1.4375],
+            [12.0, 17.125, 2.25, 0.9375],
+            [18.0, 19.25, 2.5625, 0.5],
+            [24.0, 20.625, 2.8125, 0.25],
+        ],
+    },
+    Entry {
+        name: "6'2\" shortboard (US Blanks 6'2\" P)",
+        dims: [73.875, 20.5, 0.0, 2.5, 4.4375, 2.25],
+        nose: &[
+            [0.0, 4.5, 0.75, 4.4375],
+            [6.0, 10.0, 1.25, 2.5],
+            [12.0, 14.0, 1.625, 1.5],
+            [18.0, 16.75, 2.0, 0.8125],
+            [24.0, 18.625, 2.25, 0.375],
+        ],
+        tail: &[
+            [0.0, 6.125, 1.0, 2.25],
+            [6.0, 11.875, 1.375, 1.625],
+            [12.0, 15.4375, 1.875, 1.0625],
+            [18.0, 17.875, 2.1875, 0.625],
+            [24.0, 19.4375, 2.375, 0.3125],
+        ],
+    },
+    Entry {
+        name: "6'4\" shortboard (US Blanks 6'4\" EA)",
+        dims: [75.5, 20.625, 0.0, 2.75, 5.5, 2.0625],
+        nose: &[
+            [0.0, 4.125, 0.9375, 5.5],
+            [6.0, 10.125, 1.3125, 3.3125],
+            [12.0, 14.1875, 1.75, 1.8125],
+            [18.0, 17.125, 2.125, 0.9375],
+            [24.0, 19.0, 2.4375, 0.4375],
+        ],
+        tail: &[
+            [0.0, 8.0, 1.3125, 2.0625],
+            [6.0, 12.4375, 1.6875, 1.4375],
+            [12.0, 15.4375, 2.0, 0.9375],
+            [18.0, 17.6875, 2.3125, 0.5625],
+            [24.0, 19.25, 2.5, 0.3125],
+        ],
+    },
+    Entry {
+        name: "6'5\" shortboard (US Blanks 6'5\" R)",
+        dims: [76.75, 21.75, 0.0, 3.25, 4.6875, 2.25],
+        nose: &[
+            [0.0, 6.25, 1.375, 4.6875],
+            [6.0, 13.125, 1.9375, 2.5625],
+            [12.0, 16.875, 2.375, 1.5625],
+            [18.0, 19.25, 2.75, 0.875],
+            [24.0, 20.75, 3.0, 0.375],
+        ],
+        tail: &[
+            [0.0, 9.25, 1.375, 2.25],
+            [6.0, 14.0, 2.0, 1.4375],
+            [12.0, 17.0, 2.4375, 0.6875],
+            [18.0, 19.125, 2.8125, 0.5625],
+            [24.0, 20.625, 3.0625, 0.25],
+        ],
+    },
+    Entry {
+        name: "6'8\" fish / hybrid (US Blanks 6'8\" RP)",
+        dims: [80.75, 25.125, 0.0, 3.0, 5.0, 2.125],
+        nose: &[
+            [0.0, 7.5, 1.25, 5.0],
+            [6.0, 14.3125, 1.6875, 3.0625],
+            [12.0, 18.5625, 2.125, 1.75],
+            [18.0, 21.5, 2.4375, 0.9375],
+            [24.0, 23.375, 2.6875, 0.4375],
+        ],
+        tail: &[
+            [0.0, 13.75, 1.4375, 2.125],
+            [6.0, 17.375, 1.8125, 1.5],
+            [12.0, 20.0, 2.1875, 1.0625],
+            [18.0, 21.9375, 2.5, 0.625],
+            [24.0, 23.375, 2.75, 0.375],
+        ],
+    },
+    Entry {
+        name: "7'5\" funboard (US Blanks 7'5\" A)",
+        dims: [87.4375, 21.875, 0.0, 3.0, 6.0, 2.125],
+        nose: &[
+            [0.0, 4.75, 1.0, 6.0],
+            [6.0, 11.0, 1.5, 3.5625],
+            [12.0, 15.1875, 2.0, 2.0625],
+            [18.0, 18.0, 2.375, 1.1875],
+            [24.0, 19.6875, 2.625, 0.6875],
+            [36.0, 21.625, 2.9375, 0.125],
+        ],
+        tail: &[
+            [0.0, 8.5, 1.375, 2.125],
+            [6.0, 12.6875, 1.75, 1.625],
+            [12.0, 15.375, 2.0625, 1.1875],
+            [18.0, 17.5, 2.375, 0.8125],
+            [24.0, 19.1875, 2.5625, 0.5],
+            [36.0, 21.25, 2.875, 0.09375],
+        ],
+    },
+    Entry {
+        name: "7'8\" step-up (US Blanks 7'8\" EA)",
+        dims: [92.1875, 21.875, 0.0, 3.0, 6.1875, 2.625],
+        nose: &[
+            [0.0, 3.1875, 1.0, 6.1875],
+            [6.0, 8.875, 1.375, 4.0],
+            [12.0, 12.75, 1.8125, 2.5],
+            [18.0, 16.0, 2.25, 1.5],
+            [24.0, 18.1875, 2.5625, 0.8125],
+            [36.0, 21.0, 3.0, 0.125],
+        ],
+        tail: &[
+            [0.0, 6.5625, 1.375, 2.625],
+            [6.0, 11.375, 1.625, 1.9375],
+            [12.0, 14.5, 2.0, 1.375],
+            [18.0, 16.875, 2.3125, 1.0],
+            [24.0, 18.8125, 2.5625, 0.625],
+            [36.0, 21.125, 2.875, 0.125],
+        ],
+    },
+    Entry {
+        name: "8'0\" mid-length (US Blanks 8'0\" H)",
+        dims: [95.875, 23.625, 0.0, 3.3125, 3.5625, 3.125],
+        nose: &[
+            [0.0, -1.0, 0.9375, 3.5625],
+            [6.0, 15.375, 1.75, 2.625],
+            [12.0, 19.0625, 2.125, 1.875],
+            [18.0, 21.0625, 2.5, 1.25],
+            [24.0, 22.1875, 2.8125, 0.75],
+            [36.0, 23.4375, 3.1875, 0.1875],
+        ],
+        tail: &[
+            [0.0, 6.75, 1.3125, 3.125],
+            [6.0, 13.0, 1.75, 2.875],
+            [12.0, 16.4375, 2.125, 1.75],
+            [18.0, 18.8125, 2.4375, 1.25],
+            [24.0, 20.5, 2.75, 0.8125],
+            [36.0, 22.625, 3.1875, 0.25],
+        ],
+    },
+    Entry {
+        name: "9'2\" gun (US Blanks 9'2\" A)",
+        dims: [110.0, 22.25, 0.0, 3.5, 7.625, 2.75],
+        nose: &[
+            [0.0, 4.0, 1.3125, 7.625],
+            [6.0, 8.75, 1.6875, 5.375],
+            [12.0, 12.625, 2.1875, 3.625],
+            [18.0, 15.75, -1.0, 2.375],
+            [24.0, 18.0, 3.0, 1.5625],
+            [36.0, 21.0, 3.375, 0.5],
+        ],
+        tail: &[
+            [0.0, 6.0, 1.375, 2.75],
+            [6.0, 9.75, 1.6875, 2.125],
+            [12.0, 12.75, 2.0625, 1.5625],
+            [18.0, 15.125, 2.375, 1.25],
+            [24.0, 17.125, 2.625, 0.875],
+            [36.0, 20.0, 3.125, 0.375],
+        ],
+    },
+    Entry {
+        name: "9'4\" longboard (US Blanks 9'4\" B)",
+        dims: [111.0625, 25.0625, 7.53125, 3.3125, 4.75, 3.5],
+        nose: &[
+            [0.0, -1.0, 1.3125, 4.75],
+            [6.0, 17.0, 1.6875, 3.5],
+            [12.0, 20.3125, 2.0, 2.5],
+            [18.0, 22.1875, 2.375, 1.75],
+            [24.0, 23.4375, 2.625, 1.1875],
+            [36.0, 24.8125, 3.0, 0.4375],
+            [48.0, 25.0625, 3.25, 0.0625],
+        ],
+        tail: &[
+            [0.0, 7.5, 1.5, 3.5],
+            [6.0, 13.25, 1.75, 2.75],
+            [12.0, 16.3125, 2.125, 2.125],
+            [18.0, 18.5625, 2.375, 1.5625],
+            [24.0, 20.25, 2.625, 1.09375],
+            [36.0, 22.625, 3.0, 0.4375],
+            [48.0, 24.125, 3.25, 0.09375],
+            [55.53125, 24.875, -1.0, -1.0],
+        ],
+    },
+    Entry {
+        name: "10'2\" longboard (US Blanks 10'2\" B)",
+        dims: [121.25, 25.1875, 12.625, 3.5, 4.8125, 3.4375],
+        nose: &[
+            [0.0, -1.0, 1.375, 4.8125],
+            [6.0, 17.5, 1.875, 3.625],
+            [12.0, 20.75, 2.3125, 2.625],
+            [18.0, 22.3125, 2.6875, 1.875],
+            [24.0, 23.4375, 2.9375, 1.3125],
+            [36.0, 24.625, 3.25, 0.5625],
+            [48.0, 25.1875, 3.4375, 0.15625],
+        ],
+        tail: &[
+            [0.0, 9.25, 1.3125, 3.4375],
+            [6.0, 14.25, 1.8125, 2.5],
+            [12.0, 17.5625, 2.25, 1.8125],
+            [18.0, 19.8125, 2.625, 1.3125],
+            [24.0, 21.375, 2.875, 0.9375],
+            [36.0, 23.4375, 3.25, 0.375],
+            [48.0, 24.5, 3.4375, 0.0625],
+            [60.625, 25.125, -1.0, -1.0],
+        ],
+    },
+    // Generic sizes between the catalogue blanks above (interpolated, not a manufacturer's numbers); their
+    // stations come from the typical proportions.
+    Entry {
+        name: "Generic 5'8\" shortboard (estimate)",
+        dims: [69.0, 21.0, 0.0, 2.75, 4.25, 2.0],
+        nose: &[],
+        tail: &[],
+    },
+    Entry {
+        name: "Generic 7'0\" step-up (estimate)",
+        dims: [84.5, 21.25, 0.0, 3.0, 5.75, 2.375],
+        nose: &[],
+        tail: &[],
+    },
+    Entry {
+        name: "Generic 8'6\" mid-length (estimate)",
+        dims: [102.0, 23.5, 0.0, 3.375, 4.75, 3.25],
+        nose: &[],
+        tail: &[],
+    },
+    Entry {
+        name: "Generic 9'8\" longboard (estimate)",
+        dims: [116.0, 25.0, 0.0, 3.375, 4.75, 3.5],
+        nose: &[],
+        tail: &[],
+    },
 ];
 
 /// The built-in blank library, shortest first.
 pub fn library() -> Vec<Blank> {
-    let inch = crate::units::INCH;
-    let mut lib = LIBRARY
+    let opt = |v: f64| (v >= 0.0).then_some(v * INCH);
+    let mut lib: Vec<Blank> = LIBRARY
         .iter()
         .map(|en| {
-            let [l, w, t, nr, tr] = en.dims;
+            let [l, w, wp, t, nr, tr] = en.dims;
+            let stations = en
+                .nose
+                .iter()
+                .map(|s| (true, s))
+                .chain(en.tail.iter().map(|s| (false, s)))
+                .map(|(from_nose, &[d, w, t, r])| BlankStation {
+                    from_nose,
+                    dist: d * INCH,
+                    width: opt(w),
+                    thickness: opt(t),
+                    rocker: opt(r),
+                })
+                .collect();
             Blank {
                 name: en.name.to_string(),
-                length: l * inch,
-                width: w * inch,
-                wide_point: 0.0,
-                nose_width: None,
-                tail_width: None,
-                thickness: t * inch,
-                nose_thickness: None,
-                tail_thickness: None,
-                nose_rocker: nr * inch,
-                tail_rocker: tr * inch,
-                nose_rocker_12: None,
-                nose_rocker_24: None,
-                tail_rocker_12: None,
-                tail_rocker_24: None,
+                length: l * INCH,
+                width: w * INCH,
+                wide_point: wp * INCH,
+                thickness: t * INCH,
+                nose_rocker: nr * INCH,
+                tail_rocker: tr * INCH,
+                stations,
             }
         })
-        .collect::<Vec<_>>();
+        .collect();
     lib.sort_by(|a, b| a.length.total_cmp(&b.length));
     lib
 }
@@ -1128,24 +1495,46 @@ mod tests {
     use crate::spline::polyline;
 
     fn full() -> Blank {
-        Blank {
+        let mut b = Blank {
             name: "Test = blank; 6'4\" R".into(),
-            nose_width: Some(30.0),
-            tail_width: Some(38.0),
-            nose_thickness: Some(6.0),
-            tail_thickness: Some(6.5),
-            nose_rocker_12: Some(5.0),
-            nose_rocker_24: Some(2.0),
-            tail_rocker_12: Some(2.5),
-            tail_rocker_24: Some(0.8),
             wide_point: -2.5,
             ..Blank::default()
+        };
+        for (nose, m, d, v) in [
+            (true, Measure::Width, FOOT, 30.0),
+            (false, Measure::Width, FOOT, 38.0),
+            (true, Measure::Thickness, FOOT, 6.0),
+            (false, Measure::Thickness, FOOT, 6.5),
+            (true, Measure::Rocker, FOOT, 5.0),
+            (true, Measure::Rocker, 2.0 * FOOT, 2.0),
+            (false, Measure::Rocker, FOOT, 2.5),
+            (false, Measure::Rocker, 2.0 * FOOT, 0.8),
+        ] {
+            b.set_station(nose, d, m, Some(v));
         }
+        b
+    }
+
+    #[test]
+    fn stations_set_and_clear() {
+        let mut b = full();
+        assert_eq!(b.stations.len(), 4);
+        assert_eq!(b.station(true, FOOT, Measure::Width), Some(30.0));
+        b.set_station(true, FOOT, Measure::Width, None);
+        b.set_station(true, FOOT, Measure::Thickness, None);
+        assert_eq!(b.station(true, FOOT, Measure::Rocker), Some(5.0));
+        b.set_station(true, FOOT, Measure::Rocker, None);
+        assert_eq!(b.stations.len(), 3);
+        b.set_station(true, 3.0, Measure::Width, None);
+        assert_eq!(b.stations.len(), 3);
     }
 
     #[test]
     fn compact_round_trip() {
-        for b in [Blank::default(), full()] {
+        let mut lib = library();
+        lib.push(Blank::default());
+        lib.push(full());
+        for b in lib {
             let text = b.to_compact();
             assert!(!text.contains('\n'));
             assert_eq!(Blank::from_compact(&text), Some(b.clone()), "{text}");
@@ -1164,11 +1553,13 @@ mod tests {
                 assert_eq!(BlankSetup::from_compact(&s.to_compact()), Some(s));
             }
         }
-        // Unknown keys are skipped, missing required ones refuse the line.
+        // Unknown keys are skipped, missing required ones or broken stations refuse the line.
         let b = Blank::from_compact("L=200 W=55 T=8 XYZ=4 name=x").unwrap();
         assert_eq!((b.length, b.name.as_str()), (200.0, "x"));
         assert!(Blank::from_compact("L=200 W=55 name=x").is_none());
         assert!(Blank::from_compact("L=abc W=55 T=8").is_none());
+        assert!(Blank::from_compact("L=200 W=55 T=8 S=X,1,2,3,4").is_none());
+        assert!(Blank::from_compact("L=200 W=55 T=8 S=N,1,2").is_none());
         assert!(Blank::from_compact("").is_none());
     }
 
@@ -1176,7 +1567,7 @@ mod tests {
     fn validation() {
         assert!(Blank::default().validate().is_ok());
         assert!(full().validate().is_ok());
-        let bad = [
+        let mut bad = vec![
             Blank {
                 length: -1.0,
                 ..Blank::default()
@@ -1189,15 +1580,13 @@ mod tests {
                 thickness: f64::NAN,
                 ..Blank::default()
             },
-            Blank {
-                nose_rocker_12: Some(20.0),
-                ..Blank::default()
-            },
-            Blank {
-                nose_width: Some(80.0),
-                ..Blank::default()
-            },
         ];
+        let mut b = Blank::default();
+        b.set_station(true, FOOT, Measure::Rocker, Some(20.0));
+        bad.push(b);
+        let mut b = Blank::default();
+        b.set_station(false, FOOT, Measure::Width, Some(80.0));
+        bad.push(b);
         for b in bad {
             assert!(b.validate().is_err(), "{b:?}");
         }
@@ -1219,6 +1608,30 @@ mod tests {
                 .all(|p| p.y <= b.width / 2.0 + 1e-6)
         );
         assert!(s.half_width_at(l) < 1e-6 && s.half_width_at(0.0) < 1e-6);
+        // Every published station is matched (widths away from the rounded tips).
+        for st in &b.stations {
+            let x = b.station_x(st);
+            if let Some(w) = st.width.filter(|_| st.dist > 1.0) {
+                let got = s.half_width_at(x) * 2.0;
+                assert!(
+                    (got - w).abs() < 0.05,
+                    "{}: width {got} vs {w} at {x}",
+                    b.name
+                );
+            }
+            if let Some(t) = st.thickness {
+                let got = s.thickness_at(x);
+                assert!((got - t).abs() < 0.05, "{}: thickness {got} vs {t}", b.name);
+            }
+            if let Some(r) = st.rocker {
+                let got = s.bottom_at(x);
+                assert!(
+                    (got - r).abs() < 0.05,
+                    "{}: rocker {got} vs {r} at {x}",
+                    b.name
+                );
+            }
+        }
         // Rocker: published tips, zero at the flat point, monotone either side of it.
         assert!((s.bottom_at(l) - b.nose_rocker).abs() < 1e-6, "{}", b.name);
         assert!((s.bottom_at(0.0) - b.tail_rocker).abs() < 1e-6);
@@ -1241,7 +1654,7 @@ mod tests {
                 );
             }
         }
-        // Thickness: the published centre value, thinner toward the tips, never negative.
+        // Thickness: the published middle value, thinner toward the tips, never negative.
         assert!((s.thickness_at(l / 2.0) - b.thickness).abs() < 1e-6);
         for x in [0.0, l * 0.1, l * 0.9, l] {
             let t = s.thickness_at(x);
@@ -1258,16 +1671,13 @@ mod tests {
         check_shape(&Blank::default());
         let b = full();
         check_shape(&b);
-        let s = BlankShape::new(&b);
-        let l = b.length;
-        assert!((s.half_width_at(l - FOOT) * 2.0 - 30.0).abs() < 0.05);
-        assert!((s.half_width_at(FOOT) * 2.0 - 38.0).abs() < 0.05);
-        assert!((s.bottom_at(l - FOOT) - 5.0).abs() < 0.01);
-        assert!((s.bottom_at(l - 2.0 * FOOT) - 2.0).abs() < 0.01);
-        assert!((s.bottom_at(FOOT) - 2.5).abs() < 0.01);
-        assert!((s.bottom_at(2.0 * FOOT) - 0.8).abs() < 0.01);
-        assert!((s.thickness_at(l - FOOT) - 6.0).abs() < 0.01);
-        assert!((s.thickness_at(FOOT) - 6.5).abs() < 0.01);
+        // Typical proportions when nothing is published.
+        let d = Blank::default();
+        let s = BlankShape::new(&d);
+        let w12 = s.half_width_at(d.length - FOOT) * 2.0 / d.width;
+        assert!((w12 - NOSE_12_RATIO).abs() < 1e-3, "{w12}");
+        let t12 = s.thickness_at(FOOT) / d.thickness;
+        assert!((t12 - 0.69).abs() < 1e-3, "{t12}");
     }
 
     #[test]
@@ -1283,6 +1693,17 @@ mod tests {
             assert!(b.length > 150.0 && b.length < 400.0, "{}", b.name);
             assert!(b.width > 45.0 && b.width < 70.0, "{}", b.name);
             assert!(b.thickness > 5.0 && b.thickness < 13.0, "{}", b.name);
+            // Station widths and thicknesses grow from each tip toward the middle.
+            for nose in [true, false] {
+                for m in [Measure::Width, Measure::Thickness] {
+                    let v = side_points(b, nose, m, b.length);
+                    assert!(
+                        v.windows(2).all(|w| w[1].1 >= w[0].1),
+                        "{} {m:?} nose={nose}: {v:?}",
+                        b.name
+                    );
+                }
+            }
             check_shape(b);
             assert_eq!(find(&b.name).as_ref(), Some(b));
         }
@@ -1318,6 +1739,7 @@ mod tests {
     fn board_fits_a_blank_made_around_it() {
         let b = board(190.0, 50.0, 6.5, 11.0, 5.0);
         let blank = blank_around(&b, 3.0, 2.0, 1.0);
+        blank.validate().unwrap();
         let r = fit(&b, &blank, &Placement::default());
         assert!(r.fits, "{:?}", r.problems);
         assert!((r.tail_spare - 3.0).abs() < 0.01 && (r.nose_spare - 3.0).abs() < 0.01);
@@ -1349,7 +1771,7 @@ mod tests {
             .find(|p| p.view == FitView::Outline)
             .unwrap();
         assert!(p.from < 95.0 && p.to > 95.0 && (p.depth + r.outline.min).abs() < 1e-9);
-        // Thicker: deck and bottom fail in the middle by the same amount (centred height).
+        // Thicker: deck and bottom fail along the middle by the same amount (centred height).
         let thick = board(190.0, 50.0, 10.0, 11.0, 5.0);
         let r = fit(&thick, &blank, &Placement::default());
         assert!(!r.fits && r.deck.min < 0.0 && r.bottom.min < 0.0);
@@ -1369,6 +1791,7 @@ mod tests {
         // A board with more nose rocker than the blank, placed off-centre: tilting and shifting helps.
         let b = board(190.0, 50.0, 6.5, 14.0, 4.0);
         let mut blank = blank_around(&b, 4.0, 2.0, 1.5);
+        blank.stations.retain(|s| s.dist > 40.0);
         blank.nose_rocker = 9.0;
         blank.tail_rocker = 7.0;
         let start = Placement {

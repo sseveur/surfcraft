@@ -612,11 +612,9 @@ replaced by spaces). Numbers are centimetres or degrees, in the shortest form th
 | `L` | blank length (tip to tip) | yes |
 | `W` | widest width | yes |
 | `WP` | position of the widest width from the middle, positive toward the nose | no (0) |
-| `NW`, `TW` | width 12" (30.48 cm) from the nose / tail tip | no |
 | `T` | thickness at the middle | yes |
-| `NT`, `TT` | stringer thickness 12" from the nose / tail tip | no |
 | `NR`, `TR` | nose / tail rocker: height of the bottom at the tip above its lowest point | no (0) |
-| `NR12`, `NR24`, `TR12`, `TR24` | rocker 12" / 24" from the nose / tail tip | no |
+| `S` | one measured station, any number of times: `S=<end>,<distance>,<width>,<thickness>,<rocker>` with `<end>` `N` (distance from the nose tip) or `T` (from the tail tip); an empty value is not measured (`S=N,30.48,36.04,,4.6`) | no |
 | `SH` | distance from the blank's tail to the board's tail; absent: board centred lengthwise | no |
 | `TI` | tilt of the board in the profile plane, degrees, positive lifts the nose; absent: 0 | no |
 | `LI` | height of the board's rocker baseline above the blank's; absent: centred between deck and bottom | no |
@@ -624,10 +622,11 @@ replaced by spaces). Numbers are centimetres or degrees, in the shortest form th
 Example:
 
 ```
-p63 : L=191.77 W=52.3875 WP=0 T=6.985 NR=13.97 TR=5.23875 SH=1.5 TI=0.4 name=6'4" shortboard (US Blanks 6'4" EA)
+p63 : L=191.77 W=52.3875 WP=0 T=6.985 NR=13.97 TR=5.23875 S=N,30.48,36.0362,4.445,4.60375 S=T,30.48,39.2112,, SH=1.5 TI=0.4 name=6'4" shortboard (US Blanks 6'4" EA)
 ```
 
-Readers ignore unknown keys and ignore the whole field when `L`, `W` or `T` is missing or a number is unreadable.
+Readers ignore unknown keys and ignore the whole field when `L`, `W` or `T` is missing, a number is unreadable or
+an `S` item is malformed.
 
 ---
 

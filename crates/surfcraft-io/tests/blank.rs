@@ -31,7 +31,7 @@ fn p63_round_trip() {
         let mut b = fixture(name);
         let mut blank = blank::library()[3].clone();
         blank.name = "Odd name = with; \"quotes\" and spaces".into();
-        blank.tail_rocker_12 = Some(1.5);
+        blank.set_station(false, 40.0, blank::Measure::Rocker, None);
         b.blank = Some(BlankSetup {
             blank,
             placement: Placement {
@@ -93,19 +93,25 @@ fn fixture_boards_too_big_are_reported_where_they_fail() {
         assert!(!r.fits && r.outline.min < -0.5, "{name}: {}", r.outline.min);
         let wp = b.max_width_pos();
         assert!(
-            (r.outline.at - wp).abs() < l * 0.3,
-            "{name}: outline fails at {} (wide point {wp})",
-            r.outline.at
+            r.problems
+                .iter()
+                .any(|p| p.view == FitView::Outline && p.from <= wp && p.to >= wp),
+            "{name}: outline problems {:?} miss the wide point {wp}",
+            r.problems
         );
-        // Too thin: deck and bottom fail somewhere along the middle, outline is clear.
+        assert!(r.outline.min > -1.5, "{name}: {}", r.outline.min);
+        // Too thin: deck and bottom fail, including at the thickest point; the outline is clear.
         let thin = blank_around(&b, 2.0, 1.5, -1.0);
         let r = fit(&b, &thin, &Placement::default());
         assert!(!r.fits && r.deck.min < 0.0 && r.bottom.min < 0.0, "{name}");
         assert!(r.outline.min > 0.0);
+        let (_, tp) = b.max_thickness_and_pos();
         assert!(
-            r.deck.at > l * 0.15 && r.deck.at < l * 0.85,
-            "{name}: {}",
-            r.deck.at
+            r.problems
+                .iter()
+                .any(|p| p.view == FitView::Deck && p.from <= tp && p.to >= tp),
+            "{name}: deck problems {:?} miss the thickest point {tp} (length {l})",
+            r.problems
         );
     }
 }
