@@ -274,7 +274,7 @@ impl SurfCraftApp {
     }
 
     /// Native open dialog, or the next scripted path in tests and automation.
-    fn pick_file(&mut self, what: &str, exts: &[&str]) -> Option<PathBuf> {
+    pub(crate) fn pick_file(&mut self, what: &str, exts: &[&str]) -> Option<PathBuf> {
         if let Some(q) = self.scripted_dialogs.as_mut() {
             return q.pop_front();
         }
@@ -573,6 +573,15 @@ impl SurfCraftApp {
                 {
                     self.ed.ghost = None;
                 }
+                if ui
+                    .button(tr("Compare with…"))
+                    .on_hover_text(tr(
+                        "Table of the differences with another board (or the ghost board)",
+                    ))
+                    .clicked()
+                {
+                    self.compare_with();
+                }
                 ui.separator();
                 if ui
                     .add(
@@ -774,6 +783,13 @@ impl SurfCraftApp {
                 }
                 if ui.button(tr("Weight calculator…")).clicked() {
                     self.dialogs.weight = Some(crate::tools::WeightState::new(&self.doc.board));
+                }
+                if ui
+                    .button(tr("Volume advisor…"))
+                    .on_hover_text(tr("Suggested volume for a rider's weight, skill and waves"))
+                    .clicked()
+                {
+                    self.dialogs.volume_advisor = true;
                 }
                 if ui.button(tr("Guide points…")).clicked() {
                     self.dialogs.guides = true;
@@ -1144,6 +1160,15 @@ impl eframe::App for SurfCraftApp {
             .filter(|r| r.revision == self.doc.revision)
             .map(|r| r.specs.volume);
         crate::tools::weight_window(&ctx, &mut self.dialogs.weight, &self.doc, volume, &self.set);
+        if self.dialogs.volume_advisor {
+            crate::volume_ui::advisor_window(
+                &ctx,
+                &mut self.dialogs.volume_advisor,
+                &mut self.doc,
+                volume,
+                &self.set,
+            );
+        }
         if self.dialogs.guides {
             let curve = self
                 .ed
@@ -1201,6 +1226,7 @@ impl eframe::App for SurfCraftApp {
                 self.save_export(&name, &bytes);
             }
         }
+        self.compare_window(&ctx);
         let tour = self.tour.show(&ctx, &self.tour_targets);
         if let Some(tab) = tour.tab {
             self.tab = tab;

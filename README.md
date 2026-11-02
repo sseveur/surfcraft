@@ -33,9 +33,12 @@ The builds are not signed with paid certificates yet, so the first launch needs 
   removes kinks (selected points, or every small kink of a curve while keeping deliberate corners).
 - **Live specs**: length, widths, thickness, rocker at standard stations, planform area, volume, centre of mass.
 - **Compare**: ghost board overlay, "original" snapshot, background photo tracing (hold T / N and click the photo's
-  tail / nose).
+  tail / nose). File > Compare with… tabulates the differences with another board (specs and every foot / 30 cm),
+  copyable as CSV.
 - **3D**: GPU view with zebra stripes for checking fairness.
 - **New board from a template** at a target length, width, thickness and volume (litres).
+- **Volume advisor** (Board menu, and "Suggest volume" in New board): a starting-point volume range from the
+  rider's weight, skill, fitness, age, waves and board type (Guild factor method, see `docs/volume-advisor.md`).
 - **Weight calculator**: foam, stringer, glass, laps, resin, hot coat.
 - **Print**: outline (half or full), spin, profile and cross-section templates at true 1:1 scale, tiled and centred
   over A4/A3/Letter/Tabloid with registration marks and a 100 mm check bar; one-page spec sheet. PDF, SVG or DXF.
@@ -45,7 +48,8 @@ The builds are not signed with paid certificates yet, so the first launch needs 
   4th-axis rotating board, supports or end clamps, hot-wire profile and outline; LinuxCNC G-code with a preview and
   machining-time estimate. Passes follow the modelled surface and stop at the rail apex on 3-axis machines. Check a
   new program in your machine's simulator before cutting.
-- **3D model export**: STL, OBJ (mm), STEP.
+- **3D model export**: STL, OBJ (mm), 3MF for 3D printing, glTF binary `.glb` (web/AR viewers), STEP; full size or
+  as a scale model (1:5, 1:10, custom).
 - **Files**: `.brd` (including encrypted legacy files), Shape3D `.s3d`, `.srf`, BoardCAD STEP; `.otl/.pfl/.crs` curve
   pieces. Saving keeps a `.bak` of the previous version.
 - **Languages**: English, French, Spanish, Portuguese, Dutch, Norwegian (View → Language).
@@ -81,7 +85,7 @@ Claude Desktop (`claude_desktop_config.json`):
 
 Tools include `board_summary`, `sample_board`, `get_curve`, `set_knot`, `move_knot`, `add_knot`, `section_info`,
 `add_section`, `scale_board` (with target volume), `new_board`, `open_board`, `save_board`, `set_fins`,
-`estimate_weight`, `export`, `generate_toolpath`, `undo`/`redo`, `launch_app`, `screenshot`, `set_view`.
+`estimate_weight`, `suggest_volume`, `export`, `generate_toolpath`, `undo`/`redo`, `launch_app`, `screenshot`, `set_view`.
 
 Security: the app only listens on 127.0.0.1, and only while control is enabled; every request needs a random token
 stored in a file readable only by your user account. The server never connects to the internet.
@@ -107,7 +111,7 @@ Command line: `surfcraft [board.brd] [--tab overview|outline|rocker|section|3d] 
 |---|---|
 | `crates/surfcraft-core` | Geometry: Bezier curves, cross-sections, surface models, metrics, mesh, units, weight |
 | `crates/surfcraft-io` | File formats and built-in templates |
-| `crates/surfcraft-export` | STL/OBJ, PDF/SVG/DXF writers, printable templates |
+| `crates/surfcraft-export` | STL/OBJ/3MF/glTF, PDF/SVG/DXF writers, printable templates |
 | `crates/surfcraft-session` | Document with undo, edit operations, JSON commands, automation bridge |
 | `crates/surfcraft-cam` | Toolpaths, cutters, holding systems, G-code |
 | `crates/surfcraft-app` | Desktop app (egui/eframe + wgpu) |

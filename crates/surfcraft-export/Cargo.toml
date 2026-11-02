@@ -1,6 +1,6 @@
 [package]
 name = "surfcraft-export"
-description = "SurfCraft exports: meshes (STL, OBJ), 2D drawings (PDF, SVG, DXF) and printable templates"
+description = "SurfCraft exports: meshes (STL, OBJ, 3MF, glTF), 2D drawings (PDF, SVG, DXF) and printable templates"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -9,6 +9,7 @@ authors.workspace = true
 
 [dependencies]
 surfcraft-core.workspace = true
+serde_json = "1"
 
 [dev-dependencies]
 surfcraft-io.workspace = true

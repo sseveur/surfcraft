@@ -185,7 +185,11 @@ fn no_negative_zero_in_formatted_lengths() {
 #[test]
 fn tool_specs_are_complete_and_unique() {
     let specs = tool_specs();
-    assert_eq!(specs.len(), 26, "command count (25 + generate_toolpath)");
+    assert_eq!(
+        specs.len(),
+        27,
+        "command count (25 + generate_toolpath + suggest_volume)"
+    );
     let mut names: Vec<_> = specs.iter().map(|s| s.name).collect();
     names.sort();
     names.dedup();
@@ -307,6 +311,14 @@ fn invalid_inputs_are_errors() {
             "export",
             json!({"what": "rail", "format": "pdf", "path": "/tmp/x.pdf"}),
         ),
+        (
+            "export",
+            json!({"what": "model", "format": "3mf", "path": "/tmp/x.3mf", "scale": 0}),
+        ),
+        (
+            "export",
+            json!({"what": "model", "format": "glb", "path": "/tmp/x.glb", "scale": "big"}),
+        ),
         ("set_surface_model", json!({})),
         ("set_surface_model", json!({"model": "loft"})),
         ("does_not_exist", json!({})),
@@ -419,6 +431,10 @@ fn read_only_commands_do_not_touch_history() {
         ("get_curve", json!({"curve": "section"})),
         ("section_info", json!({})),
         ("estimate_weight", json!({"foam_density": 0.03})),
+        (
+            "suggest_volume",
+            json!({"weight_kg": 75, "skill": "advanced", "board_type": "fish"}),
+        ),
     ] {
         ok(&mut d, &mut c, n, a);
     }
@@ -679,6 +695,44 @@ fn estimate_weight_is_plausible_and_reacts_to_overrides() {
         .as_f64()
         .unwrap();
     assert!(heavy > base);
+}
+
+#[test]
+fn suggest_volume_follows_the_guild_factor() {
+    let (mut d, mut c) = session(0);
+    let s = ok(
+        &mut d,
+        &mut c,
+        "suggest_volume",
+        json!({"weight_kg": 75, "skill": "intermediate"}),
+    );
+    assert_eq!(s["min_litres"], 30.0);
+    assert_eq!(s["max_litres"], 33.8);
+    let lb = ok(
+        &mut d,
+        &mut c,
+        "suggest_volume",
+        json!({"weight_lb": 165.35, "skill": "intermediate"}),
+    );
+    assert_eq!(lb["min_litres"], 30.0);
+    let long = ok(
+        &mut d,
+        &mut c,
+        "suggest_volume",
+        json!({"weight_kg": 75, "skill": "beginner", "board_type": "longboard", "waves": "small", "age": 60, "fitness": "low"}),
+    );
+    assert!(long["min_litres"].as_f64().unwrap() > 60.0);
+    for bad in [
+        json!({}),
+        json!({"weight_kg": 75, "weight_lb": 165}),
+        json!({"weight_kg": 2}),
+        json!({"weight_kg": 75, "skill": "god"}),
+    ] {
+        assert!(
+            execute(&mut d, &mut c, "suggest_volume", &bad).is_err(),
+            "{bad}"
+        );
+    }
 }
 
 #[test]
@@ -1118,6 +1172,33 @@ fn every_export_is_structurally_valid() {
                 assert!(i >= 1 && i <= nv, "OBJ index {i} of {nv}");
             }
         }
+        // 3MF and GLB: same mesh as the STL, at 1:10.
+        let p = dir.join(format!("t{t}.3mf"));
+        ok(
+            &mut d,
+            &mut c,
+            "export",
+            json!({"what": "model", "format": "3mf", "path": p, "scale": 0.1}),
+        );
+        let entries = surfcraft_export::zip::read(&std::fs::read(&p).unwrap()).unwrap();
+        let xml = String::from_utf8(entries[2].1.clone()).unwrap();
+        assert_eq!(xml.matches("<triangle ").count(), n, "3MF triangles");
+        assert!(xml.contains("Scale 1:10<"));
+        let p = dir.join(format!("t{t}.glb"));
+        ok(
+            &mut d,
+            &mut c,
+            "export",
+            json!({"what": "model", "format": "glb", "path": p}),
+        );
+        let (gl, _) = surfcraft_export::gltf::read(&std::fs::read(&p).unwrap()).unwrap();
+        assert_eq!(
+            gl["accessors"][2]["count"].as_u64().unwrap() as usize,
+            3 * n
+        );
+        let z = gl["accessors"][0]["max"][2].as_f64().unwrap()
+            - gl["accessors"][0]["min"][2].as_f64().unwrap();
+        assert!((z * 100.0 - d.board.length()).abs() < 0.3, "GLB in metres");
         // STEP re-imports to the same knots.
         let p = dir.join(format!("t{t}.stp"));
         ok(

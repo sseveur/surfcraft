@@ -10,7 +10,7 @@ use surfcraft_core::units::FOOT;
 use surfcraft_core::weight::{self, Layup};
 use surfcraft_core::{Board, DVec2, Handle, LengthUnit, Mesh, MeshDetail, SurfaceModel};
 use surfcraft_export::drawing::{Paper, fit_page, tile};
-use surfcraft_export::{dxf, mesh_formats, pdf, svg, templates, woodwork};
+use surfcraft_export::{dxf, gltf, mesh_formats, pdf, svg, templates, threemf, woodwork};
 
 /// Names accepted by the `export` command's `what`.
 fn export_names() -> Vec<&'static str> {
@@ -258,6 +258,21 @@ pub fn tool_specs() -> Vec<ToolSpec> {
             ),
         },
         ToolSpec {
+            name: "suggest_volume",
+            description: "Starting-point board volume (litres) for a rider by the Guild factor method (weight x factor by skill), adjusted for age, fitness, waves and board type; also reports the open board's volume. Give weight_kg or weight_lb.",
+            input_schema: obj(
+                json!({
+                    "weight_kg": {"type": "number"}, "weight_lb": {"type": "number"},
+                    "skill": {"type": "string", "enum": ["beginner", "intermediate", "advanced", "pro"]},
+                    "fitness": {"type": "string", "enum": ["low", "average", "high"]},
+                    "waves": {"type": "string", "enum": ["small", "average", "powerful"]},
+                    "board_type": {"type": "string", "enum": ["shortboard", "fish", "mid_length", "longboard"]},
+                    "age": {"type": "integer", "description": "Years (optional)"}
+                }),
+                &[],
+            ),
+        },
+        ToolSpec {
             name: "estimate_weight",
             description: "Finished weight estimate (kg) for a foam/stringer/glass layup. Optional overrides: foam_density, stringer_density (kg/L), deck_glass, bottom_glass (kg/m²), resin_ratio.",
             input_schema: obj(
@@ -267,9 +282,9 @@ pub fn tool_specs() -> Vec<ToolSpec> {
         },
         ToolSpec {
             name: "export",
-            description: "Write a template, spec sheet or 3D model. PDF is tiled 1:1 over pages (spec sheet: one page); SVG/DXF are one 1:1 sheet; STL/OBJ in mm. Also woodworking templates for sandwich, hollow wood (hws_*) and chambered construction.",
+            description: "Write a template, spec sheet or 3D model. PDF is tiled 1:1 over pages (spec sheet: one page); SVG/DXF are one 1:1 sheet; STL/OBJ/3MF in mm, GLB (glTF 2.0) in metres, Y up, nose +Z; scale for scale models (0.1 = 1:10). Also woodworking templates for sandwich, hollow wood (hws_*) and chambered construction.",
             input_schema: obj(
-                json!({"what": {"type": "string", "enum": export_names()}, "format": {"type": "string", "enum": ["pdf", "svg", "dxf", "stl", "obj", "step"], "description": "model: stl, obj or step (STEP holds the exact Bezier curves); drawings: pdf, svg or dxf"}, "path": {"type": "string"}, "paper": {"type": "string", "enum": ["A4", "A3", "Letter", "Tabloid"]}}),
+                json!({"what": {"type": "string", "enum": export_names()}, "format": {"type": "string", "enum": ["pdf", "svg", "dxf", "stl", "obj", "3mf", "glb", "step"], "description": "model: stl, obj, 3mf (3D printing), glb (glTF binary) or step (STEP holds the exact Bezier curves); drawings: pdf, svg or dxf"}, "path": {"type": "string"}, "paper": {"type": "string", "enum": ["A4", "A3", "Letter", "Tabloid"]}, "scale": {"type": "number", "description": "Model scale factor for stl/obj/3mf/glb, e.g. 0.1 for a 1:10 model (default 1)"}}),
                 &["what", "format", "path"],
             ),
         },
@@ -517,6 +532,7 @@ pub fn render_export(
     paper: Paper,
     ctx: &Context,
     title: &str,
+    scale: f64,
 ) -> Result<Vec<u8>, String> {
     let fmt = |cm: f64| ctx.fmt(cm);
     if what == "model" && format == "step" {
@@ -531,9 +547,16 @@ pub fn render_export(
             },
         );
         return match format {
-            "stl" => Ok(mesh_formats::stl(&mesh, title)),
-            "obj" => Ok(mesh_formats::obj(&mesh, title).into_bytes()),
-            f => Err(format!("model exports are stl, obj or step, not {f}")),
+            "stl" => Ok(mesh_formats::stl(
+                &mesh_formats::scaled(&mesh, scale),
+                title,
+            )),
+            "obj" => Ok(mesh_formats::obj(&mesh_formats::scaled(&mesh, scale), title).into_bytes()),
+            "3mf" => Ok(threemf::write(&mesh, title, scale)),
+            "glb" => Ok(gltf::write(&mesh, title, scale)),
+            f => Err(format!(
+                "model exports are stl, obj, 3mf, glb or step, not {f}"
+            )),
         };
     }
     let d = match what {
@@ -900,6 +923,83 @@ pub fn execute(doc: &mut Document, ctx: &mut Context, name: &str, a: &Value) -> 
             doc.edit(|b| b.fins = fins);
             Ok(json!({"fins": fins}))
         }
+        "suggest_volume" => {
+            use surfcraft_core::rider::{BoardType, Fitness, Rider, Skill, Waves, suggest_volume};
+            let weight_kg = match (number(a, "weight_kg")?, number(a, "weight_lb")?) {
+                (Some(kg), None) => kg,
+                (None, Some(lb)) => lb / surfcraft_core::units::POUNDS_PER_KG,
+                _ => return Err("give weight_kg or weight_lb".into()),
+            };
+            fn pick<T: Copy>(
+                a: &Value,
+                k: &str,
+                options: &[(&str, T)],
+                default: T,
+            ) -> Result<T, String> {
+                match string(a, k) {
+                    None => Ok(default),
+                    Some(s) => options
+                        .iter()
+                        .find(|(n, _)| n.eq_ignore_ascii_case(s))
+                        .map(|o| o.1)
+                        .ok_or_else(|| format!("{k}: unknown value {s:?}")),
+                }
+            }
+            let rider = Rider {
+                weight_kg,
+                age: index(a, "age")?.unwrap_or(0).min(150) as u32,
+                skill: pick(
+                    a,
+                    "skill",
+                    &[
+                        ("beginner", Skill::Beginner),
+                        ("intermediate", Skill::Intermediate),
+                        ("advanced", Skill::Advanced),
+                        ("pro", Skill::Pro),
+                    ],
+                    Skill::Intermediate,
+                )?,
+                fitness: pick(
+                    a,
+                    "fitness",
+                    &[
+                        ("low", Fitness::Low),
+                        ("average", Fitness::Average),
+                        ("high", Fitness::High),
+                    ],
+                    Fitness::Average,
+                )?,
+                waves: pick(
+                    a,
+                    "waves",
+                    &[
+                        ("small", Waves::Small),
+                        ("average", Waves::Average),
+                        ("powerful", Waves::Powerful),
+                    ],
+                    Waves::Average,
+                )?,
+                board: pick(
+                    a,
+                    "board_type",
+                    &[
+                        ("shortboard", BoardType::Shortboard),
+                        ("fish", BoardType::Fish),
+                        ("mid_length", BoardType::MidLength),
+                        ("longboard", BoardType::Longboard),
+                    ],
+                    BoardType::Shortboard,
+                )?,
+            };
+            let advice = suggest_volume(&rider).ok_or("weight must be between 10 and 250 kg")?;
+            let r = |v: f64| (v * 10.0).round() / 10.0;
+            let board = doc.board.volume() / 1000.0;
+            Ok(json!({
+                "min_litres": r(advice.min), "max_litres": r(advice.max), "middle_litres": r(advice.middle()),
+                "board_litres": r(board), "board_in_range": advice.contains(board),
+                "note": "A starting point (Guild factor method); adjust to taste. scale_board with volume_litres applies it.",
+            }))
+        }
         "estimate_weight" => {
             let mut l = Layup::defaults_for(&doc.board);
             for (k, f) in [
@@ -948,7 +1048,11 @@ pub fn execute(doc: &mut Document, ctx: &mut Context, name: &str, a: &Value) -> 
                 .trim_end_matches(" *")
                 .trim_end_matches(".brd")
                 .to_string();
-            let bytes = render_export(&doc.board, what, format, paper, ctx, &title)?;
+            let scale = number(a, "scale")?.unwrap_or(1.0);
+            if !(0.001..=10.0).contains(&scale) {
+                return Err(format!("scale must be between 0.001 and 10, got {scale}"));
+            }
+            let bytes = render_export(&doc.board, what, format, paper, ctx, &title, scale)?;
             write_with_backup(&path, &bytes).map_err(|e| format!("{}: {e}", path.display()))?;
             Ok(json!({"written": path.display().to_string(), "bytes": bytes.len()}))
         }

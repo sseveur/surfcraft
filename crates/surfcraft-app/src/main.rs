@@ -3,6 +3,7 @@
 mod app;
 mod automation;
 mod cam_ui;
+mod compare_ui;
 mod compute;
 mod dialogs;
 mod export_ui;
@@ -22,6 +23,7 @@ mod tour;
 mod view2d;
 mod viewer3d;
 mod views;
+mod volume_ui;
 
 use std::path::PathBuf;
 

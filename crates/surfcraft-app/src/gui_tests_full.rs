@@ -283,6 +283,7 @@ fn every_menu_lists_its_items() {
                 "Save and set as original",
                 "Open ghost board…",
                 "Close ghost board",
+                "Compare with…",
                 "Print & export…",
                 "Import curves (.otl/.pfl/.crs)…",
                 "Load background image…",
@@ -334,6 +335,7 @@ fn every_menu_lists_its_items() {
                 "Board info…",
                 "Fins…",
                 "Weight calculator…",
+                "Volume advisor…",
                 "Guide points…",
                 "Flip nose and tail",
                 "Put lowest rocker point at zero",
@@ -848,6 +850,13 @@ fn check_export(path: &Path, format: Format) {
             assert!(n > 1000);
         }
         Format::Obj => assert!(String::from_utf8_lossy(&bytes).contains("\nf ")),
+        Format::ThreeMf => {
+            let entries = surfcraft_export::zip::read(&bytes).unwrap();
+            assert_eq!(entries.len(), 3);
+        }
+        Format::Glb => {
+            surfcraft_export::gltf::read(&bytes).unwrap();
+        }
     }
 }
 
@@ -860,7 +869,12 @@ fn print_and_export_every_what_format_and_paper() {
     for what in What::SHAPER {
         click(&mut h, what.label());
         let formats: &[(Format, &str)] = if what == What::Model {
-            &[(Format::Stl, "STL (binary, mm)"), (Format::Obj, "OBJ (mm)")]
+            &[
+                (Format::Stl, "STL (binary, mm)"),
+                (Format::Obj, "OBJ (mm)"),
+                (Format::ThreeMf, "3MF (3D printing, mm)"),
+                (Format::Glb, "glTF binary .glb (web, AR, metres)"),
+            ]
         } else {
             &[
                 (Format::Pdf, "PDF (print, tiled pages)"),
@@ -877,6 +891,8 @@ fn print_and_export_every_what_format_and_paper() {
                 Format::Dxf => "dxf",
                 Format::Stl => "stl",
                 Format::Obj => "obj",
+                Format::ThreeMf => "3mf",
+                Format::Glb => "glb",
             };
             let out = fresh("export", &format!("{what:?}.{ext}"));
             script(&mut h, &out);
@@ -922,6 +938,17 @@ fn print_and_export_every_what_format_and_paper() {
     click(&mut h, What::Model.label());
     click(&mut h, "High resolution mesh");
     assert!(!h.state().dialogs.export_state.fine_mesh);
+    // A 1:10 scale model as 3MF.
+    click(&mut h, "3MF (3D printing, mm)");
+    click(&mut h, "1:10");
+    assert_eq!(h.state().dialogs.export_state.scale_ratio, 10.0);
+    let out = fresh("export", "scale-model.3mf");
+    script(&mut h, &out);
+    click(&mut h, "Export…");
+    let entries = surfcraft_export::zip::read(&std::fs::read(&out).unwrap()).unwrap();
+    let xml = String::from_utf8(entries[2].1.clone()).unwrap();
+    assert!(xml.contains("Scale 1:10<"));
+    snap(&mut h, "qa-export-scale-model");
 }
 
 #[test]

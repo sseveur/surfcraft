@@ -2,6 +2,7 @@
 
 pub mod automation;
 pub mod commands;
+pub mod compare;
 pub mod document;
 pub mod edit;
 
