@@ -45,7 +45,11 @@ The builds are not signed with paid certificates yet, so the first launch needs 
   tail / nose). File > Compare with… tabulates the differences with another board (specs and every foot / 30 cm),
   copyable as CSV.
 - **3D**: GPU view with zebra stripes for checking fairness.
+- **Design by numbers** (Board menu): type a new max width, wide point, nose/tail width at 12", tail block, rocker
+  or thickness at the standard stations and the curves reshape smoothly around that station (one undo step).
 - **New board from a template** at a target length, width, thickness and volume (litres).
+- **New board from measurements** (File menu): copy a board measured with a tape (widths, rocker, thickness at
+  stations, tail shape) as fair, editable curves; the table imports from and saves to CSV.
 - **Volume advisor** (Board menu, and "Suggest volume" in New board): a starting-point volume range from the
   rider's weight, skill, fitness, age, waves and board type (Guild factor method, see `docs/volume-advisor.md`).
 - **Asymmetric boards** (Board > Asymmetric outline): a separate outline for each rail (toe side and heel side),
@@ -54,6 +58,9 @@ The builds are not signed with paid certificates yet, so the first launch needs 
   with FCS I, FCS II, Futures or US box footprints, printed 1:1 on the outline template with a measurement table
   (dimensions and sources in `docs/fins.md`).
 - **Weight calculator**: foam, stringer, glass, laps, resin, hot coat.
+- **Fit in blank** (Board menu): checks the board fits a foam blank (US Blanks and Surfblanks Australia library
+  with measured stations, or your own blanks in any unit), with shift, tilt and Auto fit, clearances per view and
+  the blank drawn behind the board; see [docs/blanks.md](docs/blanks.md).
 - **Print**: outline (half or full), spin, profile and cross-section templates at true 1:1 scale, tiled and centred
   over A4/A3/Letter/Tabloid with registration marks and a 100 mm check bar; one-page spec sheet. PDF, SVG or DXF.
 - **Wooden boards**: sandwich (core profile, rail, skins), hollow wood (stringer, ribs, rail strip, skins, nose and
@@ -103,9 +110,10 @@ Claude Desktop (`claude_desktop_config.json`):
 ```
 
 Tools include `board_summary`, `sample_board`, `get_curve`, `set_knot`, `move_knot`, `add_knot`, `section_info`,
-`add_section`, `scale_board` (with target volume), `new_board`, `open_board`, `save_board`, `set_fins`, `set_asymmetric`,
-`estimate_weight`, `suggest_volume`, `export`, `generate_toolpath`, `apply_bottom_contour`, `set_rails`, `undo`/`redo`,
-`launch_app`, `screenshot`, `set_view`.
+`add_section`, `scale_board` (with target volume), `set_dimension`, `new_board`, `board_from_measurements`,
+`open_board`, `save_board`, `set_fins`, `set_asymmetric`, `estimate_weight`, `suggest_volume`, `list_blanks`,
+`fit_blank`, `export`, `generate_toolpath`, `apply_bottom_contour`, `set_rails`, `undo`/`redo`, `launch_app`,
+`screenshot`, `set_view`.
 
 Security: the app only listens on 127.0.0.1, and only while control is enabled; every request needs a random token
 stored in a file readable only by your user account. The server never connects to the internet.

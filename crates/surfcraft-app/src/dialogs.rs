@@ -27,6 +27,9 @@ pub struct Dialogs {
     pub volume_advisor: bool,
     /// "Make the outline symmetric" window (which rail to keep).
     pub asym_keep: bool,
+    pub blank: crate::blank_ui::BlankWindow,
+    pub numbers: Option<crate::numbers_ui::NumbersState>,
+    pub measure: Option<crate::measure_ui::MeasureState>,
 }
 
 /// Scale `board` to the given overall size.

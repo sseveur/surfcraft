@@ -2,11 +2,16 @@
 
 mod asym_commands;
 pub mod automation;
+mod blank_cmd;
+pub mod by_numbers;
 pub mod commands;
 pub mod compare;
 pub mod document;
 pub mod edit;
 mod fins_cmd;
+mod fit;
+mod linalg;
+pub mod measurements;
 pub mod shaping;
 mod shaping_commands;
 

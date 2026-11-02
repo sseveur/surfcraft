@@ -213,6 +213,8 @@ pub fn tool_specs() -> Vec<ToolSpec> {
                 &[],
             ),
         },
+        crate::by_numbers::tool_spec(),
+        crate::measurements::tool_spec(),
         ToolSpec {
             name: "new_board",
             description: "Start a new board from a template (shortboard, funboard, longboard), optionally at a target size and volume. Replaces the open board.",
@@ -334,6 +336,7 @@ pub fn tool_specs() -> Vec<ToolSpec> {
     ];
     specs.extend(crate::shaping_commands::specs());
     specs.extend(crate::asym_commands::specs());
+    specs.extend(crate::blank_cmd::specs());
     specs
 }
 
@@ -824,6 +827,8 @@ pub fn execute(doc: &mut Document, ctx: &mut Context, name: &str, a: &Value) -> 
             doc.edit(|d| *d = b);
             Ok(summary(&doc.board, ctx))
         }
+        "set_dimension" => crate::by_numbers::command(doc, ctx, a),
+        "board_from_measurements" => crate::measurements::command(doc, ctx, a),
         "new_board" | "open_board"
             if doc.is_dirty()
                 && !arg(a, "discard_unsaved")
@@ -1194,6 +1199,8 @@ pub fn execute(doc: &mut Document, ctx: &mut Context, name: &str, a: &Value) -> 
         "apply_bottom_contour" => crate::shaping_commands::apply_bottom_contour(doc, ctx, a),
         "set_rails" => crate::shaping_commands::set_rails(doc, ctx, a),
         "set_asymmetric" => crate::asym_commands::set_asymmetric(doc, ctx, a),
+        "list_blanks" => crate::blank_cmd::list_blanks(doc, ctx),
+        "fit_blank" => crate::blank_cmd::fit_blank(doc, ctx, a),
         other => Err(format!("unknown command {other:?}")),
     }
 }

@@ -745,6 +745,7 @@ pub fn outline(
             return;
         }
     }
+    crate::blank_ui::draw_outline(&canvas, doc, set);
     let board = &doc.board;
     if v.center_of_mass
         && let Some(com) = ed.center_of_mass
@@ -947,6 +948,7 @@ pub fn profile(
             pal.grid,
         );
     }
+    crate::blank_ui::draw_profile(&canvas, doc, set, ys);
     let board = &doc.board;
     let disp = |p: DVec2| DVec2::new(p.x, p.y * ys);
     canvas.segment(

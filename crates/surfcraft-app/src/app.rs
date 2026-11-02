@@ -559,6 +559,13 @@ impl SurfCraftApp {
                     self.dialogs.new_board = Some(NewBoard::new());
                 }
                 if ui
+                    .button(tr("New from measurements…"))
+                    .on_hover_text(tr("Copy a board you measured with a tape: widths, rocker and thickness at stations"))
+                    .clicked()
+                {
+                    self.dialogs.measure = Some(Default::default());
+                }
+                if ui
                     .add(
                         egui::Button::new(tr("Open…"))
                             .shortcut_text(ui.ctx().format_shortcut(&SC_OPEN)),
@@ -804,6 +811,7 @@ impl SurfCraftApp {
                 ui.checkbox(&mut v.original, tr("Original board"));
                 ui.checkbox(&mut v.center_of_mass, tr("Centre of mass"));
                 ui.checkbox(&mut v.background_image, tr("Background image"));
+                ui.checkbox(&mut self.set.blanks.show, tr("Foam blank"));
                 crate::snap::menu(ui, &mut self.set.snap);
                 if let Some(bg) = self.ed.background.as_mut() {
                     ui.add(egui::Slider::new(&mut bg.opacity, 0.05..=1.0).text(tr("Image opacity")));
@@ -840,6 +848,13 @@ impl SurfCraftApp {
                 if ui.button(tr("Scale…")).clicked() {
                     self.dialogs.scale = Some(Scale::of(&self.doc.board));
                 }
+                if ui
+                    .button(tr("Design by numbers…"))
+                    .on_hover_text(tr("Set widths, rocker and thickness at the standard stations to exact values"))
+                    .clicked()
+                {
+                    self.dialogs.numbers = Some(Default::default());
+                }
                 if ui.button(tr("Board info…")).clicked() {
                     self.dialogs.info = true;
                 }
@@ -861,6 +876,13 @@ impl SurfCraftApp {
                     .clicked()
                 {
                     self.dialogs.volume_advisor = true;
+                }
+                if ui
+                    .button(tr("Fit in blank…"))
+                    .on_hover_text(tr("Check that the board fits inside a foam blank before you buy it"))
+                    .clicked()
+                {
+                    self.dialogs.blank.open = true;
                 }
                 if ui.button(tr("Guide points…")).clicked() {
                     self.dialogs.guides = true;
@@ -1250,6 +1272,10 @@ impl eframe::App for SurfCraftApp {
             self.guarded(Pending::New(Box::new(b)));
         }
         dialogs::scale_window(&ctx, &mut self.dialogs.scale, &mut self.doc, &self.set);
+        crate::numbers_ui::window(&ctx, &mut self.dialogs.numbers, &mut self.doc, &self.set);
+        if let Some(a) = crate::measure_ui::window(&ctx, &mut self.dialogs.measure, &self.set) {
+            self.measure_action(a);
+        }
         if self.dialogs.info {
             dialogs::info_window(&ctx, &mut self.dialogs.info, &mut self.doc);
         }
@@ -1282,6 +1308,7 @@ impl eframe::App for SurfCraftApp {
                 &self.set,
             );
         }
+        crate::blank_ui::window(&ctx, &mut self.dialogs.blank, &mut self.doc, &mut self.set);
         if self.dialogs.guides {
             let curve = self
                 .ed

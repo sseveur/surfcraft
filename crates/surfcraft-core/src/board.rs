@@ -205,6 +205,8 @@ pub struct Board {
     pub info: BoardInfo,
     pub machine: MachineData,
     pub model: SurfaceModel,
+    /// Foam blank chosen for this board and where the board sits in it (SurfCraft extension, `.brd` p63).
+    pub blank: Option<crate::blank::BlankSetup>,
 }
 
 /// `x.clamp(lo, hi)` that tolerates an empty range (returns its middle) and NaN (returns `lo`).

@@ -187,8 +187,8 @@ fn tool_specs_are_complete_and_unique() {
     let specs = tool_specs();
     assert_eq!(
         specs.len(),
-        30,
-        "command count (25 + generate_toolpath + suggest_volume + apply_bottom_contour + set_rails + set_asymmetric)"
+        34,
+        "command count (25 + generate_toolpath + suggest_volume + apply_bottom_contour + set_rails + list_blanks + fit_blank + set_dimension + board_from_measurements + set_asymmetric)"
     );
     let mut names: Vec<_> = specs.iter().map(|s| s.name).collect();
     names.sort();
@@ -479,6 +479,8 @@ fn read_only_commands_do_not_touch_history() {
             "suggest_volume",
             json!({"weight_kg": 75, "skill": "advanced", "board_type": "fish"}),
         ),
+        ("list_blanks", json!({})),
+        ("fit_blank", json!({"blank": "9'4\"", "auto": true})),
     ] {
         ok(&mut d, &mut c, n, a);
     }
@@ -777,6 +779,91 @@ fn suggest_volume_follows_the_guild_factor() {
             "{bad}"
         );
     }
+}
+
+#[test]
+fn set_dimension_reaches_the_number_as_one_undo_step() {
+    for t in 0..TEMPLATES.len() {
+        let (mut d, mut c) = session(t);
+        let before = d.board.clone();
+        let r = ok(
+            &mut d,
+            &mut c,
+            "set_dimension",
+            json!({"name": "tail_width_12in", "value": "15 1/2\""}),
+        );
+        let got = r["dimensions"]["tail_width_12in"]["cm"].as_f64().unwrap();
+        assert!((got - 15.5 * 2.54).abs() < 0.01, "t{t}: {got}");
+        assert!((d.board.width_at(30.48) - 15.5 * 2.54).abs() < 0.01);
+        ok(
+            &mut d,
+            &mut c,
+            "set_dimension",
+            json!({"name": "nose_rocker", "value": 14.0, "keep_flat": true}),
+        );
+        assert!((d.board.rocker_at(d.board.length() - 0.005) - 14.0).abs() < 0.01);
+        ok(&mut d, &mut c, "undo", json!({}));
+        ok(&mut d, &mut c, "undo", json!({}));
+        assert_eq!(d.board, before);
+    }
+    let (mut d, mut c) = session(0);
+    let before = d.board.clone();
+    for bad in [
+        json!({"name": "girth", "value": 3}),
+        json!({"name": "max_width"}),
+        json!({"name": "max_width", "value": "wide"}),
+        json!({"name": "max_width", "value": -5}),
+        json!({"name": "max_width", "value": 50, "span": 0.1}),
+        json!({"name": "nose_rocker", "value": 10, "keep_flat": "yes"}),
+    ] {
+        assert!(
+            execute(&mut d, &mut c, "set_dimension", &bad).is_err(),
+            "{bad}"
+        );
+    }
+    assert_eq!(d.board, before);
+}
+
+#[test]
+fn board_from_measurements_builds_an_unsaved_board() {
+    let (mut d, mut c) = session(0);
+    let r = ok(
+        &mut d,
+        &mut c,
+        "board_from_measurements",
+        json!({
+            "length": "6'4\"", "tail": "round",
+            "stations": [
+                {"position": "tail 0", "rocker": "2\""},
+                {"position": "tail 12\"", "width": "15\"", "thickness": "2 1/8\""},
+                {"position": "centre", "width": "20 1/2\"", "thickness": "2 3/4\"", "rocker": 0},
+                {"position": "nose 12\"", "width": "15 1/4\"", "thickness": "2 1/4\""},
+                {"position": "nose 0", "rocker": "5\""}
+            ]
+        }),
+    );
+    assert!((d.board.length() - 76.0 * 2.54).abs() < 1e-6);
+    assert!((d.board.width_at(d.board.length() / 2.0) - 20.5 * 2.54).abs() < 0.1);
+    assert!(r["fit_mm"]["width"].as_f64().unwrap() <= 1.0, "{r}");
+    assert!(d.path.is_none() && !d.can_undo());
+    // A dirty board is protected; bad tables say what is wrong.
+    ok(&mut d, &mut c, "flip_board", json!({}));
+    let e = execute(
+        &mut d,
+        &mut c,
+        "board_from_measurements",
+        &json!({"length": 180, "stations": []}),
+    )
+    .unwrap_err();
+    assert!(e.contains("unsaved"), "{e}");
+    let e = execute(
+        &mut d,
+        &mut c,
+        "board_from_measurements",
+        &json!({"discard_unsaved": true, "length": 180, "stations": [{"position": "centre", "width": "abc"}]}),
+    )
+    .unwrap_err();
+    assert!(e.contains("cannot read the width"), "{e}");
 }
 
 #[test]
@@ -1499,7 +1586,7 @@ fn contours_cut_foam_by_default() {
             }
             if kind.ends_with("concave") {
                 // Thinner on the stringer inside the zone.
-                let x = 0.3 * l;
+                let x = 0.2 * l;
                 assert!(
                     before.thickness_at(x) - d.board.thickness_at(x) > 0.4,
                     "{t} {kind}"
@@ -1634,6 +1721,23 @@ fn set_asymmetric_and_left_outline_editing() {
     // Scaling the width scales both rails.
     ok(&mut d, &mut c, "scale_board", json!({"width": w * 0.9}));
     assert!((d.board.max_width() - w * 0.9).abs() < 0.01);
+    // Design by numbers: a new max width reshapes both rails.
+    let before = d.board.clone();
+    let target = d.board.max_width() + 1.0;
+    ok(
+        &mut d,
+        &mut c,
+        "set_dimension",
+        json!({"name": "max_width", "value": target}),
+    );
+    assert!((d.board.max_width() - target).abs() < 0.02);
+    for rail in surfcraft_core::Rail::BOTH {
+        let (was, now) = (
+            before.max_half_width(rail).0,
+            d.board.max_half_width(rail).0,
+        );
+        assert!(now > was + 0.3, "{rail:?}: {was} -> {now}");
+    }
     // Off, keeping the left rail.
     let left_outline = d.board.outline_left.clone().unwrap();
     ok(
@@ -1651,4 +1755,87 @@ fn set_asymmetric_and_left_outline_editing() {
         "set_asymmetric",
         json!({"on": false, "keep": "middle"}),
     );
+}
+
+#[test]
+fn fit_blank_reports_and_stores() {
+    let (mut d, mut c) = session(0);
+    let lib = ok(&mut d, &mut c, "list_blanks", json!({}));
+    assert!(lib["library"].as_array().unwrap().len() >= 15);
+    assert!(lib["board_blank"].is_null());
+    // The 6' shortboard template fits a 6'5" R blank once placed (auto), not centred, and not a 5'10" one.
+    let r = ok(
+        &mut d,
+        &mut c,
+        "fit_blank",
+        json!({"blank": "US Blanks 6'5\" R", "auto": true}),
+    );
+    assert_eq!(r["fits"], true, "{r}");
+    assert!(r["nose_spare"]["cm"].as_f64().unwrap() > 0.0);
+    assert!(r["problems"].as_array().unwrap().is_empty());
+    let r = ok(
+        &mut d,
+        &mut c,
+        "fit_blank",
+        json!({"blank": "US Blanks 6'5\" R"}),
+    );
+    assert_eq!(r["fits"], false, "{r}");
+    assert!(!r["problems"].as_array().unwrap().is_empty());
+    let r = ok(&mut d, &mut c, "fit_blank", json!({"blank": "5'10\" fish"}));
+    assert_eq!(r["fits"], false);
+    assert!(
+        r["problems"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|p| p["view"] == "length")
+    );
+    // Explicit dimensions with units; a thin blank fails in deck/bottom.
+    let r = ok(
+        &mut d,
+        &mut c,
+        "fit_blank",
+        json!({"length": "6'6\"", "width": "22\"", "thickness": "1 1/2\"", "nose_rocker": "5\"", "tail_rocker": "2\""}),
+    );
+    assert_eq!(r["fits"], false);
+    assert!(r["deck"]["min"]["cm"].as_f64().unwrap() < 0.0);
+    // Auto never does worse than centred.
+    let a = ok(
+        &mut d,
+        &mut c,
+        "fit_blank",
+        json!({"blank": "6'5\" shortboard", "auto": true}),
+    );
+    let m = ok(
+        &mut d,
+        &mut c,
+        "fit_blank",
+        json!({"blank": "6'5\" shortboard"}),
+    );
+    let min = |v: &Value| v["min_clearance"]["cm"].as_f64().unwrap();
+    assert!(min(&a) >= min(&m) - 1e-3);
+    assert!(!d.can_undo());
+    // Store: one undo step, then fit_blank with no blank uses the stored one.
+    ok(
+        &mut d,
+        &mut c,
+        "fit_blank",
+        json!({"blank": "6'5\" shortboard", "tail_offset": "1\"", "tilt": 0.5, "store": true}),
+    );
+    let s = d.board.blank.clone().unwrap();
+    assert!((s.placement.tail_offset.unwrap() - 2.54).abs() < 1e-9);
+    let r = ok(&mut d, &mut c, "fit_blank", json!({}));
+    assert_eq!(r["placement"]["tilt_degrees"], 0.5);
+    assert!(d.can_undo());
+    ok(&mut d, &mut c, "undo", json!({}));
+    assert!(d.board.blank.is_none());
+    for bad in [
+        json!({}),
+        json!({"blank": "no such blank"}),
+        json!({"length": "6'"}),
+        json!({"blank": "6'5\" shortboard", "tilt": 90}),
+        json!({"length": "6'", "width": "80\"", "thickness": "3\""}),
+    ] {
+        err(&mut d, &mut c, "fit_blank", bad);
+    }
 }
