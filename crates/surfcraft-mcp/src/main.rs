@@ -20,7 +20,8 @@ const INSTRUCTIONS: &str = "SurfCraft designs surfboards. The board is an outlin
 a rocker (bottom curve) and deck curve (heights vs distance from tail), and cross-sections at stations along the \
 board, all cubic Bezier curves. Lengths are centimetres unless you pass a string with units (\"6'2\\\"\", \"18 1/2\\\"\", \
 \"47cm\"). Start with board_summary or get_curve to read the shape, edit with set_knot/move_knot/scale_board, and check \
-volume_litres after changes. Call launch_app to open the SurfCraft window so the user can watch, then screenshot to see it. \
+volume_litres after changes. An asymmetric board (set_asymmetric) has curve outline for the rider's right rail and \
+outline_left for the left rail. Call launch_app to open the SurfCraft window so the user can watch, then screenshot to see it. \
 Every edit is undoable (undo).";
 
 /// Where tools are executed.
