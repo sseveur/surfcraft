@@ -6,6 +6,7 @@
 use glam::DVec3;
 use rayon::prelude::*;
 
+use crate::asym::Rail;
 use crate::board::Board;
 use crate::surface::WHOLE;
 
@@ -58,25 +59,37 @@ impl Mesh {
                 end_gap + c * (length - 2.0 * end_gap)
             })
             .collect();
-        // Half ring, deck centre (s=0) to bottom centre (s=1).
-        let rings: Vec<Vec<DVec3>> = xs
+        // Half ring, deck centre (s=0) to bottom centre (s=1), on the y >= 0 (left) rail.
+        let half_ring = |x: f64, rail: Rail| -> Vec<DVec3> {
+            (0..=h)
+                .map(|j| {
+                    let s = j as f64 / h as f64;
+                    board.surface_point_on(x, s, WHOLE.0, WHOLE.1, rail)
+                })
+                .collect()
+        };
+        let asym = board.is_asymmetric();
+        // The right rail's half ring (already at y <= 0) on an asymmetric board.
+        let rings: Vec<(Vec<DVec3>, Option<Vec<DVec3>>)> = xs
             .par_iter()
             .map(|&x| {
-                (0..=h)
-                    .map(|j| {
-                        let s = j as f64 / h as f64;
-                        board.surface_point(x, s, WHOLE.0, WHOLE.1)
-                    })
-                    .collect()
+                let right = asym.then(|| half_ring(x, Rail::Right));
+                (half_ring(x, Rail::Left), right)
             })
             .collect();
 
-        // Full ring: right half (y >= 0) then the mirrored left half, without repeating the centre points.
+        // Full ring: the y >= 0 half then the y <= 0 half (mirrored for a symmetric board), without repeating
+        // the centre points.
         let ring_len = 2 * h;
         let mut positions = Vec::with_capacity(n * ring_len + 2);
-        for half in &rings {
+        for (half, right) in &rings {
             positions.extend(half.iter().copied());
-            positions.extend(half[1..h].iter().rev().map(|p| DVec3::new(p.x, -p.y, p.z)));
+            match right {
+                Some(r) => positions.extend(r[1..h].iter().rev().copied()),
+                None => {
+                    positions.extend(half[1..h].iter().rev().map(|p| DVec3::new(p.x, -p.y, p.z)))
+                }
+            }
         }
         let mut triangles = Vec::with_capacity(2 * n * ring_len);
         for i in 0..n - 1 {

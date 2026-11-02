@@ -181,13 +181,18 @@ pub struct Specs {
 /// A surfboard in the Bezier representation. Lengths in cm; x runs from the tail (0) to the nose.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Board {
-    /// Half-width as a function of x.
+    /// Half-width as a function of x: the rider's right rail, and both rails of a symmetric board (see
+    /// [`crate::asym`]).
     pub outline: Spline,
+    /// Half-width of the rider's left rail on an asymmetric board; `None` for a symmetric board.
+    pub outline_left: Option<Spline>,
     /// Height of the bottom on the stringer (rocker).
     pub bottom: Spline,
     /// Height of the deck on the stringer.
     pub deck: Spline,
     pub outline_guides: Vec<DVec2>,
+    /// Guide points of the left outline (asymmetric boards).
+    pub outline_left_guides: Vec<DVec2>,
     pub bottom_guides: Vec<DVec2>,
     pub deck_guides: Vec<DVec2>,
     /// Sorted by position; the first and last entries are zero-size end sections at the tail and the nose.
@@ -240,8 +245,12 @@ impl Board {
         self.bottom.length()
     }
 
+    /// Full width at `x`: twice the half width, or the two rails' half widths added on an asymmetric board.
     pub fn width_at(&self, x: f64) -> f64 {
-        2.0 * self.outline.value_at(x)
+        match &self.outline_left {
+            None => 2.0 * self.outline.value_at(x),
+            Some(left) => left.value_at(x) + self.outline.value_at(x),
+        }
     }
 
     /// Height of the bottom on the stringer.
@@ -260,12 +269,26 @@ impl Board {
     }
 
     pub fn max_width(&self) -> f64 {
+        if self.is_asymmetric() {
+            return self.asym_max_width().0;
+        }
         2.0 * self.outline.max_y()
     }
 
     /// Distance of the wide point from the tail.
     pub fn max_width_pos(&self) -> f64 {
+        if self.is_asymmetric() {
+            return self.asym_max_width().1;
+        }
         self.outline.x_of_max_y()
+    }
+
+    /// Widest full width and its distance from the tail.
+    pub fn max_width_and_pos(&self) -> (f64, f64) {
+        if self.is_asymmetric() {
+            return self.asym_max_width();
+        }
+        (self.max_width(), self.max_width_pos())
     }
 
     /// Largest stringer thickness and its distance from the tail, sampled every millimetre (at most
@@ -402,6 +425,16 @@ impl Board {
     /// Cross-section at station `x` interpolated from its neighbours by knot matching, scaled to the local
     /// width and thickness. `None` without real sections or outside the board.
     pub fn interpolated_section(&self, x: f64) -> Option<CrossSection> {
+        self.interpolated_section_width(x, self.width_at(x))
+    }
+
+    /// [`Self::interpolated_section`] scaled to one rail's half width on both sides (the shape the surface
+    /// model uses for that half of an asymmetric board).
+    pub fn interpolated_section_on(&self, x: f64, rail: crate::Rail) -> Option<CrossSection> {
+        self.interpolated_section_width(x, 2.0 * self.half_width_at(x, rail))
+    }
+
+    fn interpolated_section_width(&self, x: f64, width: f64) -> Option<CrossSection> {
         let n = self.sections.len();
         if n < 3 || x.is_nan() || x < 0.0 || x > self.length() {
             return None;
@@ -423,7 +456,7 @@ impl Board {
         }
         let spline = self.sections[k].blend(&self.sections[k2], f)?;
         let mut s = CrossSection::new(x, spline);
-        s.scale_to(self.thickness_at(x).max(0.5), self.width_at(x).max(0.5));
+        s.scale_to(self.thickness_at(x).max(0.5), width.max(0.5));
         Some(s)
     }
 
@@ -571,6 +604,15 @@ impl Board {
             Locks::Y_NOT_LESS,
             curve,
         );
+        if let Some(left) = self.outline_left.as_mut() {
+            ends(
+                left,
+                DVec2::ZERO,
+                Locks::Y_NOT_LESS,
+                Locks::Y_NOT_LESS,
+                curve,
+            );
+        }
         let vertical = DVec2::new(0.0, 1.0);
         ends(&mut self.deck, vertical, Locks::NONE, Locks::NONE, curve);
         ends(&mut self.bottom, vertical, Locks::NONE, Locks::NONE, curve);
@@ -617,6 +659,9 @@ impl Board {
             }
         };
         fix(&mut self.outline);
+        if let Some(left) = self.outline_left.as_mut() {
+            fix(left);
+        }
         fix(&mut self.deck);
         fix(&mut self.bottom);
         for s in &mut self.sections {
@@ -743,11 +788,12 @@ impl Board {
     pub fn specs(&self) -> Specs {
         let (max_thickness, max_thickness_pos) = self.max_thickness_and_pos();
         let l = self.length();
+        let (max_width, max_width_pos) = self.max_width_and_pos();
         Specs {
             length: l,
             length_over_curve: self.length_over_curve(),
-            max_width: self.max_width(),
-            max_width_pos: self.max_width_pos(),
+            max_width,
+            max_width_pos,
             center_width: self.center_width(),
             max_thickness,
             max_thickness_pos,
@@ -796,6 +842,9 @@ impl Board {
             return;
         }
         self.outline.scale(kl, kw);
+        if let Some(left) = self.outline_left.as_mut() {
+            left.scale(kl, kw);
+        }
         self.deck.scale(kl, kt);
         self.bottom.scale(kl, kt);
         self.scale_section_positions(kl, length);
@@ -837,6 +886,9 @@ impl Board {
             })
             .collect();
         self.outline.scale(kl, kw);
+        if let Some(left) = self.outline_left.as_mut() {
+            left.scale(kl, kw);
+        }
         self.deck.scale(kl, 1.0);
         self.bottom.scale(kl, kl);
         // Keep the deck's ends on the bottom's ends.
@@ -895,7 +947,10 @@ impl Board {
     pub fn flip(&mut self) {
         let l = self.length();
         let mirror = |p: DVec2| DVec2::new(l - p.x, p.y);
-        for s in [&mut self.outline, &mut self.deck, &mut self.bottom] {
+        for s in [&mut self.outline, &mut self.deck, &mut self.bottom]
+            .into_iter()
+            .chain(self.outline_left.as_mut())
+        {
             let knots = s.knots_mut();
             knots.reverse();
             for k in knots.iter_mut() {
@@ -906,6 +961,7 @@ impl Board {
         }
         for g in [
             &mut self.outline_guides,
+            &mut self.outline_left_guides,
             &mut self.deck_guides,
             &mut self.bottom_guides,
         ] {

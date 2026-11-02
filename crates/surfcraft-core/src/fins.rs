@@ -11,6 +11,7 @@
 use glam::DVec2;
 
 use crate::Board;
+use crate::asym::Rail;
 use crate::fin as legacy;
 use crate::math::DEG;
 use crate::units::INCH;
@@ -336,15 +337,18 @@ impl Fin {
     }
 
     /// Distance from the rail (outline edge) to the rear end of the base (the trailing edge, where the FCS II
-    /// jig's "shaper's dot" goes), measured square to the stringer.
+    /// jig's "shaper's dot" goes), measured square to the stringer. On an asymmetric board the fin's own rail
+    /// is used.
     pub fn from_rail(&self, board: &Board) -> f64 {
-        board.outline.value_at(self.x) - self.y.abs()
+        board.half_width_at(self.x, Rail::of_y(self.y)) - self.y.abs()
     }
 
-    /// Set the lateral offset so that the rear end of the base is `rail` in from the rail, keeping the side.
+    /// Set the lateral offset so that the rear end of the base is `rail` in from the rail (the fin's own rail
+    /// on an asymmetric board), keeping the side.
     pub fn set_from_rail(&mut self, board: &Board, rail: f64) {
         let s = if self.y < 0.0 { -1.0 } else { 1.0 };
-        self.y = s * (board.outline.value_at(self.x) - rail).max(2.0 * ON_STRINGER);
+        let half = board.half_width_at(self.x, Rail::of_y(self.y));
+        self.y = s * (half - rail).max(2.0 * ON_STRINGER);
     }
 
     /// Toe-in as a distance: how much closer to the stringer the front of the base is than its rear.
@@ -598,7 +602,10 @@ impl FinSetup {
                     f.y = 1.0;
                     f.set_from_rail(board, p.from_rail * INCH);
                     fins.push(f);
-                    fins.push(f.mirrored());
+                    // The right fin follows the right rail (the same offset on a symmetric board).
+                    let mut r = f.mirrored();
+                    r.set_from_rail(board, p.from_rail * INCH);
+                    fins.push(r);
                 }
             }
         }

@@ -3,9 +3,14 @@
 //! A surface point is addressed by a station `x`, a parameter `s ∈ [0, 1]` and a range of the half
 //! cross-section given by two normal angles in degrees (see [`DECK`], [`BOTTOM`], [`WHOLE`]). The returned point
 //! is `(x, distance from stringer, height)` in the board frame.
+//!
+//! On an asymmetric board each rail has its own surface: the functions taking a [`Rail`] scale the sections to
+//! that rail's half width and return the point on that rail (y < 0 for the right rail). The functions without a
+//! rail evaluate the y >= 0 (left) half, which is the whole story for a symmetric board.
 
 use glam::{DVec2, DVec3};
 
+use crate::asym::Rail;
 use crate::board::{Board, SurfaceModel, clamp_soft};
 use crate::math::{DEG, ONE, ZERO, find_root, polyline_length, trapezoid};
 use crate::section::{CrossSection, scaled_copy, thickness_near_stringer};
@@ -81,19 +86,29 @@ enum StationKind {
 }
 
 impl Station {
-    /// Prepare station `x` (clamped to 0.1 cm inside the board) for the range `(start, end)` in degrees.
+    /// Prepare station `x` (clamped to 0.1 cm inside the board) for the range `(start, end)` in degrees, on
+    /// the y >= 0 half (the left rail).
     pub fn new(board: &Board, x: f64, start: f64, end: f64) -> Station {
+        Station::new_on(board, x, start, end, Rail::Left)
+    }
+
+    /// [`Self::new`] for one rail: the section is scaled to that rail's half width. The points are still
+    /// returned on the y >= 0 side; [`Rail::place`] puts them on the rail.
+    pub fn new_on(board: &Board, x: f64, start: f64, end: f64, rail: Rail) -> Station {
         let l = board.length();
         let x = clamp_soft(x, 0.1, l - 0.1);
         let rocker = board.rocker_at(x);
         let kind = match board.model {
-            SurfaceModel::ControlPoint => match board.interpolated_section(x) {
+            SurfaceModel::ControlPoint => match board.interpolated_section_on(x, rail) {
                 Some(s) => StationKind::ControlPoint(Ranged::new(s.spline, start, end, true)),
-                None => {
-                    StationKind::ControlPoint(Ranged::new(fallback_at(board, x), start, end, true))
-                }
+                None => StationKind::ControlPoint(Ranged::new(
+                    fallback_at(board, x, rail),
+                    start,
+                    end,
+                    true,
+                )),
             },
-            SurfaceModel::SBlend => sblend_kind(board, x, start, end),
+            SurfaceModel::SBlend => sblend_kind(board, x, start, end, rail),
         };
         Station { x, rocker, kind }
     }
@@ -143,19 +158,20 @@ impl Station {
     }
 }
 
-/// The fallback shape scaled to the local width and thickness.
-fn fallback_at(board: &Board, x: f64) -> Spline {
+/// The fallback shape scaled to a rail's local width and thickness.
+fn fallback_at(board: &Board, x: f64, rail: Rail) -> Spline {
     let mut s = CrossSection::fallback_shape();
-    let (w, t) = (board.width_at(x).max(0.0), board.thickness_at(x).max(0.0));
+    let w = 2.0 * board.half_width_at(x, rail);
+    let (w, t) = (w.max(0.0), board.thickness_at(x).max(0.0));
     s.scale(w / 2.0, t);
     s
 }
 
-fn sblend_kind(board: &Board, x: f64, start: f64, end: f64) -> StationKind {
-    let w = board.width_at(x);
+fn sblend_kind(board: &Board, x: f64, start: f64, end: f64, rail: Rail) -> StationKind {
+    let w = 2.0 * board.half_width_at(x, rail);
     let t = board.thickness_at(x);
     let fallback = || {
-        let r = Ranged::new(fallback_at(board, x), start, end, false);
+        let r = Ranged::new(fallback_at(board, x, rail), start, end, false);
         StationKind::SBlend([r.clone(), r], 0.0)
     };
     let (Some(i1), Some(i2), Some(p1), Some(p2)) = (
@@ -199,6 +215,14 @@ impl Board {
         Station::new(self, x, start, end).point(s)
     }
 
+    /// [`Self::surface_point`] on one rail (y < 0 on the right rail).
+    pub fn surface_point_on(&self, x: f64, s: f64, start: f64, end: f64, rail: Rail) -> DVec3 {
+        if self.outline.is_empty() {
+            return DVec3::ZERO;
+        }
+        rail.place(Station::new_on(self, x, start, end, rail).point(s))
+    }
+
     /// Point of the half cross-section at `(x, s)` over the whole section, without the rocker.
     pub fn section_point(&self, x: f64, s: f64) -> DVec2 {
         if self.outline.is_empty() {
@@ -212,8 +236,23 @@ impl Board {
         Station::new(self, x, start, end)
     }
 
+    /// Prepared station of one rail (points on the y >= 0 side, see [`Station::new_on`]).
+    pub fn station_on(&self, x: f64, start: f64, end: f64, rail: Rail) -> Station {
+        Station::new_on(self, x, start, end, rail)
+    }
+
     /// Outward unit normal of the surface at `(x, s)` (up on the deck, down on the bottom, outward at the rail).
     pub fn surface_normal(&self, x: f64, s: f64, start: f64, end: f64) -> DVec3 {
+        self.surface_normal_y(x, s, start, end, Rail::Left)
+    }
+
+    /// [`Self::surface_normal`] on one rail (pointing towards -y at the right rail).
+    pub fn surface_normal_on(&self, x: f64, s: f64, start: f64, end: f64, rail: Rail) -> DVec3 {
+        rail.place(self.surface_normal_y(x, s, start, end, rail))
+    }
+
+    /// Normal of a rail's surface computed on the y >= 0 side.
+    fn surface_normal_y(&self, x: f64, s: f64, start: f64, end: f64, rail: Rail) -> DVec3 {
         if self.outline.is_empty() {
             return DVec3::Z;
         }
@@ -222,14 +261,14 @@ impl Board {
             SurfaceModel::ControlPoint => {
                 let x = clamp_soft(clamp_soft(x, 0.1, l - 0.1), 1.0, l - 1.0);
                 let xo = x + 0.1;
-                let st = Station::new(self, x, start, end);
+                let st = Station::new_on(self, x, start, end, rail);
                 let StationKind::ControlPoint(r) = &st.kind else {
                     return DVec3::Z;
                 };
                 let sc = r.s_cur(s);
                 let s2 = self
-                    .interpolated_section(xo)
-                    .map_or_else(|| fallback_at(self, xo), |c| c.spline);
+                    .interpolated_section_on(xo, rail)
+                    .map_or_else(|| fallback_at(self, xo, rail), |c| c.spline);
                 let (p, (ps, flip)) = (r.at(sc), st.offset_point(s));
                 let px = s2.point_at_s(sc);
                 let (rk, ro) = (self.rocker_at(x), self.rocker_at(xo));
@@ -239,11 +278,11 @@ impl Board {
                 if flip { -n } else { n }
             }
             SurfaceModel::SBlend => {
-                let st = Station::new(self, x, start, end);
+                let st = Station::new_on(self, x, start, end, rail);
                 let p = st.point(s);
                 let (ps, flip) = st.offset_point(s);
                 let ps = DVec3::new(st.x, ps.x, ps.y + st.rocker);
-                let pxo = self.surface_point(st.x + 0.1, s, start, end);
+                let pxo = Station::new_on(self, st.x + 0.1, start, end, rail).point(s);
                 let vc = DVec3::new(0.0, p.y - ps.y, p.z - ps.z);
                 let vl = DVec3::new(0.1, pxo.y - p.y, pxo.z - p.z);
                 let n = vl.cross(vc).normalize_or_zero();
@@ -259,38 +298,54 @@ impl Board {
         if self.sections.len() < 3 || self.outline.is_empty() {
             return 0.0;
         }
-        let area = match self.model {
+        let area = if self.is_asymmetric() {
+            let half = |rail| self.half_section_area(x, splits, rail).unwrap_or(0.0);
+            half(Rail::Left) + half(Rail::Right)
+        } else {
+            match self.half_section_area(x, splits, Rail::Left) {
+                Some(a) => 2.0 * a,
+                None => return 0.0,
+            }
+        };
+        if area.is_finite() { area.max(0.0) } else { 0.0 }
+    }
+
+    /// Area of the half of the section at `x` on `rail`; `None` where the control-point model has no section.
+    fn half_section_area(&self, x: f64, splits: usize, rail: Rail) -> Option<f64> {
+        Some(match self.model {
             SurfaceModel::ControlPoint => {
-                let Some(s) = self.interpolated_section(x) else {
-                    return 0.0;
-                };
+                let s = self.interpolated_section_on(x, rail)?;
                 let sp = &s.spline;
                 let gr = sp.g_for_normal(90.0 * DEG);
                 let n = splits.max(1);
                 let deck = trapezoid(|g| sp.point_by_g(g), gr, 1.0, n);
                 let bottom = trapezoid(|g| sp.point_by_g(g), 0.0, gr, n);
-                2.0 * (deck - bottom)
+                deck - bottom
             }
             SurfaceModel::SBlend => {
-                let deck = Station::new(self, x, DECK.0, DECK.1);
-                let bottom = Station::new(self, x, BOTTOM.0, BOTTOM.1);
+                let deck = Station::new_on(self, x, DECK.0, DECK.1, rail);
+                let bottom = Station::new_on(self, x, BOTTOM.0, BOTTOM.1, rail);
                 let uz = |st: &Station, s: f64| {
                     let p = st.point(s);
                     DVec2::new(p.y, p.z)
                 };
                 let a = trapezoid(|s| uz(&deck, s), 0.0, 1.0, 10);
                 let b = trapezoid(|s| uz(&bottom, s), 0.0, 1.0, 10);
-                2.0 * (a - b)
+                a - b
             }
-        };
-        if area.is_finite() { area.max(0.0) } else { 0.0 }
+        })
     }
 
     /// Girth of the deck (`deck = true`) or of the bottom of the half section at `x`: the length of the curve
     /// from the stringer to the rail apex, measured as a 10-step polyline.
     pub fn half_girth(&self, x: f64, deck: bool) -> f64 {
+        self.half_girth_on(x, deck, Rail::Left)
+    }
+
+    /// [`Self::half_girth`] of the half on one rail.
+    pub fn half_girth_on(&self, x: f64, deck: bool, rail: Rail) -> f64 {
         let (a, b) = if deck { DECK } else { BOTTOM };
-        let st = Station::new(self, x, a, b);
+        let st = Station::new_on(self, x, a, b, rail);
         polyline_length(
             |s| {
                 let p = st.point(s);
@@ -303,33 +358,45 @@ impl Board {
     }
 
     /// Surface point on the deck (`deck = true`) or the bottom at lateral distance `y` from the stringer.
-    fn point_at_lateral(&self, x: f64, y: f64, deck: bool) -> DVec3 {
+    fn point_at_lateral(&self, x: f64, y: f64, deck: bool, rail: Rail) -> DVec3 {
         let (a, b) = if deck { DECK } else { (90.0, 270.0) };
-        let st = Station::new(self, x, a, b);
+        let st = Station::new_on(self, x, a, b, rail);
         let s = find_root(|s| st.point(s).y, y, 0.0, 1.0);
         st.point(s)
     }
 
+    /// Rail and lateral distance of a point `(x, y)`: on an asymmetric board the sign of `y` picks the rail
+    /// (y < 0 is the right rail); a symmetric board uses `y` as given.
+    fn lateral(&self, y: f64) -> (Rail, f64) {
+        if self.is_asymmetric() {
+            (Rail::of_y(y), y.abs())
+        } else {
+            (Rail::Left, y)
+        }
+    }
+
     /// Height of the deck at `(x, y)`; 0 outside the outline.
     pub fn deck_at_xy(&self, x: f64, y: f64) -> f64 {
-        if self.width_at(x) / 2.0 < y {
+        let (rail, y) = self.lateral(y);
+        if self.half_width_at(x, rail) < y {
             return 0.0;
         }
         if y == 0.0 {
             return self.deck_at(x);
         }
-        self.point_at_lateral(x, y, true).z
+        self.point_at_lateral(x, y, true, rail).z
     }
 
     /// Height of the bottom at `(x, y)`; 0 outside the outline.
     pub fn bottom_at_xy(&self, x: f64, y: f64) -> f64 {
-        if self.width_at(x) / 2.0 < y {
+        let (rail, y) = self.lateral(y);
+        if self.half_width_at(x, rail) < y {
             return 0.0;
         }
         if y == 0.0 {
             return self.rocker_at(x);
         }
-        self.point_at_lateral(x, y, false).z
+        self.point_at_lateral(x, y, false, rail).z
     }
 
     /// Thickness at `(x, y)`.
@@ -368,6 +435,11 @@ impl Board {
     /// Polyline of a rail feature line: surface points at the end of the range (-45°, `angle`), from the tail
     /// to the nose with `steps` points between consecutive sections.
     pub fn feature_line(&self, angle: f64, steps: usize) -> Vec<DVec3> {
+        self.feature_line_on(angle, steps, Rail::Left)
+    }
+
+    /// [`Self::feature_line`] along one rail (y < 0 on the right rail).
+    pub fn feature_line_on(&self, angle: f64, steps: usize, rail: Rail) -> Vec<DVec3> {
         let mut xs = vec![0.01];
         let mut prev = 0.0;
         for s in self.sections.iter().skip(1) {
@@ -379,7 +451,7 @@ impl Board {
         }
         use rayon::prelude::*;
         xs.par_iter()
-            .map(|&x| self.surface_point(x, 1.0, -45.0, angle))
+            .map(|&x| self.surface_point_on(x, 1.0, -45.0, angle, rail))
             .collect()
     }
 }

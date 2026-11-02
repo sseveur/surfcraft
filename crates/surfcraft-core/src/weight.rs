@@ -1,5 +1,6 @@
 //! Finished-weight estimate of a foam, stringer and fibreglass board.
 
+use crate::asym::Rail;
 use crate::board::Board;
 use crate::math::{ZERO, simpson, simpson_par};
 use crate::units::FOOT;
@@ -76,11 +77,22 @@ pub fn estimate(board: &Board, volume: f64, layup: &Layup) -> Weights {
     let stringer = stringer_volume / 1000.0 * layup.stringer_density;
     let foam_volume = volume - stringer_volume;
     let foam = foam_volume / 1000.0 * layup.foam_density;
-    let deck_glass_area = 2.0 * simpson_par(|x| board.half_girth(x, true), ZERO, l - ZERO, 10);
-    let bottom_glass_area = 2.0 * simpson_par(|x| board.half_girth(x, false), ZERO, l - ZERO, 10);
+    let girth = |x: f64, deck: bool| {
+        if board.is_asymmetric() {
+            (board.half_girth_on(x, deck, Rail::Left) + board.half_girth_on(x, deck, Rail::Right))
+                / 2.0
+        } else {
+            board.half_girth(x, deck)
+        }
+    };
+    let deck_glass_area = 2.0 * simpson_par(|x| girth(x, true), ZERO, l - ZERO, 10);
+    let bottom_glass_area = 2.0 * simpson_par(|x| girth(x, false), ZERO, l - ZERO, 10);
     let deck_glass = deck_glass_area / 10000.0 * layup.deck_glass;
     let bottom_glass = bottom_glass_area / 10000.0 * layup.bottom_glass;
-    let rail = board.outline.length();
+    let rail = match &board.outline_left {
+        None => board.outline.length(),
+        Some(left) => (board.outline.length() + left.length()) / 2.0,
+    };
     let deck_lap = rail * layup.deck_lap_width * 2.0 / 10000.0 * layup.deck_glass;
     let bottom_lap = rail * layup.bottom_lap_width * 2.0 / 10000.0 * layup.bottom_glass;
     let glass = deck_glass + deck_lap + bottom_glass + bottom_lap;
