@@ -318,43 +318,7 @@ pub fn info_window(ctx: &egui::Context, open: &mut bool, doc: &mut Document) {
 }
 
 pub fn fins_window(ctx: &egui::Context, open: &mut bool, doc: &mut Document, set: &Settings) {
-    let mut fins = doc.board.fins;
-    egui::Window::new(tr("Fins"))
-        .id(egui::Id::unique("fins-window"))
-        .open(open)
-        .resizable(false)
-        .show(ctx, |ui| {
-            ui.label(tr("Positions from the tail and out from the stringer."));
-            egui::Grid::new("fins").num_columns(2).show(ui, |ui| {
-                let labels = [
-                    tr("Side fin rear, from tail"),
-                    tr("Side fin rear, from stringer"),
-                    tr("Side fin front, from tail"),
-                    tr("Side fin front, from stringer"),
-                    tr("Centre fin rear, from tail"),
-                    tr("Centre fin front, from tail"),
-                    tr("Centre fin depth"),
-                    tr("Side fin depth"),
-                ];
-                for (i, label) in labels.iter().enumerate() {
-                    ui.label(*label);
-                    if let Some(v) = length_field(ui, ("fin", i), fins[i], set) {
-                        fins[i] = v;
-                    }
-                    ui.end_row();
-                }
-                ui.label(tr("Splay angle (°)"));
-                ui.add(
-                    egui::DragValue::new(&mut fins[8])
-                        .speed(0.1)
-                        .range(-20.0..=20.0),
-                );
-                ui.end_row();
-            });
-        });
-    if fins != doc.board.fins {
-        doc.edit_grouped(|b| b.fins = fins);
-    }
+    crate::fins_ui::window(ctx, open, doc, set);
 }
 
 pub fn about_window(ctx: &egui::Context, open: &mut bool) {

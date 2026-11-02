@@ -1772,18 +1772,52 @@ fn board_info_typing_is_one_undo_step() {
 }
 
 #[test]
-fn fins_dialog_edits_positions() {
+fn fins_dialog_applies_a_five_fin_fcs2_setup() {
+    use surfcraft_core::fins::BoxSystem;
     let mut h = harness();
     menu(&mut h, "Board", "Fins…");
-    let p = field_in(&h, "Fins", "Side fin rear, from tail");
-    type_into(&mut h, p, "11\"");
-    let p = field_in(&h, "Fins", "Centre fin front, from tail");
-    type_into(&mut h, p, "6 1/2\"");
-    let f = h.state().doc.board.fins;
-    assert!(
-        (f[0] - 27.94).abs() < 1e-9 && (f[5] - 16.51).abs() < 1e-9,
-        "{f:?}"
+    step(&mut h);
+    assert!(has_label(
+        &h,
+        "No fins. Choose a setup and press Apply preset."
+    ));
+    click(&mut h, "Setup");
+    click(&mut h, "5 fins");
+    click(&mut h, "Box system");
+    click(&mut h, "FCS II");
+    let depth = undo_depth(&mut h);
+    click(&mut h, "Apply preset");
+    step(&mut h);
+    let s = h.state().doc.board.fin_setup.clone().expect("setup stored");
+    assert_eq!(s.fins.len(), 5);
+    assert!(s.fins.iter().all(|f| f.system == BoxSystem::FcsII));
+    for l in [
+        "Left front",
+        "Right front",
+        "Left rear",
+        "Right rear",
+        "Centre",
+    ] {
+        assert!(has_label(&h, l), "{l} not listed");
+    }
+    assert_eq!(
+        undo_depth(&mut h),
+        depth + 1,
+        "Apply preset is one undo step"
     );
+    // The legacy marks follow (BoardCAD shows the front pair and the centre fin).
+    assert!(h.state().doc.board.fins[0] > 0.0 && h.state().doc.board.fins[4] > 0.0);
+    // Typing a distance from the tail moves the fin and its mirror image.
+    let p = field_in(&h, "Fins", "Left front");
+    type_into(&mut h, p, "11 1/2\"");
+    let s = h.state().doc.board.fin_setup.clone().unwrap();
+    let moved: Vec<_> = s
+        .fins
+        .iter()
+        .filter(|f| (f.x - 29.21).abs() < 1e-9)
+        .collect();
+    assert_eq!(moved.len(), 2, "{s:?}");
+    assert_eq!(*moved[0], moved[1].mirrored());
     h.state_mut().set.view.fins = true;
     snap(&mut h, "qa-fins-dialog");
     set_tab(&mut h, Tab::Outline);
