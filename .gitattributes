@@ -1,0 +1,3 @@
+# Test data is compared byte for byte: never convert line endings on checkout.
+tests/fixtures/** -text
+crates/*/tests/data/** -text
