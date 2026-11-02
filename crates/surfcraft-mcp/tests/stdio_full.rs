@@ -258,7 +258,7 @@ fn every_tool_runs_headless() {
     m.ok("save_board", json!({}));
     let s = m.ok(
         "board_from_measurements",
-        json!({"length": "6'", "tail": "squash", "stations": [
+        json!({"length": "6'", "tail": "squash", "bottom": "vee", "rail": "70/30", "stations": [
             {"position": "tail 0", "width": "10\"", "rocker": "2\""},
             {"position": "tail 12\"", "width": "14\"", "thickness": "2\""},
             {"position": "centre", "width": "19 1/4\"", "thickness": "2 1/2\""},

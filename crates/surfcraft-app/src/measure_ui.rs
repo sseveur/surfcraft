@@ -3,7 +3,8 @@
 
 use eframe::egui;
 use surfcraft_io::templates::TEMPLATES;
-use surfcraft_session::measurements::{self, Column, Problem, Row, Table, TailShape};
+use surfcraft_session::measurements::{self, BOTTOMS, Column, Problem, Row, Table, TailShape};
+use surfcraft_session::shaping::{ContourKind, RAIL_PRESETS};
 
 use crate::app::{Pending, SurfCraftApp};
 use crate::document::write_with_backup;
@@ -34,6 +35,16 @@ fn tail_label(t: TailShape) -> &'static str {
     }
 }
 
+fn bottom_label(k: ContourKind) -> &'static str {
+    match k {
+        ContourKind::Flat => tr("Flat"),
+        ContourKind::SingleConcave => tr("Single concave"),
+        ContourKind::DoubleConcave => tr("Double concave"),
+        ContourKind::Vee => tr("Vee"),
+        ContourKind::Channels => tr("Channels"),
+    }
+}
+
 fn column(c: Column) -> &'static str {
     match c {
         Column::Length => tr("length"),
@@ -41,12 +52,18 @@ fn column(c: Column) -> &'static str {
         Column::Width => tr("width"),
         Column::Rocker => tr("rocker"),
         Column::Thickness => tr("thickness"),
+        Column::Depth => tr("depth"),
     }
 }
 
 /// The problem in the interface language.
 pub fn problem_text(p: &Problem) -> String {
     match p {
+        Problem::Unreadable {
+            row: 0,
+            column: Column::Depth,
+            text,
+        } => trf("Cannot read the bottom depth \"{0}\".", &[text]),
         Problem::Unreadable { row: 0, text, .. } => trf("Cannot read the length \"{0}\".", &[text]),
         Problem::Unreadable {
             row,
@@ -80,6 +97,12 @@ pub fn problem_text(p: &Problem) -> String {
         Problem::NoThickness => tr("Give at least one thickness.").into(),
         Problem::TailBlockTooWide => {
             tr("The tail block is wider than the board ahead of it.").into()
+        }
+        Problem::DepthOutOfRange => {
+            tr("The bottom depth must be more than zero and at most 1\".").into()
+        }
+        Problem::Shaping(_) => {
+            tr("The bottom or rail shape could not be applied to this board.").into()
         }
         Problem::CsvLine { line, text } => trf("Line {0}: cannot read \"{1}\".", &[line, text]),
     }
@@ -129,6 +152,37 @@ pub fn window(
                         }
                     });
                 ui.end_row();
+                ui.label(tr("Bottom"))
+                    .on_hover_text(tr("Shaped after the curves are fitted: the rail line stays and foam is cut, so a concave or vee makes the stringer thinner"));
+                ui.horizontal(|ui| {
+                    egui::ComboBox::from_id_salt("measure-bottom")
+                        .selected_text(t.bottom.map_or(tr("As the template"), bottom_label))
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(&mut t.bottom, None, tr("As the template"));
+                            for k in BOTTOMS {
+                                ui.selectable_value(&mut t.bottom, Some(k), bottom_label(k));
+                            }
+                        });
+                    if t.bottom.is_some_and(|k| k != ContourKind::Flat) {
+                        ui.label(tr("Depth"));
+                        ui.add(
+                            egui::TextEdit::singleline(&mut t.bottom_depth)
+                                .desired_width(70.0)
+                                .hint_text(tr("usual")),
+                        );
+                    }
+                });
+                ui.end_row();
+                ui.label(tr("Rails"));
+                egui::ComboBox::from_id_salt("measure-rail")
+                    .selected_text(t.rail.map_or(tr("As the template"), |i| RAIL_PRESETS[i].0))
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut t.rail, None, tr("As the template"));
+                        for (i, p) in RAIL_PRESETS.iter().enumerate() {
+                            ui.selectable_value(&mut t.rail, Some(i), p.0);
+                        }
+                    });
+                ui.end_row();
             });
             ui.separator();
             let help = tr(
@@ -161,7 +215,7 @@ pub fn window(
                 t.rows.remove(i);
             }
             let csv_help = tr(
-                "CSV columns: position, width, rocker, thickness (any order, named in a header line). Optional lines: length, tail (pin, round, squash, square, swallow), template. Comma or semicolon separated; bare numbers are in the display unit.",
+                "CSV columns: position, width, rocker, thickness (any order, named in a header line). Optional lines: length, tail (pin, round, squash, square, swallow), template, bottom (template, flat, single_concave, double_concave, vee), bottom depth, rail (template, 50/50, 60/40, 70/30, 80/20). Comma or semicolon separated; bare numbers are in the display unit.",
             );
             ui.horizontal(|ui| {
                 if ui.button(tr("Add row")).clicked() {
@@ -182,10 +236,15 @@ pub fn window(
                 if ui.button(tr("Create")).clicked() {
                     match measurements::parse(&s.table, set.length_unit()) {
                         Ok(m) => {
-                            let (b, report) = measurements::build(&m);
-                            s.problems.clear();
-                            action = Some(MeasureAction::Create(Box::new(b), report.worst()));
-                            close = true;
+                            match measurements::build(&m) {
+                                Ok((b, report)) => {
+                                    s.problems.clear();
+                                    action =
+                                        Some(MeasureAction::Create(Box::new(b), report.worst()));
+                                    close = true;
+                                }
+                                Err(p) => s.problems = vec![p],
+                            }
                         }
                         Err(ps) => s.problems = ps,
                     }

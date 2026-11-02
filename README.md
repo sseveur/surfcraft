@@ -49,7 +49,8 @@ The builds are not signed with paid certificates yet, so the first launch needs 
   or thickness at the standard stations and the curves reshape smoothly around that station (one undo step).
 - **New board from a template** at a target length, width, thickness and volume (litres).
 - **New board from measurements** (File menu): copy a board measured with a tape (widths, rocker, thickness at
-  stations, tail shape) as fair, editable curves; the table imports from and saves to CSV.
+  stations, tail shape) as fair, editable curves, optionally with a bottom contour and rail preset; the table
+  imports from and saves to CSV.
 - **Volume advisor** (Board menu, and "Suggest volume" in New board): a starting-point volume range from the
   rider's weight, skill, fitness, age, waves and board type (Guild factor method, see `docs/volume-advisor.md`).
 - **Asymmetric boards** (Board > Asymmetric outline): a separate outline for each rail (toe side and heel side),

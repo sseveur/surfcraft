@@ -864,6 +864,41 @@ fn board_from_measurements_builds_an_unsaved_board() {
     )
     .unwrap_err();
     assert!(e.contains("cannot read the width"), "{e}");
+    // Bottom contour and rail options: a concave cuts foam compared with a flat bottom.
+    let stations = json!([
+        {"position": "tail 0", "rocker": "2\""},
+        {"position": "tail 12\"", "width": "15\"", "thickness": "2 1/8\""},
+        {"position": "centre", "width": "20 1/2\"", "thickness": "2 3/4\""},
+        {"position": "nose 12\"", "width": "15 1/4\"", "thickness": "2 1/4\""},
+        {"position": "nose 0", "rocker": "5\""}
+    ]);
+    let flat = ok(
+        &mut d,
+        &mut c,
+        "board_from_measurements",
+        json!({"discard_unsaved": true, "length": "6'4\"", "stations": stations, "bottom": "flat", "rail": "60/40"}),
+    );
+    let concave = ok(
+        &mut d,
+        &mut c,
+        "board_from_measurements",
+        json!({"length": "6'4\"", "stations": stations, "bottom": "single_concave", "bottom_depth": "1/4\"", "rail": "60/40"}),
+    );
+    assert!(concave["volume_litres"].as_f64().unwrap() < flat["volume_litres"].as_f64().unwrap());
+    for bad in [
+        json!({"bottom": "channels"}),
+        json!({"rail": "90/10"}),
+        json!({"bottom": "vee", "bottom_depth": "5cm"}),
+    ] {
+        let mut a = json!({"length": "6'4\"", "stations": stations});
+        for (k, v) in bad.as_object().unwrap() {
+            a[k] = v.clone();
+        }
+        assert!(
+            execute(&mut d, &mut c, "board_from_measurements", &a).is_err(),
+            "{bad}"
+        );
+    }
 }
 
 #[test]
