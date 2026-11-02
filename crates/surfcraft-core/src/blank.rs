@@ -1418,6 +1418,74 @@ const LIBRARY: &[Entry] = &[
             [60.625, 25.125, -1.0, -1.0],
         ],
     },
+    // Surfblanks Australia (Brookvale, NSW): max length, max width (and its position from the tail), max thickness
+    // and natural rocker from the blank's drawing; stations as labelled on it (nose stations 12" / 24" from the
+    // nose, tail stations from the tail).
+    Entry {
+        name: "6'4\" shortboard (Surfblanks Australia 6'4\" SB)",
+        dims: [76.0, 22.5, 0.375, 2.75, 4.875, 1.75],
+        nose: &[
+            [0.0, 4.0, -1.0, -1.0],
+            [6.0, -1.0, 1.5625, 2.625],
+            [12.0, 16.3125, 2.0, 1.4375],
+            [24.0, 20.9375, 2.5, 0.3125],
+        ],
+        tail: &[
+            [0.0, 8.375, 0.5, -1.0],
+            [6.0, -1.0, 1.5625, 1.4375],
+            [12.0, 17.9375, 2.0, 1.1875],
+            [24.0, 21.125, 2.5, 0.25],
+        ],
+    },
+    Entry {
+        name: "6'5\" fat fish (Surfblanks Australia 6'5\" FF)",
+        dims: [78.0, 25.0, 2.1875, 3.75, 4.5, 2.5],
+        nose: &[[0.0, 0.5, -1.0, -1.0], [12.0, 19.75, 2.6875, 1.5]],
+        tail: &[[0.0, 10.5, -1.0, -1.0], [12.0, 19.5, 2.5625, 1.1875]],
+    },
+    Entry {
+        name: "6'7\" shortboard (Surfblanks Australia 6'7\" SB)",
+        dims: [80.0, 20.75, -1.125, 2.8125, 5.1875, 2.5],
+        nose: &[
+            [0.0, 4.0, -1.0, -1.0],
+            [12.0, 13.5625, 1.875, 1.75],
+            [24.0, 18.5, 2.5, 0.5],
+        ],
+        tail: &[
+            [0.0, 8.0, -1.0, -1.0],
+            [12.0, 15.9375, 2.0, 1.25],
+            [24.0, 19.3125, 2.5625, 0.375],
+        ],
+    },
+    Entry {
+        name: "8'3\" mid-length (Surfblanks Australia 8'3\" LB)",
+        dims: [99.5, 24.5, 3.8125, 3.5625, 5.375, 3.1875],
+        nose: &[
+            [0.0, -1.0, 0.625, -1.0],
+            [12.0, 19.9375, 2.25, 2.375],
+            [24.0, 23.125, 2.9375, 1.0],
+        ],
+        tail: &[
+            [0.0, 6.3125, 0.625, -1.0],
+            [12.0, 17.75, 2.25, 1.75],
+            [24.0, 21.6875, 2.9375, 0.75],
+        ],
+    },
+    Entry {
+        name: "9'2\" longboard (Surfblanks Australia 9'2\" LB)",
+        dims: [110.5, 24.3125, 7.25, 3.375, 4.0, 3.5],
+        nose: &[
+            [12.0, 19.5, 2.0, 1.875],
+            [24.0, 22.5, 2.625, 0.8125],
+            [48.0, 24.3125, -1.0, -1.0],
+        ],
+        tail: &[
+            [0.0, 7.5, -1.0, -1.0],
+            [12.0, 16.0625, 2.0, 1.875],
+            [24.0, 19.75, 2.625, 0.9375],
+            [48.0, 23.6875, -1.0, -1.0],
+        ],
+    },
     // Generic sizes between the catalogue blanks above (interpolated, not a manufacturer's numbers); their
     // stations come from the typical proportions.
     Entry {

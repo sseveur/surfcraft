@@ -47,9 +47,9 @@ The builds are not signed with paid certificates yet, so the first launch needs 
   with FCS I, FCS II, Futures or US box footprints, printed 1:1 on the outline template with a measurement table
   (dimensions and sources in `docs/fins.md`).
 - **Weight calculator**: foam, stringer, glass, laps, resin, hot coat.
-- **Fit in blank** (Board menu): checks the board fits a foam blank (US Blanks library with measured stations, or
-  your own blanks in any unit), with shift, tilt and Auto fit, clearances per view and the blank drawn behind the
-  board; see [docs/blanks.md](docs/blanks.md).
+- **Fit in blank** (Board menu): checks the board fits a foam blank (US Blanks and Surfblanks Australia library
+  with measured stations, or your own blanks in any unit), with shift, tilt and Auto fit, clearances per view and
+  the blank drawn behind the board; see [docs/blanks.md](docs/blanks.md).
 - **Print**: outline (half or full), spin, profile and cross-section templates at true 1:1 scale, tiled and centred
   over A4/A3/Letter/Tabloid with registration marks and a 100 mm check bar; one-page spec sheet. PDF, SVG or DXF.
 - **Wooden boards**: sandwich (core profile, rail, skins), hollow wood (stringer, ribs, rail strip, skins, nose and

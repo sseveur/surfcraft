@@ -9,10 +9,21 @@ shape is rebuilt from them.
 | Maker | Published per blank | Units |
 |---|---|---|
 | US Blanks (California) | page text: overall bottom length, tip-to-tip deck length, max width, max thickness, displacement, "natural rocker" nose (N) / tail (T). A "with Measurements" drawing per blank gives width, stringer thickness and rocker at the tips and 6", 12", 18", 24" (and 36", 48" on longer blanks) from each tip, and at the centre. A PDF lists the other rockers the blank is glued up with. | inches with fractions, cm in brackets |
-| Surfblanks Australia (Sydney) | blank "families" by length (5'7" to 10'7"); each blank has a rocker chart PDF with many rocker options (M08 is their standard rocker), plus a blank diagram book and a quick reference chart, all as PDF/images | ft/in |
+| Surfblanks Australia (Brookvale, NSW) | a drawing per blank (the product image): max length, max width, max thickness, volume, and width / stringer thickness / rocker at stations labelled by their distance from the tail (12", 24", the wide point, 12" and 24" from the nose, sometimes 6" and 48"), the position of the lowest rocker point, and the natural (moulded) rocker; glued-in rockers (M08 is the most popular) are in a separate rocker chart | ft/in |
 | Burford (Currumbin, Queensland) | no public web catalogue found; shapers order by model code (e.g. 6'7" B, 6'8" P, 7'0" J) | ft/in |
 
-Things to know when comparing:
+Things to know when comparing (Australian vs US catalogues):
+
+* **Stations.** US Blanks measures every station from its own tip (0", 6", 12", 18", 24", 36", 48" from the nose
+  and from the tail). Surfblanks Australia labels every station by its distance from the **tail** along the
+  stringer; its nose stations fall 12" and 24" from the nose (e.g. 5'4.8" and 4'4.8" on the 6'4" SB, whose tip is
+  then at 6'4.8"), so they are measured along the curved bottom, while "Max length" (6'4") is the straight length.
+  The library uses the published max length and puts the nose stations 12" / 24" from the nose.
+* **Rocker.** Surfblanks Australia also gives where the lowest rocker point is (38.4" from the tail on the 6'7" SB);
+  US Blanks does not. Both show the natural (moulded) rocker; other rockers are glued in to order.
+* **Width.** For the same nominal length the Australian shortboard blanks are wider here (6'4" SB: 22 1/2" vs US
+  Blanks 6'4" EA: 20 5/8"), and each drawing lists the blank's volume (51.6 L for the 6'4" SB).
+* **Units.** Both publish inches; nothing metric to convert.
 
 * **Length.** US Blanks gives the bottom length measured along the rocker and the tip-to-tip deck length, which
   is shorter (by ¼" to 1¼"). The library uses the **tip-to-tip deck length**: the straight length available, the
@@ -57,6 +68,20 @@ last column. Retrieved November 2026.
 | 9'4" longboard (US Blanks 9'4" B) | 9' 3 1/16" | 25 1/16" (48" from the nose) | 3 5/16" | 4 3/4" | 3 1/2" | https://usblanks.com/longboards/94b/ | https://usblanks.com/wp-content/uploads/2022/03/94B-with-Measurements.png |
 | 10'2" longboard (US Blanks 10'2" B) | 10' 1 1/4" | 25 3/16" (48" from the nose) | 3 1/2" | 4 13/16" | 3 7/16" | https://usblanks.com/longboards/102b/ | https://usblanks.com/wp-content/uploads/2022/03/102B-with-Measurements.png |
 
+Surfblanks Australia, from each blank's drawing (the product image on its page), retrieved November 2026:
+
+| Library name | Max length | Max width (from the tail) | Max thickness | Nose rocker | Tail rocker | Page | Drawing |
+|---|---|---|---|---|---|---|---|
+| 6'4" shortboard (Surfblanks Australia 6'4" SB) | 6' 4" | 22 1/2" (38 3/8") | 2 3/4" | 4 7/8" | 1 3/4" | https://surfblanksaustralia.com/products/6-4-shortboard-rocker-chart | https://surfblanksaustralia.com/cdn/shop/products/0604SB_1024x1024.jpg |
+| 6'5" fat fish (Surfblanks Australia 6'5" FF) | 6' 6" | 25" (41 3/16") | 3 3/4" | 4 1/2" | 2 1/2" | https://surfblanksaustralia.com/products/6-5-fat-fish-rocker-chart | https://surfblanksaustralia.com/cdn/shop/products/0605FF_1024x1024.gif |
+| 6'7" shortboard (Surfblanks Australia 6'7" SB) | 6' 8" | 20 3/4" (38 7/8") | 2 13/16" | 5 3/16" | 2 1/2" | https://surfblanksaustralia.com/products/6-7-shortboard-rocker-chart | https://surfblanksaustralia.com/cdn/shop/products/0607SB_1024x1024.gif |
+| 8'3" mid-length (Surfblanks Australia 8'3" LB) | 8' 3 1/2" | 24 1/2" (53 9/16") | 3 9/16" | 5 3/8" | 3 3/16" | https://surfblanksaustralia.com/products/8-3-longboard-rocker-chart | https://surfblanksaustralia.com/cdn/shop/products/0803LB_1024x1024.gif |
+| 9'2" longboard (Surfblanks Australia 9'2" LB) | 9' 2 1/2" | 24 5/16" (48" from the nose) | 3 3/8" | 4" | 3 1/2" | https://surfblanksaustralia.com/products/9-2-longboard-rocker-chart | https://surfblanksaustralia.com/cdn/shop/products/0902LB_1024x1024.gif |
+
+Left out of the Australian entries: the 8'3" LB nose-tip width ("12 15/16"" printed at the apex of a round nose)
+and the 9'2" LB nose-tip width ("0"", a point); both noses are rebuilt as round ends from the 12" and 24" widths.
+The 6'7" SB centre width (20 11/16" at 38 7/8") is just under its max width and is not used.
+
 Generic presets, clearly **not** manufacturer numbers: values interpolated between the catalogue blanks above, for
 a first check when your blank is not in the list. Their stations come from the typical proportions below.
 
@@ -67,10 +92,10 @@ a first check when your blank is not in the list. Their stations come from the t
 | Generic 8'6" mid-length (estimate) | 8' 6" | 23 1/2" | 3 3/8" | 4 3/4" | 3 1/4" |
 | Generic 9'8" longboard (estimate) | 9' 8" | 25" | 3 3/8" | 4 3/4" | 3 1/2" |
 
-Australian blanks (Surfblanks Australia, Burford) are not in the built-in list: their dimensions are published as
-PDF charts and drawings that could not be retrieved or read as text, and no number is included without a source.
-Add the blank you order with Fit in blank > New blank…, typing the values from the chart in mm, cm or inches; user
-blanks are saved with the settings.
+Not in the built-in list: the other Surfblanks Australia sizes (their pages limit automated requests; the drawings
+are on each blank's page), Surfblanks' glued-in rockers (the rocker chart PDF link returned "not found"), and
+Burford blanks (no public catalogue). Add the blank you order with Fit in blank > New blank…, typing the values
+from the drawing in inches, cm or mm; user blanks are saved with the settings.
 
 ## How the blank's shape is rebuilt
 
