@@ -211,6 +211,7 @@ impl SurfCraftApp {
                 let r = commands::execute(&mut self.doc, &mut c, cmd, args);
                 self.ed.current_section = c.current_section;
                 if replaced && r.is_ok() {
+                    self.autosave_document_closed();
                     let cur = self.ed.current_section;
                     self.ed.reset_for(&self.doc.board);
                     self.ed.current_section = cur;

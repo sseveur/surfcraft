@@ -48,6 +48,8 @@ The builds are not signed with paid certificates yet, so the first launch needs 
 - **3D model export**: STL, OBJ (mm), STEP.
 - **Files**: `.brd` (including encrypted legacy files), Shape3D `.s3d`, `.srf`, BoardCAD STEP; `.otl/.pfl/.crs` curve
   pieces. Saving keeps a `.bak` of the previous version.
+- **Autosave and crash recovery**: unsaved changes are copied every 2 minutes (File → Autosave every…, 0 = off) to
+  SurfCraft's own folder, never into your file; after a crash SurfCraft offers to recover, save or discard them.
 - **Languages**: English, French, Spanish, Portuguese, Dutch, Norwegian (View → Language).
 - **Guided tour** on first launch, any time from Help → Tour of SurfCraft.
 - **Report a bug** (Help menu): saves a zip with the recent log, system information and optionally the board, then

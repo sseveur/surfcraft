@@ -233,3 +233,196 @@ fn report_a_bug_window_filters_logs_and_saves_a_zip() {
     step(&mut h);
     assert!(!has_text(&h, "Include logs from the last:"));
 }
+
+// ------------------------------------------------------------------------------------------------ autosave
+
+fn named_board(name: &str) -> surfcraft_core::Board {
+    let mut b = surfcraft_io::templates::TEMPLATES[1].board();
+    b.info.name = name.into();
+    b
+}
+
+/// Autosaves left by a crashed run (a session without a lock), then the app started as on launch.
+fn crashed_run(name: &str) -> (H, PathBuf, PathBuf) {
+    let (mut h, dir) = harness_with_data(name);
+    let auto = crate::autosave::autosave_dir(&dir);
+    let original = dir.join("my-fish.brd");
+    std::fs::write(&original, "the user's last saved version").unwrap();
+    crate::autosave::write_entry(
+        &auto,
+        "4242-1-0",
+        "4242-1",
+        &named_board("Crashed fish"),
+        Some(&original),
+    )
+    .unwrap();
+    crate::autosave::write_entry(&auto, "4242-1-1", "4242-1", &named_board("Sketch"), None)
+        .unwrap();
+    h.state_mut().init_autosave(true);
+    step(&mut h);
+    (h, auto, original)
+}
+
+#[test]
+fn recovery_window_recovers_to_the_original_path_and_discards() {
+    let (mut h, auto, original) = crashed_run("recover");
+    assert!(h.state().recovery.open);
+    assert!(has_text(&h, "Recover unsaved boards"));
+    assert!(has_text(&h, "Crashed fish") && has_text(&h, "Sketch"));
+    assert!(has_text(&h, &original.display().to_string()));
+    assert!(has_text(&h, "Never saved"));
+    snap(&mut h, "qa-recovery");
+    // Discard the untitled sketch: its files go.
+    let sketch = h
+        .state()
+        .recovery
+        .entries
+        .iter()
+        .position(|e| e.meta.name == "Sketch")
+        .unwrap();
+    let discard = h
+        .query_all_by_label("Discard")
+        .map(|n| n.rect())
+        .nth(sketch)
+        .unwrap();
+    click_rect(&mut h, discard);
+    assert!(!auto.join("4242-1-1.brd").exists() && !auto.join("4242-1-1.json").exists());
+    assert_eq!(h.state().recovery.entries.len(), 1);
+    // Recover the other: unsaved, original path kept, user's file untouched.
+    click(&mut h, "Recover");
+    step(&mut h);
+    assert!(!h.state().recovery.open, "closes when nothing is left");
+    let app = h.state();
+    assert_eq!(app.doc.board.info.name, "Crashed fish");
+    assert_eq!(app.doc.path.as_deref(), Some(original.as_path()));
+    assert!(app.doc.is_dirty(), "recovered boards are unsaved");
+    assert!(app.doc.title().ends_with(" *"));
+    assert_eq!(
+        std::fs::read_to_string(&original).unwrap(),
+        "the user's last saved version"
+    );
+    // Save goes to the original file, keeping a .bak; the autosave goes away.
+    menu(&mut h, "File", "Save");
+    assert!(!h.state().doc.is_dirty());
+    let saved = std::fs::read(&original).unwrap();
+    assert_eq!(
+        surfcraft_io::brd::read(&saved).unwrap().info.name,
+        "Crashed fish"
+    );
+    let mut bak = original.clone().into_os_string();
+    bak.push(".bak");
+    assert_eq!(
+        std::fs::read_to_string(PathBuf::from(bak)).unwrap(),
+        "the user's last saved version"
+    );
+    let left: Vec<_> = std::fs::read_dir(&auto)
+        .unwrap()
+        .flatten()
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .filter(|n| !n.starts_with("session-"))
+        .collect();
+    assert!(left.is_empty(), "{left:?}");
+}
+
+fn click_rect(h: &mut H, rect: egui::Rect) {
+    let pos = rect.center();
+    h.hover_at(pos);
+    h.run_steps(1);
+    for pressed in [true, false] {
+        h.event(egui::Event::PointerButton {
+            pos,
+            button: egui::PointerButton::Primary,
+            pressed,
+            modifiers: Modifiers::NONE,
+        });
+    }
+    h.run_steps(3);
+}
+
+#[test]
+fn recovery_save_as_and_decide_later() {
+    let (mut h, auto, original) = crashed_run("recover-later");
+    // Save as: written where the user chooses, the autosave goes; the open board is not replaced.
+    let out = auto.parent().unwrap().join("saved-sketch.brd");
+    h.state_mut()
+        .scripted_dialogs
+        .as_mut()
+        .unwrap()
+        .push_back(out.clone());
+    let sketch = h
+        .state()
+        .recovery
+        .entries
+        .iter()
+        .position(|e| e.meta.name == "Sketch")
+        .unwrap();
+    let save_as = h
+        .query_all_by_label("Save as…")
+        .map(|n| n.rect())
+        .nth(sketch)
+        .unwrap();
+    click_rect(&mut h, save_as);
+    assert_eq!(
+        surfcraft_io::brd::read(&std::fs::read(&out).unwrap())
+            .unwrap()
+            .info
+            .name,
+        "Sketch"
+    );
+    assert!(!auto.join("4242-1-1.brd").exists());
+    assert!(!h.state().doc.is_dirty());
+    // Decide later: the window closes, the remaining autosave stays for next time.
+    click(&mut h, "Decide later");
+    step(&mut h);
+    assert!(!h.state().recovery.open);
+    assert!(auto.join("4242-1-0.brd").exists());
+    assert_eq!(
+        std::fs::read_to_string(&original).unwrap(),
+        "the user's last saved version"
+    );
+    let again = crate::autosave::scan(&auto);
+    assert_eq!(again.len(), 1);
+    assert_eq!(again[0].meta.name, "Crashed fish");
+}
+
+#[test]
+fn autosave_runs_while_unsaved_and_stops_on_new_board() {
+    let (mut h, dir) = harness_with_data("autosave-app");
+    h.state_mut().set.autosave_minutes = 1;
+    h.state_mut().init_autosave(true);
+    assert!(!h.state().recovery.open, "nothing to recover");
+    let auto = crate::autosave::autosave_dir(&dir);
+    let brd_files = |auto: &std::path::Path| {
+        std::fs::read_dir(auto)
+            .unwrap()
+            .flatten()
+            .filter(|e| e.file_name().to_string_lossy().ends_with(".brd"))
+            .count()
+    };
+    // Write now instead of waiting a minute.
+    h.state_mut().doc.edit(|b| b.info.name = "Edited".into());
+    step(&mut h);
+    assert_eq!(brd_files(&auto), 0, "not before the interval");
+    let app = h.state_mut();
+    app.autosave
+        .as_mut()
+        .unwrap()
+        .write(&app.doc, std::time::Instant::now());
+    assert_eq!(brd_files(&auto), 1);
+    // The File menu shows the setting.
+    click(&mut h, "File");
+    assert!(has_text(&h, "Autosave every"));
+    h.key_press(egui::Key::Escape);
+    step(&mut h);
+    // A new board (Don't save): the old autosave goes.
+    h.state_mut()
+        .guarded(crate::app::Pending::New(Box::new(named_board("Next"))));
+    step(&mut h);
+    click(&mut h, "Don't save");
+    step(&mut h);
+    assert_eq!(h.state().doc.board.info.name, "Next");
+    assert_eq!(brd_files(&auto), 0);
+    // Normal exit removes the session lock too.
+    h.state_mut().autosave_shutdown();
+    assert_eq!(std::fs::read_dir(&auto).unwrap().count(), 0);
+}

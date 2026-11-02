@@ -35,6 +35,8 @@ pub(crate) enum Pending {
     New(Box<Board>),
     Open(PathBuf),
     Quit,
+    /// Open an autosave left by a crash.
+    Recover(Box<crate::autosave::Entry>),
 }
 
 // Fields are crate-visible so GUI tests (and the automation bridge) can inspect state.
@@ -69,6 +71,8 @@ pub struct SurfCraftApp {
     pub(crate) trace: crate::app_log::Trace,
     /// Help > Report a bug.
     pub(crate) bug_report: Option<crate::bugreport_ui::BugReport>,
+    pub(crate) autosave: Option<crate::autosave::Autosave>,
+    pub(crate) recovery: crate::autosave_ui::Recovery,
 }
 
 /// Board formats the app can open.
@@ -123,6 +127,9 @@ impl SurfCraftApp {
             open: !set.tour_done && args.screenshot.is_none() && !args.automation && !cfg!(test),
             step: 0,
         };
+        // Autosave except for screenshots and tests; crash recovery also not for the AI assistant.
+        let autosave = args.screenshot.is_none() && !cfg!(test);
+        let recover = autosave && !args.automation;
         let mut app = Self {
             ed: EditorState::default(),
             doc: Document::new(board, None),
@@ -151,8 +158,13 @@ impl SurfCraftApp {
             },
             trace: Default::default(),
             bug_report: None,
+            autosave: None,
+            recovery: Default::default(),
         };
         app.ed.reset_for(&app.doc.board);
+        if autosave {
+            app.init_autosave(recover);
+        }
         if let Some(p) = args.open {
             app.open_path(&p);
             if args.untitled {
@@ -228,14 +240,15 @@ impl SurfCraftApp {
         self.status = Some((msg, Instant::now()));
     }
 
-    fn replace_document(&mut self, mut board: Board, path: Option<PathBuf>) {
+    pub(crate) fn replace_document(&mut self, mut board: Board, path: Option<PathBuf>) {
+        self.autosave_document_closed();
         board.model = self.set.model.into();
         self.doc = Document::new(board, path);
         self.ed.reset_for(&self.doc.board);
         self.results = None;
     }
 
-    fn guarded(&mut self, action: Pending) {
+    pub(crate) fn guarded(&mut self, action: Pending) {
         if self.doc.is_dirty() {
             self.pending = Some(action);
         } else {
@@ -247,6 +260,7 @@ impl SurfCraftApp {
         match action {
             Pending::New(b) => self.replace_document(*b, None),
             Pending::Open(p) => self.open_path(&p),
+            Pending::Recover(e) => self.recover(*e),
             Pending::Quit => {
                 self.allow_close = true;
             }
@@ -307,7 +321,12 @@ impl SurfCraftApp {
     }
 
     /// Native save dialog, or the next scripted path in tests and automation.
-    fn save_file(&mut self, what: &str, ext: &str, name: Option<&str>) -> Option<PathBuf> {
+    pub(crate) fn save_file(
+        &mut self,
+        what: &str,
+        ext: &str,
+        name: Option<&str>,
+    ) -> Option<PathBuf> {
         let mut p = match self.scripted_dialogs.as_mut() {
             Some(q) => q.pop_front()?,
             None => {
@@ -593,6 +612,7 @@ impl SurfCraftApp {
                         self.doc.refresh_original();
                     }
                 }
+                self.autosave_menu(ui);
                 ui.separator();
                 if ui
                     .button(tr("Open ghost board…"))
@@ -1241,6 +1261,7 @@ impl eframe::App for SurfCraftApp {
             }
         }
         self.bug_report_window(&ctx);
+        self.autosave_frame(&ctx);
         let tour = self.tour.show(&ctx, &self.tour_targets);
         if let Some(tab) = tour.tab {
             self.tab = tab;
@@ -1261,6 +1282,7 @@ impl eframe::App for SurfCraftApp {
     }
 
     fn on_exit(&mut self) {
+        self.autosave_shutdown();
         log::info!("exit");
     }
 }

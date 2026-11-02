@@ -3,6 +3,8 @@
 mod app;
 mod app_log;
 mod automation;
+mod autosave;
+mod autosave_ui;
 mod bugreport;
 mod bugreport_ui;
 mod cam_ui;
