@@ -190,6 +190,7 @@ pub fn resolve(q: &Query) -> Snapped {
 
 /// Snap targets of one view for this frame, owned so the board can be edited while they are in use.
 pub struct ViewSnap {
+    pub pane: Pane,
     /// Display y per board y (profile exaggeration).
     pub y_scale: f64,
     /// Snapping switched on and Alt (fine drag) not held.
@@ -256,6 +257,7 @@ impl ViewSnap {
         .map(disp)
         .collect();
         Self {
+            pane,
             y_scale,
             active: settings.enabled && !alt,
             settings,

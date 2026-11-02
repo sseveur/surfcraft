@@ -25,6 +25,7 @@ mod gui_tests_infra;
 mod gui_tests_measure;
 mod i18n;
 mod logging;
+mod measure;
 mod panels;
 mod platform;
 mod preview3d;

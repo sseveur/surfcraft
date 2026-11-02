@@ -34,6 +34,13 @@ fn click_pos(h: &mut H, pos: egui::Pos2) {
     h.run_steps(3);
 }
 
+/// Some label or text on screen matches.
+fn shows(h: &H, f: impl Fn(&str) -> bool) -> bool {
+    h.query_all_by(|n| n.label().is_some_and(|l| f(&l)) || n.value().is_some_and(|v| f(&v)))
+        .next()
+        .is_some()
+}
+
 fn outline_knot(h: &H, i: usize) -> DVec2 {
     h.state().doc.board.outline.knots()[i].point()
 }
@@ -176,4 +183,151 @@ fn snap_menu_and_toolbar_toggle() {
     for l in ["Snapping on", "Guide points", "Axis (start x or y)"] {
         assert!(h.query_all_by_label(l).next().is_some(), "{l}");
     }
+}
+
+// ------------------------------------------------------------------------------------------------ measure
+
+#[test]
+fn measure_between_two_knots_with_knot_snapping() {
+    let mut h = harness();
+    set_tab(&mut h, Tab::Outline);
+    h.key_press(egui::Key::M);
+    h.run_steps(2);
+    assert_eq!(h.state().ed.tool, Tool::Measure, "M picks the Measure tool");
+    h.state_mut().set.snap = SnapSettings {
+        enabled: true,
+        knots: true,
+        ..Default::default()
+    };
+    h.run_steps(2);
+    let (a, b) = (outline_knot(&h, 1), outline_knot(&h, 2));
+    let from = outline_screen(&h, 1, Handle::Point) + egui::vec2(3.0, 2.0);
+    let to = outline_screen(&h, 2, Handle::Point) + egui::vec2(-2.0, 4.0);
+    drag(&mut h, from, to, Modifiers::NONE);
+    h.run_steps(2);
+    let m = h.state().ed.measure.last.expect("measured");
+    assert_eq!(m.pane, crate::snap::Pane::Outline);
+    assert!(
+        (m.a - a).length() < 1e-9 && (m.b - b).length() < 1e-9,
+        "{m:?}"
+    );
+    let set = &h.state().set;
+    let label = format!("Distance {}", set.fmt(a.distance(b)));
+    assert!(m.label(set).starts_with(&label));
+    assert!(!h.state().doc.can_undo(), "not an edit");
+    // Shown in the status bar.
+    h.hover_at(egui::pos2(700.0, 880.0));
+    h.run_steps(2);
+    assert!(
+        shows(&h, |t| t.starts_with(&label)),
+        "status bar shows {label}"
+    );
+    snap(&mut h, "measure-outline");
+    // Pin keeps it, Esc clears the latest only, Clear measurements clears all.
+    click(&mut h, "Pin");
+    assert_eq!(h.state().ed.measure.pinned.len(), 1);
+    drag(&mut h, from, to + egui::vec2(0.0, 60.0), Modifiers::NONE);
+    assert!(h.state().ed.measure.last.is_some());
+    h.key_press(egui::Key::Escape);
+    h.run_steps(2);
+    assert!(h.state().ed.measure.last.is_none(), "Esc clears");
+    assert_eq!(h.state().ed.tool, Tool::Select);
+    assert_eq!(h.state().ed.measure.pinned.len(), 1, "pinned stays");
+    click(&mut h, "Edit");
+    click(&mut h, "Clear measurements");
+    assert!(h.state().ed.measure.pinned.is_empty());
+}
+
+#[test]
+fn measure_click_click_with_shift_in_the_overview_profile() {
+    let mut h = harness();
+    h.state_mut().tab = Tab::Overview;
+    h.state_mut().ed.tool = Tool::Measure;
+    h.run_steps(3);
+    let xf = h.state().ed.profile_view.xf;
+    let a = xf.to_screen(DVec2::new(40.0, 3.0));
+    let b = a + egui::vec2(150.0, -12.0);
+    click_pos(&mut h, a);
+    assert!(h.state().ed.measure.last.is_none(), "first click starts");
+    h.hover_at(b);
+    h.run_steps(2);
+    h.event_modifiers(
+        egui::Event::PointerButton {
+            pos: b,
+            button: egui::PointerButton::Primary,
+            pressed: true,
+            modifiers: Modifiers::SHIFT,
+        },
+        Modifiers::SHIFT,
+    );
+    h.event_modifiers(
+        egui::Event::PointerButton {
+            pos: b,
+            button: egui::PointerButton::Primary,
+            pressed: false,
+            modifiers: Modifiers::SHIFT,
+        },
+        Modifiers::SHIFT,
+    );
+    h.run_steps(3);
+    let m = h.state().ed.measure.last.expect("measured");
+    assert_eq!(m.pane, crate::snap::Pane::Profile);
+    assert!((m.b.y - m.a.y).abs() < 1e-9, "Shift: horizontal {m:?}");
+    assert_eq!(m.angle(), 0.0);
+    let expect = 150.0 / xf.scale as f64;
+    assert!((m.distance() - expect).abs() < 0.05, "{m:?} {expect}");
+    snap(&mut h, "measure-overview-profile");
+    // Another tool drops it.
+    h.state_mut().ed.tool = Tool::Select;
+    h.run_steps(3);
+    assert!(h.state().ed.measure.last.is_none());
+}
+
+#[test]
+fn measure_hover_reads_the_width() {
+    let mut h = harness();
+    set_tab(&mut h, Tab::Outline);
+    h.state_mut().set.unit = crate::settings::Unit::Centimetres;
+    h.state_mut().ed.tool = Tool::Measure;
+    h.run_steps(2);
+    let x = 60.0;
+    let w = h.state().doc.board.width_at(x);
+    let at = h
+        .state()
+        .ed
+        .outline_view
+        .xf
+        .to_screen(DVec2::new(x, -w / 2.0));
+    h.hover_at(at);
+    h.run_steps(2);
+    h.hover_at(at);
+    h.run_steps(2);
+    let set = &h.state().set;
+    let needle = format!("width {}", set.fmt(w));
+    assert!(
+        shows(&h, |t| t.contains(&needle)),
+        "read-out shows {needle}"
+    );
+    snap(&mut h, "measure-hover-outline");
+    // Cross-section: height and thickness at a distance from the stringer.
+    set_tab(&mut h, Tab::Section);
+    let i = h.state().ed.current_section;
+    let deck = h.state().doc.board.sections[i].deck_at(10.0);
+    let at = h
+        .state()
+        .ed
+        .section_view
+        .xf
+        .to_screen(DVec2::new(-10.0, deck));
+    h.hover_at(at);
+    h.run_steps(2);
+    h.hover_at(at);
+    h.run_steps(2);
+    let needle = format!(
+        "{} from stringer: deck {}",
+        h.state().set.fmt(10.0),
+        h.state().set.fmt(deck)
+    );
+    assert!(shows(&h, |t| t.starts_with(&needle)), "{needle}");
+    snap(&mut h, "measure-hover-section");
 }

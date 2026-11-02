@@ -17,6 +17,7 @@ pub enum Tool {
     Select,
     AddKnot,
     AddGuide,
+    Measure,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -61,6 +62,8 @@ pub struct EditorState {
     pub cursor: Option<DVec2>,
     /// What the point under the pointer snapped to this frame, for the status bar.
     pub snap_hint: Option<crate::snap::SnapKind>,
+    /// Measure tool dimensions and read-out.
+    pub measure: crate::measure::MeasureState,
     drag: Option<Drag>,
     boxsel: Option<BoxSelect>,
 }
@@ -80,6 +83,7 @@ impl Default for EditorState {
             center_of_mass: None,
             cursor: None,
             snap_hint: None,
+            measure: Default::default(),
             drag: None,
             boxsel: None,
         }
@@ -273,6 +277,19 @@ fn interact(
         }
         _ => None,
     };
+    if let Some(snap) = &snap {
+        let active = ed.tool == Tool::Measure;
+        crate::measure::view(
+            ui,
+            canvas,
+            &doc.board,
+            &mut ed.measure,
+            &mut ed.snap_hint,
+            active,
+            snap,
+            set,
+        );
+    }
 
     // Hover feedback.
     if ed.drag.is_none()
@@ -319,6 +336,7 @@ fn interact(
                 None if !mods.shift && !mods.command => ed.selection = None,
                 None => {}
             },
+            Tool::Measure => {}
         }
     }
 
