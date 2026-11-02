@@ -178,21 +178,6 @@ fn demo_overview() {
     rec.close_window("Rails");
     rec.hold(1.0);
 
-    // ---------------------------------------------------------------------------------------- 3D
-    rec.narrate(
-        "In 3D, zebra stripes show how fair the surfaces are. \
-         Drag to turn the board around, and scroll to zoom.",
-    );
-    rec.click("3D");
-    rec.click("View");
-    rec.click("3D zebra stripes (surface fairness)");
-    rec.key(Modifiers::NONE, Key::Escape, None);
-    let c = outline.center();
-    rec.drag(c, c + egui::vec2(90.0, -25.0), 1.8);
-    rec.drag(c + egui::vec2(90.0, -25.0), c + egui::vec2(20.0, 5.0), 1.6);
-    rec.wheel(40.0, 0.8);
-    rec.hold(0.8);
-
     // ---------------------------------------------------------------------------------------- fins
     rec.narrate("Board, Fins: a five-fin setup in FCS II boxes, placed in one click.");
     rec.click("Board");
@@ -227,6 +212,24 @@ fn demo_overview() {
     rec.hold(1.2);
     rec.key(Modifiers::NONE, Key::F, Some("F"));
     rec.hold(0.4);
+
+    // ---------------------------------------------------------------------------------------- 3D
+    rec.narrate(
+        "In 3D, zebra stripes show how fair the surfaces are. \
+         Drag to turn the board over and see the fins under the tail, and scroll to zoom.",
+    );
+    rec.click("3D");
+    rec.click("View");
+    rec.click("3D zebra stripes (surface fairness)");
+    rec.key(Modifiers::NONE, Key::Escape, None);
+    let c = outline.center();
+    // Up and round to look at the bottom, hold there, then back to a deck view.
+    rec.drag(c, c + egui::vec2(90.0, -105.0), 2.0);
+    assert!(rec.app().orbit.pitch < -0.3, "looking at the bottom");
+    rec.hold(1.4);
+    rec.drag(c + egui::vec2(90.0, -105.0), c + egui::vec2(20.0, 5.0), 1.8);
+    rec.wheel(40.0, 0.8);
+    rec.hold(0.8);
 
     // ---------------------------------------------------------------------------------------- blank
     rec.narrate(
