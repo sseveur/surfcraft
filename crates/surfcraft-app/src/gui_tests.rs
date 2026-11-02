@@ -447,3 +447,21 @@ fn every_language_renders_menus_and_dialogs() {
 pub(crate) fn world(p: DVec2) -> DVec2 {
     p
 }
+
+#[test]
+fn new_board_on_an_unedited_board_shows_its_own_specs() {
+    // Found while recording the "Your first board" tutorial: both documents started at revision 0, so the
+    // worker's cached results for the template were shown as the new board's specs.
+    let mut h = harness();
+    let mut b = h.state().doc.board.clone();
+    let (l, w, t) = (b.length(), b.max_width(), b.max_thickness());
+    b.scale(l, w, t * 0.8);
+    let litres = b.volume() / 1000.0;
+    h.state_mut().replace_document(b, None);
+    settle(&mut h);
+    let shown = h.state().results.as_ref().unwrap().specs.volume / 1000.0;
+    assert!(
+        (shown - litres).abs() < 0.05,
+        "specs {shown} L, board {litres} L"
+    );
+}

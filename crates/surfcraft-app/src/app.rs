@@ -244,7 +244,11 @@ impl SurfCraftApp {
     pub(crate) fn replace_document(&mut self, mut board: Board, path: Option<PathBuf>) {
         self.autosave_document_closed();
         board.model = self.set.model.into();
+        // Keep revisions increasing across documents: the worker caches by revision, and a new document starting
+        // again at the old one's revision would show the previous board's specs and volume.
+        let revision = self.doc.revision + 1;
         self.doc = Document::new(board, path);
+        self.doc.revision = revision;
         self.ed.reset_for(&self.doc.board);
         self.results = None;
     }
