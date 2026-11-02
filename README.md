@@ -83,6 +83,18 @@ The builds are not signed with paid certificates yet, so the first launch needs 
   Help → Detailed logging records every edit and click).
 - **AI assistant (MCP)**: Claude or another MCP client can read and edit the board while you watch (see below).
 
+## Videos and tutorials
+
+![SurfCraft: dragging the wide point and typing its half width; specs and volume update live](docs/videos/overview-preview.gif)
+
+- **SurfCraft in 3 minutes** and **Tutorial 1: Your first board**: narrated videos, attached to the
+  [releases](https://github.com/sseveur/surfcraft/releases) (`SurfCraft-overview.mp4`,
+  `SurfCraft-tutorial-01-first-board.mp4`, with subtitles).
+- [Tutorials](docs/tutorials/README.md): step-by-step guides with screenshots, starting with
+  [Your first board](docs/tutorials/01-first-board.md).
+- The videos are recorded from the app itself by scripts, so they are re-made in a minute after each change:
+  see [docs/videos.md](docs/videos.md).
+
 ## Using SurfCraft with an AI assistant (MCP)
 
 `surfcraft-mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) server installed next to the app.
