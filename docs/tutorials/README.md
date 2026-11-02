@@ -12,7 +12,7 @@ New to SurfCraft? Watch **SurfCraft in 3 minutes** (`SurfCraft-overview.mp4`) fi
 | 04 | Fit in blank and CNC | Choosing a foam blank, Auto fit, toolpaths and G-code | Coming |
 | 05 | Design by numbers and from measurements | Typing a board's dimensions; copying a board measured with a tape | Coming |
 | 06 | [Asymmetric boards](06-asymmetric.md) | A separate outline for each rail (heel and toe side): which rail is drawn where, per-rail widths, 3D, fins placed from each rail, back to symmetric, BoardCAD compatibility | Ready (text + video) |
-| 07 | Reporting a bug | Help > Report a bug, detailed logging, what gets sent | Coming |
+| 07 | [Reporting a bug](07-reporting-a-bug.md) | Detailed logging, Help > Report a bug: log period and preview, what to include, GitHub issue or e-mail with a zip (nothing is sent by itself), the log folder | Ready (text + video) |
 
 More reading: [fins](../fins.md), [blanks](../blanks.md), [shaping tools](../shaping-tools.md),
 [volume advisor](../volume-advisor.md).

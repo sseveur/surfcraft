@@ -11,3 +11,4 @@ pub(crate) mod recorder;
 mod asymmetric;
 mod first_board;
 mod overview;
+mod report_bug;
