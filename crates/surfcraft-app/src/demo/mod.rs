@@ -8,3 +8,5 @@
 
 #[allow(dead_code)] // used by the video scripts
 pub(crate) mod recorder;
+
+mod overview;
