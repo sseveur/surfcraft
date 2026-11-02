@@ -3072,7 +3072,7 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "surfcraft-app"
-version = "4.0.0-alpha.1"
+version = "4.0.0-alpha.2"
 dependencies = [
  "bytemuck",
  "directories",
@@ -3095,7 +3095,7 @@ dependencies = [
 
 [[package]]
 name = "surfcraft-cam"
-version = "4.0.0-alpha.1"
+version = "4.0.0-alpha.2"
 dependencies = [
  "glam",
  "rayon",
@@ -3106,7 +3106,7 @@ dependencies = [
 
 [[package]]
 name = "surfcraft-core"
-version = "4.0.0-alpha.1"
+version = "4.0.0-alpha.2"
 dependencies = [
  "glam",
  "rayon",
@@ -3115,7 +3115,7 @@ dependencies = [
 
 [[package]]
 name = "surfcraft-export"
-version = "4.0.0-alpha.1"
+version = "4.0.0-alpha.2"
 dependencies = [
  "serde_json",
  "surfcraft-core",
@@ -3124,7 +3124,7 @@ dependencies = [
 
 [[package]]
 name = "surfcraft-io"
-version = "4.0.0-alpha.1"
+version = "4.0.0-alpha.2"
 dependencies = [
  "cbc",
  "des",
@@ -3136,7 +3136,7 @@ dependencies = [
 
 [[package]]
 name = "surfcraft-mcp"
-version = "4.0.0-alpha.1"
+version = "4.0.0-alpha.2"
 dependencies = [
  "serde_json",
  "surfcraft-core",
@@ -3146,7 +3146,7 @@ dependencies = [
 
 [[package]]
 name = "surfcraft-session"
-version = "4.0.0-alpha.1"
+version = "4.0.0-alpha.2"
 dependencies = [
  "directories",
  "log",
