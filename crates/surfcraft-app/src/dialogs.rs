@@ -22,6 +22,7 @@ pub struct Dialogs {
     pub guides: bool,
     pub cam: bool,
     pub cam_state: crate::cam_ui::CamState,
+    pub shaping: crate::shaping_ui::ShapingState,
     pub compare: crate::compare_ui::CompareState,
     pub volume_advisor: bool,
 }

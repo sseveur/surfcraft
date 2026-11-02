@@ -23,6 +23,8 @@ mod gui_tests_full;
 mod gui_tests_infra;
 #[cfg(test)]
 mod gui_tests_measure;
+#[cfg(test)]
+mod gui_tests_shaping;
 mod i18n;
 mod logging;
 mod measure;
@@ -31,6 +33,7 @@ mod platform;
 mod preview3d;
 mod screenshot;
 mod settings;
+mod shaping_ui;
 mod snap;
 mod tools;
 mod tour;

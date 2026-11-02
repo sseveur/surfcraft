@@ -187,8 +187,8 @@ fn tool_specs_are_complete_and_unique() {
     let specs = tool_specs();
     assert_eq!(
         specs.len(),
-        27,
-        "command count (25 + generate_toolpath + suggest_volume)"
+        29,
+        "command count (25 + generate_toolpath + suggest_volume + apply_bottom_contour + set_rails)"
     );
     let mut names: Vec<_> = specs.iter().map(|s| s.name).collect();
     names.sort();
@@ -321,6 +321,44 @@ fn invalid_inputs_are_errors() {
         ),
         ("set_surface_model", json!({})),
         ("set_surface_model", json!({"model": "loft"})),
+        ("apply_bottom_contour", json!({})),
+        ("apply_bottom_contour", json!({"type": "spiral"})),
+        ("apply_bottom_contour", json!({"type": "vee", "depth": -1})),
+        (
+            "apply_bottom_contour",
+            json!({"type": "vee", "start": 100, "end": 50}),
+        ),
+        (
+            "apply_bottom_contour",
+            json!({"type": "vee", "run_out_fraction": 0.5, "run_out_from_rail": 2}),
+        ),
+        (
+            "apply_bottom_contour",
+            json!({"type": "vee", "run_out_fraction": 3}),
+        ),
+        (
+            "apply_bottom_contour",
+            json!({"type": "channels", "channel_count": 0}),
+        ),
+        (
+            "apply_bottom_contour",
+            json!({"type": "channels", "channel_count": -2}),
+        ),
+        (
+            "apply_bottom_contour",
+            json!({"type": "single_concave", "section_spacing": 0.1}),
+        ),
+        (
+            "apply_bottom_contour",
+            json!({"type": "vee", "keep": "deck"}),
+        ),
+        ("apply_bottom_contour", json!({"type": "vee", "keep": 3})),
+        ("set_rails", json!({"preset": "90/10"})),
+        ("set_rails", json!({"apex": 1.5})),
+        ("set_rails", json!({"softness": "soft"})),
+        ("set_rails", json!({"tuck": "a lot"})),
+        ("set_rails", json!({"tail": 3})),
+        ("set_rails", json!({"start": 100, "end": 20})),
         ("does_not_exist", json!({})),
     ];
     for (name, a) in cases {
@@ -393,6 +431,11 @@ fn undo_after_every_command_restores_exact_board() {
             ),
             ("set_surface_model", json!({"model": "control_point"})),
             ("flip_board", json!({})),
+            (
+                "apply_bottom_contour",
+                json!({"type": "single_concave", "depth": "1/8\"", "end": "4'"}),
+            ),
+            ("set_rails", json!({"preset": "70/30"})),
         ]
     };
     for (t, template) in TEMPLATES.iter().enumerate() {
@@ -1340,6 +1383,136 @@ fn remove_section_keeps_current_section_valid() {
 #[test]
 fn double_minus_is_rejected() {
     assert_eq!(LengthUnit::Centimetres.parse("--3"), None);
+}
+
+/// Shaping tools on every template: every contour type and rail preset as one undo step, volumes reported,
+/// widths and stringer thickness kept, mesh and CAM still work.
+#[test]
+fn shaping_commands_on_every_template() {
+    for t in 0..TEMPLATES.len() {
+        let kinds = [
+            json!({"type": "flat"}),
+            json!({"type": "single_concave", "depth": "3/16\"", "fade_out": "2'"}),
+            json!({"type": "double_concave", "depth": "1/8\"", "inner_depth": "1/16\"", "end": "3'"}),
+            json!({"type": "vee", "depth": "1/4\"", "end": "2'", "run_out_fraction": 0.85}),
+            json!({"type": "channels", "channel_count": 3, "channel_width": "3/4\"", "end": "18\""}),
+            json!({"type": "remove"}),
+        ];
+        let rails = ["50/50", "60/40", "70/30", "80/20"]
+            .map(|p| json!({"preset": p}))
+            .into_iter()
+            .chain([json!({"apex": 0.45, "softness": 0.5, "tuck": "1/4\"",
+                "tail": {"preset": "80/20"}, "nose": {"softness": 1}, "start": "1'", "end": "5'"})]);
+        let cases = kinds
+            .into_iter()
+            .map(|mut a| {
+                a["keep"] = json!("stringer");
+                ("apply_bottom_contour", a)
+            })
+            .chain(rails.map(|a| ("set_rails", a)));
+        for (name, a) in cases {
+            let (mut d, mut c) = session(t);
+            let before = d.board.clone();
+            let r = ok(&mut d, &mut c, name, a.clone());
+            let (v0, v1) = (
+                r["volume_before_litres"].as_f64().unwrap(),
+                r["volume_after_litres"].as_f64().unwrap(),
+            );
+            assert!((v1 - v0).abs() < 0.06 * v0, "{t} {name} {a}: {v0} -> {v1}");
+            assert!(r["sections_changed"].as_u64().unwrap() > 0, "{t} {a}");
+            assert!(finite_board(&d.board));
+            let l = before.length();
+            for i in 1..20 {
+                let x = l * i as f64 / 20.0;
+                assert!((d.board.width_at(x) - before.width_at(x)).abs() < 1e-9);
+                assert!((d.board.thickness_at(x) - before.thickness_at(x)).abs() < 1e-9);
+            }
+            assert_eq!(d.board.outline, before.outline);
+            assert_eq!(d.board.bottom, before.bottom, "rocker kept");
+            assert_eq!(d.board.deck, before.deck);
+            let mesh =
+                surfcraft_core::Mesh::of_board(&d.board, surfcraft_core::MeshDetail::PREVIEW);
+            assert!(mesh.is_watertight(), "{t} {a}");
+            // One undo step restores the board exactly.
+            ok(&mut d, &mut c, "undo", json!({}));
+            assert_eq!(d.board, before, "{t} {a}");
+            assert!(!d.can_undo());
+        }
+    }
+}
+
+#[test]
+fn shaped_board_still_machines() {
+    for t in 0..TEMPLATES.len() {
+        let (mut d, mut c) = session(t);
+        ok(
+            &mut d,
+            &mut c,
+            "apply_bottom_contour",
+            json!({"type": "double_concave", "end": "3'"}),
+        );
+        ok(&mut d, &mut c, "set_rails", json!({"preset": "70/30"}));
+        let r = ok(
+            &mut d,
+            &mut c,
+            "generate_toolpath",
+            json!({"job": "bottom"}),
+        );
+        assert!(r.to_string().contains("passes"), "{r}");
+    }
+}
+
+/// Cutting foam (the default): the rail edge stays, the stringer rocker deepens, the deck stays, the volume
+/// drops, one undo step.
+#[test]
+fn contours_cut_foam_by_default() {
+    for t in 0..TEMPLATES.len() {
+        for kind in [
+            "single_concave",
+            "double_concave",
+            "vee",
+            "channels",
+            "flat",
+        ] {
+            let (mut d, mut c) = session(t);
+            let before = d.board.clone();
+            let r = ok(
+                &mut d,
+                &mut c,
+                "apply_bottom_contour",
+                json!({"type": kind, "depth": "3/16\""}),
+            );
+            assert_eq!(r["keep"], "rails");
+            let (v0, v1) = (
+                r["volume_before_litres"].as_f64().unwrap(),
+                r["volume_after_litres"].as_f64().unwrap(),
+            );
+            assert!(v1 < v0 && v0 - v1 < 0.06 * v0, "{t} {kind}: {v0} -> {v1}");
+            let l = before.length();
+            let dz = d.board.deck_at(l / 2.0) - before.deck_at(l / 2.0);
+            for i in 1..20 {
+                let x = l * i as f64 / 20.0;
+                assert!((d.board.width_at(x) - before.width_at(x)).abs() < 1e-9);
+                assert!((d.board.deck_at(x) - before.deck_at(x) - dz).abs() < 1e-6);
+                assert!(d.board.thickness_at(x) <= before.thickness_at(x) + 1e-3);
+            }
+            if kind.ends_with("concave") {
+                // Thinner on the stringer inside the zone.
+                let x = 0.3 * l;
+                assert!(
+                    before.thickness_at(x) - d.board.thickness_at(x) > 0.4,
+                    "{t} {kind}"
+                );
+            }
+            assert!(finite_board(&d.board));
+            let mesh =
+                surfcraft_core::Mesh::of_board(&d.board, surfcraft_core::MeshDetail::PREVIEW);
+            assert!(mesh.is_watertight(), "{t} {kind}");
+            ok(&mut d, &mut c, "undo", json!({}));
+            assert_eq!(d.board, before, "{t} {kind}");
+            assert!(!d.can_undo());
+        }
+    }
 }
 
 #[test]
