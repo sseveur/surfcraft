@@ -89,4 +89,4 @@ version is kept next to it as `.brd.bak`.
 
 ## Next
 
-[Tutorial 2: rocker and cross-sections](README.md) (coming): bottom contours and rails.
+[Tutorial 2: rocker and cross-sections](02-rocker-and-sections.md): bottom contours and rails.
