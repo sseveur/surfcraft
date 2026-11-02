@@ -511,7 +511,11 @@ impl SurfCraftApp {
                 self.ed.fit_all();
                 self.orbit.reset();
             }
+            if ctx.input(|i| i.key_pressed(Key::M) && i.modifiers.is_none()) {
+                self.ed.tool = Tool::Measure;
+            }
             if ctx.input(|i| i.key_pressed(Key::Escape)) {
+                self.ed.measure.cancel();
                 self.ed.tool = Tool::Select;
                 self.ed.selection = None;
             }
@@ -734,6 +738,8 @@ impl SurfCraftApp {
                 ui.radio_value(&mut self.ed.tool, Tool::Select, tr("Select and move"));
                 ui.radio_value(&mut self.ed.tool, Tool::AddKnot, tr("Add control point"));
                 ui.radio_value(&mut self.ed.tool, Tool::AddGuide, tr("Add guide point"));
+                ui.radio_value(&mut self.ed.tool, Tool::Measure, tr("Measure distances"));
+                crate::measure::edit_menu(ui, &mut self.ed.measure);
                 ui.separator();
                 if ui
                     .add_enabled(
@@ -797,6 +803,7 @@ impl SurfCraftApp {
                 ui.checkbox(&mut v.original, tr("Original board"));
                 ui.checkbox(&mut v.center_of_mass, tr("Centre of mass"));
                 ui.checkbox(&mut v.background_image, tr("Background image"));
+                crate::snap::menu(ui, &mut self.set.snap);
                 if let Some(bg) = self.ed.background.as_mut() {
                     ui.add(egui::Slider::new(&mut bg.opacity, 0.05..=1.0).text(tr("Image opacity")));
                 }
@@ -990,6 +997,12 @@ impl SurfCraftApp {
                 ui.selectable_value(&mut self.ed.tool, Tool::AddGuide, tr("+ Guide"))
                     .rect,
             );
+            grow(
+                ui.selectable_value(&mut self.ed.tool, Tool::Measure, tr("Measure"))
+                    .on_hover_text(tr("Measure (M): drag, or click twice, for the distance, dx, dy and angle; Shift keeps it horizontal, vertical or at 45°. Hover a curve to read the width, rocker or thickness there. Esc clears; Pin keeps up to 5."))
+                    .rect,
+            );
+            grow(crate::snap::toolbar(ui, &mut self.set.snap).rect);
             ui.separator();
             let undo = ui.add_enabled(self.doc.can_undo(), egui::Button::new(tr("Undo")));
             grow(undo.rect);
@@ -1026,6 +1039,10 @@ impl SurfCraftApp {
                     self.status = None;
                 }
             }
+            if let Some(k) = self.ed.snap_hint.take() {
+                ui.label(k.label());
+            }
+            crate::measure::status_bar(ui, &mut self.ed.measure, &self.set);
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if let Some(c) = self.ed.cursor {
                     ui.monospace(format!("{}  {}", self.set.fmt(c.x), self.set.fmt(c.y)));

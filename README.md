@@ -31,6 +31,10 @@ The builds are not signed with paid certificates yet, so the first launch needs 
   (Alt = fine), box select, arrow-key nudge, add/delete points, exact numeric entry in any unit
   (`6'2"`, `18 1/2"`, `47cm`), guide points, curvature combs, rail apex and tuck-under markers. Edit → Smooth
   removes kinks (selected points, or every small kink of a curve while keeping deliberate corners).
+- **Measure tool** (M): drag or click twice in the outline, rocker or cross-section for distance, dx, dy and angle
+  in your unit (Shift = 0/45/90°); hover a curve to read width, rocker, thickness or height there; pin up to 5.
+- **Snapping** (View > Snap, toolbar Snap): dragged and placed points snap to other control points, guide points
+  or the visible grid; Shift keeps a drag on its start x or y; Alt (fine drag) never snaps.
 - **Bottom contours** (Shape menu): single concave, double concave inside a single, vee and channels over a zone
   with fade-in and fade-out, cut into the foam (rail edge kept, stringer rocker deepened) or keeping the stringer
   rocker, applied to every cross-section as one undo step with a preview; or flatten a range.

@@ -22,15 +22,19 @@ mod gui_tests_full;
 #[cfg(test)]
 mod gui_tests_infra;
 #[cfg(test)]
+mod gui_tests_measure;
+#[cfg(test)]
 mod gui_tests_shaping;
 mod i18n;
 mod logging;
+mod measure;
 mod panels;
 mod platform;
 mod preview3d;
 mod screenshot;
 mod settings;
 mod shaping_ui;
+mod snap;
 mod tools;
 mod tour;
 mod view2d;
