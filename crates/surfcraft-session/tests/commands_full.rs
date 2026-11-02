@@ -348,6 +348,11 @@ fn invalid_inputs_are_errors() {
             "apply_bottom_contour",
             json!({"type": "single_concave", "section_spacing": 0.1}),
         ),
+        (
+            "apply_bottom_contour",
+            json!({"type": "vee", "keep": "deck"}),
+        ),
+        ("apply_bottom_contour", json!({"type": "vee", "keep": 3})),
         ("set_rails", json!({"preset": "90/10"})),
         ("set_rails", json!({"apex": 1.5})),
         ("set_rails", json!({"softness": "soft"})),
@@ -1402,7 +1407,10 @@ fn shaping_commands_on_every_template() {
                 "tail": {"preset": "80/20"}, "nose": {"softness": 1}, "start": "1'", "end": "5'"})]);
         let cases = kinds
             .into_iter()
-            .map(|a| ("apply_bottom_contour", a))
+            .map(|mut a| {
+                a["keep"] = json!("stringer");
+                ("apply_bottom_contour", a)
+            })
             .chain(rails.map(|a| ("set_rails", a)));
         for (name, a) in cases {
             let (mut d, mut c) = session(t);
@@ -1453,6 +1461,59 @@ fn shaped_board_still_machines() {
             json!({"job": "bottom"}),
         );
         assert!(r.to_string().contains("passes"), "{r}");
+    }
+}
+
+/// Cutting foam (the default): the rail edge stays, the stringer rocker deepens, the deck stays, the volume
+/// drops, one undo step.
+#[test]
+fn contours_cut_foam_by_default() {
+    for t in 0..TEMPLATES.len() {
+        for kind in [
+            "single_concave",
+            "double_concave",
+            "vee",
+            "channels",
+            "flat",
+        ] {
+            let (mut d, mut c) = session(t);
+            let before = d.board.clone();
+            let r = ok(
+                &mut d,
+                &mut c,
+                "apply_bottom_contour",
+                json!({"type": kind, "depth": "3/16\""}),
+            );
+            assert_eq!(r["keep"], "rails");
+            let (v0, v1) = (
+                r["volume_before_litres"].as_f64().unwrap(),
+                r["volume_after_litres"].as_f64().unwrap(),
+            );
+            assert!(v1 < v0 && v0 - v1 < 0.06 * v0, "{t} {kind}: {v0} -> {v1}");
+            let l = before.length();
+            let dz = d.board.deck_at(l / 2.0) - before.deck_at(l / 2.0);
+            for i in 1..20 {
+                let x = l * i as f64 / 20.0;
+                assert!((d.board.width_at(x) - before.width_at(x)).abs() < 1e-9);
+                assert!((d.board.deck_at(x) - before.deck_at(x) - dz).abs() < 1e-6);
+                assert!(d.board.thickness_at(x) <= before.thickness_at(x) + 1e-3);
+            }
+            if kind.ends_with("concave") {
+                // Thinner on the stringer inside the zone.
+                let x = 0.2 * l;
+                assert!(
+                    before.thickness_at(x) - d.board.thickness_at(x) > 0.4,
+                    "{t} {kind}"
+                );
+            }
+            assert!(finite_board(&d.board));
+            let mesh =
+                surfcraft_core::Mesh::of_board(&d.board, surfcraft_core::MeshDetail::PREVIEW);
+            assert!(mesh.is_watertight(), "{t} {kind}");
+            ok(&mut d, &mut c, "undo", json!({}));
+            assert_eq!(d.board, before, "{t} {kind}");
+            assert!(!d.can_undo());
+        }
     }
 }
 

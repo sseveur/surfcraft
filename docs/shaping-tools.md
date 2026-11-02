@@ -18,8 +18,33 @@ earlier one where they overlap, e.g. a double concave fading in over a single). 
 sections are inserted at the zone ends, where the fades end and at most "section spacing" apart (default 15 cm),
 so the contour has sections to follow.
 
+**What stays: rails or stringer rocker.** Each zone has a *Keep* choice:
+
+- **Rails (cut foam, like shaping a blank)**, the default. The rail edge stays where it is in the board and foam
+  is removed, as a shaper cuts a contour into a blank. A concave raises the stringer rocker inside the zone (the
+  stringer rocker deepens, the deck stays, so the thickness on the stringer drops by the depth plus the old rise of
+  the bottom to the run-out); a vee and channels cut towards the rails with the stringer left alone. The volume
+  always goes down. The stringer rocker is raised as a fair curve: the lift follows the zone's fades
+  (smoothstep), fades out over the last 5 cm at the tail and nose tips and where the board gets thin, and a zone
+  that starts or ends inside the board fades over at least 10 cm. The lowest rocker point is then put back at zero,
+  as after any rocker edit.
+
+  The rocker keeps its own knots so it stays easy to edit by hand: each knot moves up by the lift at its station
+  and its handles turn by the lift's slope (smooth knots stay smooth). New knots go only where the zone starts,
+  reaches full depth, starts fading and ends, plus one wherever the result would still stray more than 0.3 mm
+  from the intended rocker; a zone typically adds 3-4 knots (a flat zone over the whole board up to 6). Each
+  section is then cut by the lift the refitted rocker really has at its station, so the rail edge stays exactly
+  where it was.
+
+**Knots on a contoured section.** The bottom from the stringer to the run-out is refitted with the fewest knots
+that stay within 0.2 mm of the contour shape: usually 2 (stringer and run-out) for a single concave, vee or flat
+bottom, 4 for a double concave, plus four per channel (one at each end of each channel wall).
+- **Stringer rocker**. The rocker and the thickness on the stringer stay; the bottom moves near the rails instead
+  (a concave lowers it there and adds a little volume, a vee raises it). This is how CAD programs that define
+  the rocker on the stringer behave.
+
 **How depth is measured.** As a shaper measures it, with a straight edge laid across the bottom between the two
-run-out points. The rocker on the stringer is kept, so:
+run-out points. Relative to the stringer:
 
 | Type | Shape between stringer and run-out | Run-out height |
 |---|---|---|
@@ -31,17 +56,19 @@ run-out points. The rocker on the stringer is kept, so:
 
 At a fade factor *f* the bottom is `(1 - f) * old + f * contour`, so applying the same contour twice gives the same
 board (except channels, which cut into whatever bottom is there). The shape is bent slightly so it leaves the
-run-out along the original bottom (no kink at the run-out). Outboard of the run-out the rail keeps its shape: the
-part below the rail apex is stretched or compressed vertically to meet the new run-out height; the apex and the
-deck do not move.
+run-out along the original bottom (no kink at the run-out). Outboard of the run-out the rail keeps its shape: when
+the run-out moves relative to the rail (stringer mode, or a vee), the part below the rail apex is stretched or
+compressed vertically to meet it; the apex and the deck do not move.
 
-**Volume.** Because the stringer rocker is fixed, a concave lowers the bottom towards the rails and *adds* volume;
-a vee and channels remove volume. On the built-in boards: a 1/8" single concave over two thirds of the length adds
-about 1.1 L to the 31 L shortboard (+3.6 %); a 1/4" vee in the last quarter removes about 0.3 L; two 3/16"
-channels per side in the last 30 % remove about 0.2 L. Use Board > Scale (target volume) afterwards if the volume
-must stay. *Remove contours* (Flatten the bottom) makes the bottom straight and level from the stringer to the
-run-out in a range; it also removes the slight rise of an un-contoured bottom towards the rail, which adds a
-little volume.
+**Volume.** Keeping the rails (cutting foam), every contour removes volume: on the built-in 31 L shortboard the
+default zones remove about 0.7 L (1/8" single concave over two thirds of the length), 0.5 L (double concave),
+0.3 L (vee) and 0.2 L (channels). Keeping the stringer rocker, a concave
+lowers the bottom towards the rails and *adds* volume, while a vee and channels remove volume. On the built-in
+31 L shortboard, keeping the stringer: a 1/8" single concave over two thirds of the length adds about 1.1 L
+(+3.6 %); a 1/4" vee in the last quarter removes about 0.3 L; two 3/16" channels per side in the last 30 % remove
+about 0.2 L. Use Board > Scale (target volume) afterwards if the volume must stay. *Remove contours* (Flatten the
+bottom) makes the bottom straight and level from the stringer to the run-out in a range, with the first zone's
+Keep choice: cutting foam, whichever of the stringer and the run-out is higher sets the level.
 
 Defaults when a zone is created for a board: single concave 1/8" from the tail to 65 % of the length, fading out
 over the last 25 %; double concave 1/8" (inner 1/16") over the last 40 %; vee 1/4" over the last 25 %; channels

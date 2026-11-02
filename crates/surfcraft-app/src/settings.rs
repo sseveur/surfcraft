@@ -128,6 +128,8 @@ pub struct Settings {
     pub autosave_minutes: u32,
     /// Your own foam blanks and whether the board's blank is drawn (Fit in blank).
     pub blanks: crate::blank_ui::BlankPrefs,
+    /// Snapping in the 2D views (View > Snap).
+    pub snap: crate::snap::SnapSettings,
 }
 
 impl Default for Settings {
@@ -148,6 +150,7 @@ impl Default for Settings {
             detailed_logging: false,
             autosave_minutes: 2,
             blanks: Default::default(),
+            snap: Default::default(),
         }
     }
 }
