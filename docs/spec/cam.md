@@ -322,6 +322,15 @@ Each program machines one side from above (+z of the side frame):
 * **Deck side**: identical to the board frame.
 * **Bottom side**: the board turned over. *Original and required:* the turn-over is modelled as a mirror of z only: a point (x, y, z) becomes (x, y, −z) and a normal (n_x, n_y, n_z) becomes (n_x, n_y, −n_z). (A physical turn about the stringer also negates y. Because boards are symmetric this does not change the geometry; it only means that the "right" passes of the bottom program physically lie on the other rail. Keep the mirror convention.)
 
+**Asymmetric boards** (SurfCraft extension, `geometry.md` §6 "Asymmetric boards"). The pass names "right" (y ≥ 0)
+and "left" (y ≤ 0) of this document are frame halves, not the rider's rails: the y ≥ 0 half is the rider's left
+rail. On an asymmetric board each half is computed from its own rail (band points, outline pass, clean-ups, width
+splits, the gouge-check cloud) instead of mirroring the y ≥ 0 half. Because the z-only mirror above would swap
+the rails of the turned-over board, the bottom program machines the board with its rails exchanged (outlines
+swapped, y → −y); placed with the z mirror, that is the board turned over about the stringer. The program records
+this (`rails_swapped`) and maps its tool path back to the board frame accordingly. The hot-wire outline's +z pass
+follows the y ≥ 0 rail and its −z pass the y ≤ 0 rail. Symmetric boards are unaffected.
+
 ### 4.3 Bottom-side mapping summary
 
 Throughout §5, "flip" means the mapping of §4.2. Every bottom-program point and normal MUST be flipped exactly once, including stringer, outline and clean-up passes (see C-05, C-12).

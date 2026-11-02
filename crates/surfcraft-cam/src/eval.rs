@@ -8,7 +8,7 @@
 //! that points are smooth in both parameters. The result agrees with the core to a few micrometres.
 
 use surfcraft_core::math::{DEG, ONE, ZERO};
-use surfcraft_core::{Board, CrossSection, DVec2, DVec3, Segment, Spline, SurfaceModel};
+use surfcraft_core::{Board, CrossSection, DVec2, DVec3, Rail, Segment, Spline, SurfaceModel};
 
 /// Table entries per Bezier segment for the arc length.
 const TABLE: usize = 32;
@@ -215,16 +215,25 @@ fn angle_of(d: DVec2) -> f64 {
 
 // ------------------------------------------------------------------------------------------------ surface
 
-/// Surface evaluator for one board.
+/// Surface evaluator for one half of a board: the y >= 0 half of the evaluator's frame, shaped by one of the
+/// board's rails (the board's left rail, its y >= 0 side, unless made with [`Surf::on`]).
 pub(crate) struct Surf<'a> {
     pub board: &'a Board,
     pub len: f64,
+    /// The board rail whose outline shapes this half.
+    rail: Rail,
     /// Width and thickness at the stringer of every section.
     sections: Vec<(f64, f64)>,
 }
 
 impl<'a> Surf<'a> {
     pub fn new(board: &'a Board) -> Self {
+        Surf::on(board, Rail::Left)
+    }
+
+    /// The half of an asymmetric board shaped by `rail`, still evaluated on the y >= 0 side (mirror the results
+    /// for the right rail).
+    pub fn on(board: &'a Board, rail: Rail) -> Self {
         let sections = board
             .sections
             .iter()
@@ -233,18 +242,27 @@ impl<'a> Surf<'a> {
         Surf {
             board,
             len: board.length(),
+            rail,
             sections,
         }
     }
 
-    /// Full width at `x`.
+    /// The evaluator of the other half of an asymmetric board (the board's right rail), or `None` for a
+    /// symmetric board whose other half is the mirror image of this one.
+    pub fn other_half(&self) -> Option<Surf<'a>> {
+        self.board
+            .is_asymmetric()
+            .then(|| Surf::on(self.board, self.rail.other()))
+    }
+
+    /// Full width at `x` of the symmetric board made of this half.
     pub fn width(&self, x: f64) -> f64 {
-        2.0 * profile(&self.board.outline, x).0
+        2.0 * profile(self.board.outline_of(self.rail), x).0
     }
 
     /// Half width and its slope.
     pub fn outline(&self, x: f64) -> (f64, f64) {
-        profile(&self.board.outline, x)
+        profile(self.board.outline_of(self.rail), x)
     }
 
     pub fn rocker(&self, x: f64) -> (f64, f64) {
@@ -298,11 +316,12 @@ impl<'a> Surf<'a> {
             part(&shape, w.max(0.0) / 2.0, t.max(0.0), 1.0, false)
         };
         let parts = match b.model {
-            SurfaceModel::ControlPoint => match b.interpolated_section(x) {
+            SurfaceModel::ControlPoint => match b.interpolated_section_on(x, self.rail) {
                 Some(s) => vec![part(&s.spline, 1.0, 1.0, 1.0, true)],
                 None => {
                     let shape = CrossSection::fallback_shape();
-                    let (cw, ct) = (b.width_at(x).max(0.0), b.thickness_at(x).max(0.0));
+                    let cw = 2.0 * b.half_width_at(x, self.rail);
+                    let (cw, ct) = (cw.max(0.0), b.thickness_at(x).max(0.0));
                     vec![part(&shape, cw / 2.0, ct, 1.0, true)]
                 }
             },

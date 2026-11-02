@@ -954,3 +954,105 @@ fn invalid_input_is_rejected() {
         Err(Error::NothingToCut)
     ));
 }
+
+/// The shortboard with its left rail (y > 0) 2 cm wider at the middle knot.
+fn asym_shortboard() -> Board {
+    use surfcraft_core::Rail;
+    let mut b = load("shortboard");
+    b.set_asymmetric(true, Rail::Right);
+    let left = b.outline_left.as_mut().unwrap();
+    let i = left.len() / 2;
+    let p = left.knots()[i].point();
+    left.knots_mut()[i].move_point_to(p + DVec2::new(0.0, 2.0));
+    b.on_outline_changed();
+    b
+}
+
+/// Every contact point lies within its own rail's outline, and the passes reach out to each rail.
+fn check_rails(board: &Board, tp: &Toolpath, label: &str, reach_fraction: f64) {
+    use surfcraft_core::Rail;
+    let mid = board.length() / 2.0;
+    let mut reach = [0.0f64; 2];
+    for p in tp.points() {
+        let (x, y) = (p.pos.x, p.pos.y);
+        assert!(p.pos.is_finite(), "{label}");
+        if y.abs() < 1e-6 || x < 0.0 || x > board.length() {
+            continue;
+        }
+        let rail = Rail::of_y(y);
+        // Clean-up passes step out 1 cm per pass past the rail; the side change runs to a fixed offset.
+        assert!(
+            y.abs() <= board.half_width_at(x, rail) + 0.05 || y.abs() < 5.0,
+            "{label}: {:?} at x {x}: y {y}, half width {}",
+            rail,
+            board.half_width_at(x, rail)
+        );
+        if (x - mid).abs() < 3.0 {
+            let k = usize::from(rail == Rail::Right);
+            reach[k] = reach[k].max(y.abs());
+        }
+    }
+    for (k, rail) in Rail::BOTH.into_iter().enumerate() {
+        let half = board.half_width_at(mid, rail) * reach_fraction;
+        assert!(
+            (reach[k] - half).abs() < 0.3,
+            "{label}: {rail:?} reach {} vs {half}",
+            reach[k]
+        );
+    }
+}
+
+#[test]
+fn asymmetric_boards_machine_each_rail() {
+    let board = asym_shortboard();
+    let cfg = MachineConfig {
+        deck_cleanup_cuts: 0,
+        bottom_cleanup_cuts: 0,
+        ..coarse()
+    };
+    let deck = toolpath(&board, &cfg, BoardSide::Deck).unwrap();
+    check_rails(&board, &deck, "deck", 1.0);
+    // The bottom program machines the board turned over about the stringer: its rails are swapped.
+    let bottom = toolpath(&board, &cfg, BoardSide::Bottom).unwrap();
+    check_rails(&board.rails_mirrored(), &bottom, "bottom", 1.0);
+    let program = generate_bottom(&board, &cfg).unwrap();
+    assert!(program.rails_swapped);
+    assert!(program.to_gcode().len() > 1000);
+    assert!(!generate_deck(&board, &cfg).unwrap().rails_swapped);
+    let widths = MachineConfig {
+        generator: GeneratorKind::WidthSplits { splits: 6 },
+        ..cfg.clone()
+    };
+    let w = toolpath(&board, &widths, BoardSide::Deck).unwrap();
+    // The outermost width split is at 5/6 of each half width.
+    check_rails(&board, &w, "width splits", 5.0 / 6.0);
+    generate_deck(&board, &widths).unwrap();
+}
+
+#[test]
+fn asymmetric_hotwire_outline_follows_each_rail() {
+    use surfcraft_core::Rail;
+    let board = asym_shortboard();
+    let o = generate_hotwire(
+        &board,
+        &HotwireConfig {
+            splits: 500,
+            ..Default::default()
+        },
+        HotwireKind::Outline,
+    )
+    .unwrap();
+    let max_z = |i: usize| {
+        o.toolpath.passes[i]
+            .points
+            .iter()
+            .map(|p| p.pos.z.abs())
+            .fold(0.0, f64::max)
+    };
+    let (left, right) = (
+        board.max_half_width(Rail::Left).0,
+        board.max_half_width(Rail::Right).0,
+    );
+    assert!((max_z(0) - left).abs() < 0.3, "{} vs {left}", max_z(0));
+    assert!((max_z(1) - right).abs() < 0.3, "{} vs {right}", max_z(1));
+}

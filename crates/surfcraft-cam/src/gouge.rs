@@ -19,6 +19,8 @@ pub(crate) fn cloud(
     parallel: bool,
 ) -> Vec<DVec3> {
     let surf = Surf::new(board);
+    // The y < 0 half of an asymmetric board has its own shape.
+    let other = surf.other_half();
     let l = surf.len;
     // Four times denser within 3 cm of the tips, where the surface turns fast.
     let end = 3.0f64.min(l / 4.0);
@@ -34,10 +36,24 @@ pub(crate) fn cloud(
         let near = x < end || x > l - end;
         let sp = if near { spacing / 2.0 } else { spacing };
         let mut v = Vec::new();
-        for p in section_samples(&surf, x, part, sp) {
-            v.push(placement.point(p));
-            if p.y.abs() > 1e-9 {
-                v.push(placement.point(DVec3::new(p.x, -p.y, p.z)));
+        match &other {
+            None => {
+                for p in section_samples(&surf, x, part, sp) {
+                    v.push(placement.point(p));
+                    if p.y.abs() > 1e-9 {
+                        v.push(placement.point(DVec3::new(p.x, -p.y, p.z)));
+                    }
+                }
+            }
+            Some(o) => {
+                for p in section_samples(&surf, x, part, sp) {
+                    v.push(placement.point(p));
+                }
+                for p in section_samples(o, x, part, sp) {
+                    if p.y.abs() > 1e-9 {
+                        v.push(placement.point(DVec3::new(p.x, -p.y, p.z)));
+                    }
+                }
             }
         }
         v

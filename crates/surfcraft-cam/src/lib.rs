@@ -48,15 +48,31 @@ pub enum Error {
     InvalidStl(String),
 }
 
+/// The board as the machine sees it for a program. The bottom program's placement turns the board over by
+/// mirroring z only (`cam.md` §4.5), which for an asymmetric board would swap its rails; turning a real blank
+/// over about the stringer also mirrors y, so the bottom program machines the board with its rails swapped, and
+/// the placed result is the board turned over. A symmetric board is used as it is.
+pub fn machined_board(board: &Board, side: BoardSide) -> std::borrow::Cow<'_, Board> {
+    if side == BoardSide::Bottom && board.is_asymmetric() {
+        std::borrow::Cow::Owned(board.rails_mirrored())
+    } else {
+        std::borrow::Cow::Borrowed(board)
+    }
+}
+
 /// Contact-point toolpath of one side.
 pub fn toolpath(board: &Board, cfg: &MachineConfig, side: BoardSide) -> Result<Toolpath, Error> {
-    toolpath::plan(board, cfg, side).map(|p| p.toolpath)
+    let board = machined_board(board, side);
+    toolpath::plan(&board, cfg, side).map(|p| p.toolpath)
 }
 
 /// Milling program of one side.
 pub fn generate(board: &Board, cfg: &MachineConfig, side: BoardSide) -> Result<Program, Error> {
-    let planned = toolpath::plan(board, cfg, side)?;
-    program::milling(board, cfg, side, planned)
+    let board = machined_board(board, side);
+    let planned = toolpath::plan(&board, cfg, side)?;
+    let mut program = program::milling(&board, cfg, side, planned)?;
+    program.rails_swapped = matches!(board, std::borrow::Cow::Owned(_));
+    Ok(program)
 }
 
 pub fn generate_deck(board: &Board, cfg: &MachineConfig) -> Result<Program, Error> {

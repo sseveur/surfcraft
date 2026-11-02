@@ -74,6 +74,9 @@ pub struct Program {
     pub commands: Vec<Command>,
     /// Output word scaling.
     pub scaling: AxisScaling,
+    /// The program machines the board with its rails swapped (the bottom of an asymmetric board, see
+    /// [`crate::machined_board`]): its toolpath's y is the board's -y.
+    pub rails_swapped: bool,
     stats: Stats,
 }
 
@@ -93,6 +96,7 @@ impl Program {
             cutter_offset,
             commands,
             scaling,
+            rails_swapped: false,
             stats: Stats::default(),
         };
         p.stats = p.compute_stats();
@@ -272,7 +276,12 @@ impl Program {
                 if let Some(a) = m.a {
                     p = rot_x(-a.to_radians(), p);
                 }
-                self.placement.inverse_point(p)
+                let q = self.placement.inverse_point(p);
+                if self.rails_swapped {
+                    DVec3::new(q.x, -q.y, q.z)
+                } else {
+                    q
+                }
             })
             .collect()
     }

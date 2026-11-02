@@ -438,8 +438,9 @@ fn sandwich(
     }
     if limit > 0.0 {
         let q = DVec2::new(p.pos.x, p.pos.y.abs());
-        let half = crate::eval::profile(&board.outline, q.x).0;
-        if half - q.y < limit || board.outline.distance_to(q) < limit {
+        let outline = board.outline_of(surfcraft_core::Rail::of_y(p.pos.y));
+        let half = crate::eval::profile(outline, q.x).0;
+        if half - q.y < limit || outline.distance_to(q) < limit {
             return p;
         }
     }
@@ -518,7 +519,26 @@ pub(crate) fn surface_splits(
         slice_contacts(&surf, &sl, &st)
     });
     let ends = [Slice::new(&surf, xs[0]), Slice::new(&surf, xs[n])];
+    // An asymmetric board's y < 0 passes follow its own half (computed on the y >= 0 side, then mirrored).
+    let other = surf.other_half();
+    let other_slices: Option<Vec<SliceContacts>> = other.as_ref().map(|o| {
+        map(cfg.parallel, xs.clone(), |x| {
+            let sl = Slice::new(o, x);
+            slice_contacts(o, &sl, &st)
+        })
+    });
+    let other_ends = other
+        .as_ref()
+        .map(|o| [Slice::new(o, xs[0]), Slice::new(o, xs[n])]);
     let end_slice = |at_nose: bool| &ends[usize::from(at_nose)];
+    let end_slice_on = |side: Side, at_nose: bool| match (&other_ends, side) {
+        (Some(e), Side::Left) => &e[usize::from(at_nose)],
+        _ => &ends[usize::from(at_nose)],
+    };
+    let slices_on = |side: Side| match (&other_slices, side) {
+        (Some(s), Side::Left) => s,
+        _ => &slices,
+    };
 
     let mut b = Builder {
         cfg,
@@ -528,6 +548,7 @@ pub(crate) fn surface_splits(
         counts: Vec::new(),
     };
     let lengthwise = |lane: Lane, side: Side, forward: bool, extra: bool| -> Vec<ToolPoint> {
+        let slices = slices_on(side);
         let mut v: Vec<ToolPoint> = if forward {
             (0..=n).map(|k| on(side, slices[k].get(lane))).collect()
         } else {
@@ -681,7 +702,7 @@ pub(crate) fn surface_splits(
             };
             let m = cfg.move_between_steps;
             for i in 1..=n_b {
-                let sl = end_slice(at_nose);
+                let sl = end_slice_on(half, at_nose);
                 let mut pts: Vec<ToolPoint> = (0..m)
                     .map(|k| {
                         let f = (((i - 1) * m + k) as f64 / (n_b * m) as f64).min(1.0);
@@ -767,19 +788,24 @@ pub(crate) fn width_splits(
     }
     let deck = side == BoardSide::Deck;
     // Per station: the right-side contacts at fractions 0 .. splits-1.
-    let rows: Vec<Vec<ToolPoint>> = map(cfg.parallel, xs.clone(), |x| {
-        let sl = Slice::new(&surf, x);
-        let half = surf.width(sl.x()) / 2.0;
-        (0..splits)
-            .map(|k| {
-                if k == 0 {
-                    return stringer_contact(&surf, sl.x(), side);
-                }
-                let y = half * k as f64 / splits as f64;
-                tp(sl.contact(sl.s_at_lateral(y, deck)))
-            })
-            .collect()
-    });
+    let rows_of = |surf: &Surf| -> Vec<Vec<ToolPoint>> {
+        map(cfg.parallel, xs.clone(), |x| {
+            let sl = Slice::new(surf, x);
+            let half = surf.width(sl.x()) / 2.0;
+            (0..splits)
+                .map(|k| {
+                    if k == 0 {
+                        return stringer_contact(surf, sl.x(), side);
+                    }
+                    let y = half * k as f64 / splits as f64;
+                    tp(sl.contact(sl.s_at_lateral(y, deck)))
+                })
+                .collect()
+        })
+    };
+    let rows = rows_of(&surf);
+    // The y < 0 half of an asymmetric board, before mirroring.
+    let other_rows = surf.other_half().map(|o| rows_of(&o));
     let mut b = Builder {
         cfg,
         board,
@@ -792,6 +818,10 @@ pub(crate) fn width_splits(
         .chain((1..splits).map(|k| (k, Side::Right)))
         .chain((1..splits).map(|k| (k, Side::Left)));
     for (k, s) in order {
+        let rows = match (&other_rows, s) {
+            (Some(o), Side::Left) => o,
+            _ => &rows,
+        };
         let mut pts: Vec<ToolPoint> = rows.iter().map(|r| on(s, r[k])).collect();
         if !forward {
             pts.reverse();
@@ -915,11 +945,20 @@ pub(crate) fn hotwire(board: &Board, cfg: &HotwireConfig, kind: HotwireKind) -> 
             } else {
                 (0.0, 1.0)
             };
-            let right: Vec<ToolPoint> = curve(&board.outline, a, bb, n, true)
-                .into_iter()
-                .map(|(p, nr)| pt(p, nr, out))
-                .collect();
-            let left: Vec<ToolPoint> = right
+            // The +z pass follows the board's y > 0 rail, the -z pass its y < 0 rail.
+            let half = |rail: surfcraft_core::Rail| -> Vec<ToolPoint> {
+                curve(board.outline_of(rail), a, bb, n, true)
+                    .into_iter()
+                    .map(|(p, nr)| pt(p, nr, out))
+                    .collect()
+            };
+            let right = half(surfcraft_core::Rail::Left);
+            let other = if board.is_asymmetric() {
+                half(surfcraft_core::Rail::Right)
+            } else {
+                right.clone()
+            };
+            let left: Vec<ToolPoint> = other
                 .iter()
                 .rev()
                 .map(|q| ToolPoint {
