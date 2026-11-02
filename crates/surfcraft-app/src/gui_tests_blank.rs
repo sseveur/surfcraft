@@ -104,6 +104,32 @@ fn fit_in_blank_window_picks_a_blank_and_reports() {
     assert!(h.state().doc.board.blank.is_none());
 }
 
+/// The fields of the blank editor are wide enough to read the values (regression: the window opened at egui's
+/// default width and squeezed every field to a few characters).
+#[test]
+fn blank_editor_fields_are_readable() {
+    use egui_kittest::kittest::NodeT as _;
+    let mut h = harness();
+    open_window(&mut h);
+    click(&mut h, "New blank…");
+    h.run_steps(3);
+    let w = h
+        .get_all_by_role(egui::accesskit::Role::Window)
+        .find(|n| n.accesskit_node().label().as_deref() == Some("Blank dimensions"))
+        .expect("editor window")
+        .rect();
+    let fields: Vec<egui::Rect> = h
+        .get_all_by_role(egui::accesskit::Role::TextInput)
+        .map(|n| n.rect())
+        .filter(|r| w.contains(r.center()))
+        .collect();
+    assert_eq!(fields.len(), 13, "name, 6 main values, 6 stations");
+    for r in &fields {
+        assert!(r.width() >= 110.0, "field {r:?} squeezed in {w:?}");
+        assert!(r.max.x <= w.max.x, "field {r:?} cut off by {w:?}");
+    }
+}
+
 #[test]
 fn new_blank_is_saved_and_used() {
     let mut h = harness();

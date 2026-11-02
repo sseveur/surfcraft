@@ -528,6 +528,8 @@ fn editor_window(
         .id(egui::Id::unique("blank-editor-window"))
         .open(&mut open)
         .resizable(false)
+        // Room for the long labels and full-width fields (text fields shrink to the space left).
+        .default_width(560.0)
         .show(ctx, |ui| {
             let b = &mut ed.blank;
             egui::Grid::new("blank-editor")
