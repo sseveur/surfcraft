@@ -3,7 +3,7 @@
 
 use eframe::egui::{self, Modifiers, accesskit::Role};
 use egui_kittest::kittest::Queryable as _;
-use surfcraft_session::shaping::ContourKind;
+use surfcraft_session::shaping::{ContourKind, Keep};
 
 use crate::app::Tab;
 use crate::gui_tests::{H, harness, set_tab, settle, snap};
@@ -106,6 +106,12 @@ fn contours_window_change_type_preview_apply_undo() {
     h.run_steps(3);
     click(&mut h, "Vee");
     assert_eq!(h.state().set.shaping.zones[0].kind, ContourKind::Vee);
+    assert_eq!(
+        h.state().set.shaping.zones[0].keep,
+        Keep::Rails,
+        "cutting foam is the default"
+    );
+    assert!(h.query_all_by_value("Keep").next().is_some());
     set_length(&mut h, "Depth", "0.5");
     assert!((h.state().set.shaping.zones[0].depth - 0.5).abs() < 1e-9);
     set_length(&mut h, "End (from tail)", "60");

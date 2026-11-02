@@ -7,8 +7,8 @@ use crate::commands::{
 };
 use crate::document::Document;
 use crate::shaping::{
-    self, ContourKind, ContourZone, DEFAULT_SPACING, RAIL_PRESETS, RailParams, RailSpec, RunOut,
-    ShapeReport,
+    self, ContourKind, ContourZone, DEFAULT_SPACING, Keep, RAIL_PRESETS, RailParams, RailSpec,
+    RunOut, ShapeReport,
 };
 
 pub(crate) fn specs() -> Vec<ToolSpec> {
@@ -48,13 +48,16 @@ pub(crate) fn specs() -> Vec<ToolSpec> {
             name: "apply_bottom_contour",
             description: "Shape the bottom of every cross-section in a zone: flat, single_concave, double_concave \
                           (two concaves inside a single), vee or channels; `remove` flattens the bottom back to \
-                          level. The stringer rocker is kept: depth is measured with a straight edge across the \
-                          run-out points (a concave ends `depth` below the stringer, a vee `depth` above). \
+                          level. `keep: rails` (default) cuts foam like shaping a blank: the rail edge stays, a \
+                          concave raises the stringer rocker by its depth and the volume drops; `keep: stringer` \
+                          keeps the stringer rocker and moves the bottom near the rails instead (a concave then \
+                          adds volume). Depth is measured with a straight edge across the run-out points. \
                           Interpolated sections are added inside the zone where needed. Undoable as one step; \
                           returns the volume before and after.",
             input_schema: obj(
                 json!({
                     "type": {"type": "string", "enum": kinds},
+                    "keep": {"type": "string", "enum": ["rails", "stringer"], "description": "rails (default): the rail edge stays and foam is cut, as when shaping a blank; stringer: the stringer rocker stays"},
                     "depth": len_schema("concave / vee depth, or channel depth (default 1/8\" concave, 1/4\" vee, 3/16\" channels)"),
                     "inner_depth": len_schema("depth of the two inner concaves of a double concave (default 1/16\")"),
                     "start": len_schema("zone start from the tail (default 0)"),
@@ -145,17 +148,26 @@ pub(crate) fn apply_bottom_contour(doc: &mut Document, ctx: &mut Context, a: &Va
     if let Some(v) = length(a, "channel_width")? {
         z.channel_width = v;
     }
+    if let Some(k) = arg(a, "keep") {
+        let k = k
+            .as_str()
+            .ok_or("keep: expected \"rails\" or \"stringer\"")?;
+        z.keep =
+            Keep::from_slug(k).ok_or_else(|| format!("keep: unknown {k:?} (rails or stringer)"))?;
+    }
     let spacing = length(a, "section_spacing")?.unwrap_or(DEFAULT_SPACING);
+    let z_keep = z.keep.slug();
     let mut b = doc.board.clone();
     let r = if remove {
         z.validate()?;
-        shaping::remove_contours(&mut b, z.start, z.end, z.run_out)?
+        shaping::remove_contours(&mut b, z.start, z.end, z.run_out, z.keep)?
     } else {
         shaping::apply_contours(&mut b, &[z], spacing)?
     };
     doc.edit(|d| *d = b);
     let mut out = report_json(&r, ctx);
     out["type"] = json!(ty);
+    out["keep"] = json!(z_keep);
     Ok(out)
 }
 

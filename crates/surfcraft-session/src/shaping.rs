@@ -101,11 +101,40 @@ impl RunOut {
     }
 }
 
+/// What a contour keeps where it was.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Keep {
+    /// The rail edge stays and foam is cut away, as when shaping a blank: a concave raises the stringer (the
+    /// stringer rocker deepens and the thickness on the stringer drops by the depth); a vee and channels cut
+    /// towards the rails. The volume always goes down.
+    #[default]
+    Rails,
+    /// The stringer rocker stays: a concave lowers the bottom towards the rails, a vee raises it.
+    Stringer,
+}
+
+impl Keep {
+    pub fn slug(self) -> &'static str {
+        match self {
+            Keep::Rails => "rails",
+            Keep::Stringer => "stringer",
+        }
+    }
+
+    pub fn from_slug(s: &str) -> Option<Keep> {
+        [Keep::Rails, Keep::Stringer]
+            .into_iter()
+            .find(|k| k.slug() == s)
+    }
+}
+
 /// One contour zone along the board. Lengths in cm, positions from the tail.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ContourZone {
     pub kind: ContourKind,
+    /// Whether the rail edge (cut foam) or the stringer rocker stays.
+    pub keep: Keep,
     /// Concave or vee depth, or channel depth.
     pub depth: f64,
     /// Depth of the two inner concaves of a double concave.
@@ -135,6 +164,7 @@ impl Default for ContourZone {
             run_out: RunOut::FromRail(2.54),
             channel_count: 2,
             channel_width: 2.54,
+            keep: Keep::Rails,
         }
     }
 }
@@ -220,7 +250,25 @@ impl ContourZone {
         let ramp = |d: f64, len: f64| if len > 1e-9 { smoothstep(d / len) } else { 1.0 };
         ramp(x - self.start, self.fade_in).min(ramp(self.end - x, self.fade_out))
     }
+
+    /// The zone as applied on a board of length `l`. Cutting foam changes the stringer rocker, which must stay a
+    /// fair curve: a zone that starts or ends inside the board then fades over at least [`MIN_RAMP`].
+    fn effective(&self, l: f64) -> ContourZone {
+        let mut z = self.clone();
+        if z.keep == Keep::Rails {
+            if z.start > 0.0 {
+                z.fade_in = z.fade_in.max(MIN_RAMP);
+            }
+            if z.end < l {
+                z.fade_out = z.fade_out.max(MIN_RAMP);
+            }
+        }
+        z
+    }
 }
+
+/// Shortest fade of a foam-cutting zone that starts or ends inside the board (cm).
+pub const MIN_RAMP: f64 = 10.0;
 
 /// What a shaping tool did.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -449,6 +497,37 @@ pub fn contour_section(
     zone: &ContourZone,
     fade: f64,
 ) -> Result<bool, &'static str> {
+    contour_section_lifted(cs, zone, fade, 0.0)
+}
+
+/// Height of the bottom at the run-out of `zone` above the bottom centre, for this section.
+pub fn run_out_height(cs: &CrossSection, zone: &ContourZone) -> Option<f64> {
+    let sp = &cs.spline;
+    if sp.len() < 3 {
+        return None;
+    }
+    let o = sp.knots()[0].point();
+    let hw = sp.max_x();
+    if hw - o.x < 3.0 {
+        return None;
+    }
+    let u_r = zone
+        .run_out
+        .at(hw)
+        .clamp(o.x + 0.2 * (hw - o.x), o.x + 0.97 * (hw - o.x));
+    let (seg, t) = bottom_segment(sp, u_r)?;
+    Some(sp.segment(seg).point(t).y - o.y)
+}
+
+/// [`contour_section`] for a section whose stringer is raised by `lift` (foam cut on the stringer): the bottom
+/// gets the same shape relative to the stringer, while the rail and the deck stay where they were in the board,
+/// which in the section's own frame (bottom centre at the stringer) moves them down by `lift`.
+fn contour_section_lifted(
+    cs: &mut CrossSection,
+    zone: &ContourZone,
+    fade: f64,
+    lift: f64,
+) -> Result<bool, &'static str> {
     let f = fade.clamp(0.0, 1.0);
     let sp = cs.spline.clone();
     if sp.len() < 3 || f <= 0.0 {
@@ -520,7 +599,11 @@ pub fn contour_section(
         shape(u) + bend * t * t * (t - 1.0)
     };
     let new_bottom = |u: f64| o.y + (1.0 - f) * base(u) + f * target(u);
-    let shift = f * (r_end - y_r);
+    // How far the run-out moves in the board: relative to the stringer, plus the stringer's own lift.
+    let shift = f * (r_end - y_r) + lift;
+    if lift > 0.0 && lift > 0.5 * thick {
+        return Err("section too thin to cut");
+    }
 
     // Breakpoints: the ends, the original knots inside (kinks of the old bottom) and the contour's own features.
     let mut breaks = vec![o.x, u_r];
@@ -602,6 +685,18 @@ pub fn contour_section(
             break;
         }
     }
+    // Back into the section's frame, whose origin (the stringer) moved up by `lift`.
+    if lift != 0.0 {
+        let down = DVec2::new(0.0, -lift);
+        {
+            let kn = &mut knots[jn];
+            let nx = kn.next() + down;
+            kn.set(surfcraft_core::Handle::Next, nx);
+        }
+        for kn in knots.iter_mut().skip(jn + 1) {
+            kn.translate(down);
+        }
+    }
     for kn in &mut knots[jn..] {
         if kn.continuous && !kn.is_geometrically_continuous() {
             kn.continuous = false;
@@ -612,7 +707,13 @@ pub fn contour_section(
     }
     let mut result = cs.clone();
     result.spline = Spline::from_knots(knots);
-    if !section_valid(&result, cs) {
+    let mut expected = cs.clone();
+    if lift != 0.0
+        && let Some(k) = expected.spline.knots_mut().last_mut()
+    {
+        k.translate(DVec2::new(0.0, -lift));
+    }
+    if !section_valid(&result, &expected) {
         return Err("the contour would make an invalid section");
     }
     let changed = result.spline != cs.spline;
@@ -704,6 +805,183 @@ fn ensure_sections(b: &mut Board, zone: &ContourZone, spacing: f64) -> usize {
     added
 }
 
+/// How far a foam-cutting zone raises the stringer along the board: enough to keep the run-out (and so the rail)
+/// where it was, faded like the contour and tapered to nothing where the board gets thin (tail and nose tips).
+struct Lift {
+    zone: ContourZone,
+    /// Run-out height above the stringer at the sections, by position.
+    samples: Vec<(f64, f64)>,
+    /// Run-out height relative to the stringer that the contour asks for.
+    target: f64,
+    rocker: Bottom,
+    deck: Bottom,
+}
+
+impl Lift {
+    fn new(b: &Board, z: &ContourZone) -> Option<Lift> {
+        let target = match z.kind {
+            ContourKind::Flat => 0.0,
+            ContourKind::SingleConcave | ContourKind::DoubleConcave => -z.depth,
+            ContourKind::Vee => z.depth,
+            // Channels are cut into the bottom without moving the stringer.
+            ContourKind::Channels => return None,
+        };
+        let samples: Vec<(f64, f64)> = b
+            .real_sections()
+            .filter_map(|i| {
+                let s = &b.sections[i];
+                run_out_height(s, z).map(|y| (s.position, y))
+            })
+            .collect();
+        if samples.is_empty() || b.bottom.segment_count() == 0 || b.deck.segment_count() == 0 {
+            return None;
+        }
+        Some(Lift {
+            zone: z.clone(),
+            samples,
+            target,
+            rocker: Bottom::new(&b.bottom, b.bottom.segment_count() - 1),
+            deck: Bottom::new(&b.deck, b.deck.segment_count() - 1),
+        })
+    }
+
+    /// Run-out height above the stringer at `x`, linear between sections (as the surface blends them).
+    fn run_out(&self, x: f64) -> f64 {
+        let s = &self.samples;
+        if x <= s[0].0 {
+            return s[0].1;
+        }
+        for w in s.windows(2) {
+            if x <= w[1].0 {
+                let t = (x - w[0].0) / (w[1].0 - w[0].0).max(1e-9);
+                return w[0].1 + t * (w[1].1 - w[0].1);
+            }
+        }
+        s[s.len() - 1].1
+    }
+
+    fn at(&self, x: f64) -> f64 {
+        let f = self.zone.fade_at(x);
+        if f <= 0.0 {
+            return 0.0;
+        }
+        let lift = (f * (self.run_out(x) - self.target)).max(0.0);
+        let thickness = (self.deck.eval(x).0 - self.rocker.eval(x).0).max(0.0);
+        lift * smoothstep(thickness / (4.0 * (self.zone.depth + 0.3)))
+    }
+}
+
+/// Raise the stringer rocker by `lift` inside its zone, refitting the bottom curve there (a fair curve: the lift
+/// fades in and out smoothly). `extra` are stations the new knots should include (the sections).
+fn lift_rocker(b: &mut Board, lift: &Lift, extra: &[f64]) {
+    let l = b.length();
+    let (a, e) = (lift.zone.start.clamp(0.0, l), lift.zone.end.clamp(0.0, l));
+    if e - a < 0.5 {
+        return;
+    }
+    let old = b.bottom.clone();
+    let rocker = |x: f64| lift.rocker.eval(x).0 + lift.at(x);
+    let z = &lift.zone;
+    let mut breaks = vec![a, e, z.start + z.fade_in, z.end - z.fade_out];
+    breaks.extend(old.knots().iter().map(|k| k.point().x));
+    breaks.extend_from_slice(extra);
+    for i in 1..16 {
+        breaks.push(a + (e - a) * i as f64 / 16.0);
+    }
+    breaks.retain(|&x| x >= a && x <= e);
+    breaks.sort_by(f64::total_cmp);
+    breaks.dedup_by(|p, q| (*p - *q).abs() < 0.2);
+    if let Some(x) = breaks.last_mut() {
+        *x = e;
+    }
+    breaks[0] = a;
+    if breaks.len() < 2 {
+        return;
+    }
+    let fitted = fit(&rocker, &breaks, 0.001);
+    let mut new_knots = knots_from_fit(&fitted);
+    // Split the old curve at both ends of the zone (the end first, so the start's index stays valid).
+    let mut s = old.clone();
+    let at = |s: &Spline, x: f64| bottom_segment(s, x).unwrap_or((0, 0.0));
+    let (ie, te) = at(&s, e);
+    let je = split_or_existing(&mut s, ie, te);
+    let (ia, ta) = at(&s, a);
+    let ja = split_or_existing(&mut s, ia, ta);
+    let je = (ja + 1..s.len())
+        .find(|&i| (s.knots()[i].point().x - e).abs() < 1e-6)
+        .unwrap_or(je);
+    if je <= ja {
+        return;
+    }
+    let first = s.knots()[ja].clone();
+    let last = s.knots()[je].clone();
+    let n = new_knots.len();
+    new_knots[0].set(surfcraft_core::Handle::Prev, first.prev());
+    new_knots[0].set(surfcraft_core::Handle::Point, first.point());
+    new_knots[n - 1].set(surfcraft_core::Handle::Next, last.next());
+    new_knots[n - 1].set(surfcraft_core::Handle::Point, last.point());
+    for k in [0, n - 1] {
+        new_knots[k].continuous = new_knots[k].is_geometrically_continuous();
+    }
+    let mut knots = s.knots()[..ja].to_vec();
+    knots.extend(new_knots);
+    knots.extend_from_slice(&s.knots()[je + 1..]);
+    b.bottom = Spline::from_knots(knots);
+}
+
+/// Apply one zone: add sections (when `spacing` is given), raise the stringer rocker when cutting foam, reshape
+/// every section in the zone. Returns whether the rocker changed.
+fn apply_zone(
+    b: &mut Board,
+    zone: &ContourZone,
+    spacing: Option<f64>,
+    report: &mut ShapeReport,
+) -> bool {
+    let z = zone.effective(b.length());
+    if let Some(sp) = spacing {
+        report.sections_added += ensure_sections(b, &z, sp);
+    }
+    let lift = (z.keep == Keep::Rails).then(|| Lift::new(b, &z)).flatten();
+    let positions: Vec<f64> = b.real_sections().map(|i| b.sections[i].position).collect();
+    let mut lifted = false;
+    if let Some(l) = &lift
+        && positions.iter().any(|&x| l.at(x) > 1e-9)
+    {
+        lift_rocker(b, l, &positions);
+        lifted = true;
+    }
+    for i in b.real_sections() {
+        let x = b.sections[i].position;
+        let f = z.fade_at(x);
+        if f <= 0.0 {
+            continue;
+        }
+        let u = lift.as_ref().map_or(0.0, |l| l.at(x));
+        let mut cs = b.sections[i].clone();
+        match contour_section_lifted(&mut cs, &z, f, u) {
+            Ok(true) => {
+                b.sections[i] = cs;
+                report.sections_changed += 1;
+            }
+            Ok(false) => {}
+            Err(_) => report.skipped.push(x),
+        }
+    }
+    lifted
+}
+
+fn finish(b: &mut Board, lifted: bool, report: &mut ShapeReport) {
+    if lifted {
+        // The rocker moved: lowest point back at zero, sections fitted to the new thickness.
+        edit::after_edit(b, CurveId::Bottom);
+    } else if report.sections_changed > 0 || report.sections_added > 0 {
+        edit::after_edit(b, CurveId::Section(1));
+    }
+    report.skipped.sort_by(f64::total_cmp);
+    report.skipped.dedup();
+    report.volume_after = b.volume();
+}
+
 /// Apply contour zones (in order) to the board, inserting sections where needed. One call = one edit.
 pub fn apply_contours(
     b: &mut Board,
@@ -726,49 +1004,27 @@ pub fn apply_contours(
         volume_before: b.volume(),
         ..Default::default()
     };
+    let mut lifted = false;
     for z in zones {
-        report.sections_added += ensure_sections(b, z, spacing);
+        lifted |= apply_zone(b, z, Some(spacing), &mut report);
     }
-    for i in b.real_sections() {
-        let x = b.sections[i].position;
-        let mut cs = b.sections[i].clone();
-        let mut changed = false;
-        let mut skipped = false;
-        for z in zones {
-            let f = z.fade_at(x);
-            if f <= 0.0 {
-                continue;
-            }
-            match contour_section(&mut cs, z, f) {
-                Ok(c) => changed |= c,
-                Err(_) => skipped = true,
-            }
-        }
-        if skipped {
-            report.skipped.push(x);
-        }
-        if changed {
-            b.sections[i] = cs;
-            report.sections_changed += 1;
-        }
-    }
-    if report.sections_changed > 0 || report.sections_added > 0 {
-        edit::after_edit(b, CurveId::Section(1));
-    }
-    report.volume_after = b.volume();
+    finish(b, lifted, &mut report);
     Ok(report)
 }
 
 /// Flatten the bottom of every section between `start` and `end` (straight and level from the stringer to the
-/// run-out), removing concaves, vee and channels there.
+/// run-out), removing concaves, vee and channels there. With [`Keep::Rails`] foam is cut: whichever of the
+/// stringer and the run-out is higher sets the level.
 pub fn remove_contours(
     b: &mut Board,
     start: f64,
     end: f64,
     run_out: RunOut,
+    keep: Keep,
 ) -> Result<ShapeReport, String> {
     let zone = ContourZone {
         kind: ContourKind::Flat,
+        keep,
         depth: 0.0,
         start,
         end,
@@ -778,30 +1034,16 @@ pub fn remove_contours(
         ..Default::default()
     };
     zone.validate()?;
+    if b.real_sections().is_empty() || b.length() <= 0.0 {
+        return Err("the board has no cross-sections".into());
+    }
     // Removing contours never needs new sections: only the existing ones carry contours.
     let mut report = ShapeReport {
         volume_before: b.volume(),
         ..Default::default()
     };
-    for i in b.real_sections() {
-        let x = b.sections[i].position;
-        if zone.fade_at(x) <= 0.0 {
-            continue;
-        }
-        let mut cs = b.sections[i].clone();
-        match contour_section(&mut cs, &zone, 1.0) {
-            Ok(true) => {
-                b.sections[i] = cs;
-                report.sections_changed += 1;
-            }
-            Ok(false) => {}
-            Err(_) => report.skipped.push(x),
-        }
-    }
-    if report.sections_changed > 0 {
-        edit::after_edit(b, CurveId::Section(1));
-    }
-    report.volume_after = b.volume();
+    let lifted = apply_zone(b, &zone, None, &mut report);
+    finish(b, lifted, &mut report);
     Ok(report)
 }
 
@@ -1293,71 +1535,158 @@ mod tests {
         for (t, b0) in boards().into_iter().enumerate() {
             let l = b0.length();
             let v0 = b0.volume();
-            for kind in ContourKind::ALL {
-                let mut b = b0.clone();
-                let z = ContourZone::for_board(kind, &b);
-                let r = apply_contours(&mut b, std::slice::from_ref(&z), DEFAULT_SPACING).unwrap();
-                assert!(r.sections_changed > 0, "{t} {kind:?}");
-                assert!(r.skipped.is_empty(), "{t} {kind:?} skipped {:?}", r.skipped);
-                assert!((r.volume_before - v0).abs() < 1e-6);
-                let dv = r.volume_after - r.volume_before;
-                // Small and of the expected sign.
-                assert!(dv.abs() < 0.06 * v0, "{t} {kind:?} {dv}");
-                match kind {
-                    ContourKind::SingleConcave | ContourKind::Flat => {
-                        assert!(dv > 0.0, "{t} {kind:?} {dv}")
+            for keep in [Keep::Rails, Keep::Stringer] {
+                for kind in ContourKind::ALL {
+                    let mut b = b0.clone();
+                    let z = ContourZone {
+                        keep,
+                        ..ContourZone::for_board(kind, &b)
+                    };
+                    let r =
+                        apply_contours(&mut b, std::slice::from_ref(&z), DEFAULT_SPACING).unwrap();
+                    let what = format!("{t} {keep:?} {kind:?}");
+                    assert!(r.sections_changed > 0, "{what}");
+                    assert!(r.skipped.is_empty(), "{what} skipped {:?}", r.skipped);
+                    assert!((r.volume_before - v0).abs() < 1e-6);
+                    let dv = r.volume_after - r.volume_before;
+                    // Small and of the expected sign.
+                    assert!(dv.abs() < 0.06 * v0, "{what} {dv}");
+                    match (keep, kind) {
+                        // Cutting foam always removes volume.
+                        (Keep::Rails, _) => assert!(dv < 0.0, "{what} {dv}"),
+                        (_, ContourKind::SingleConcave | ContourKind::Flat) => {
+                            assert!(dv > 0.0, "{what} {dv}")
+                        }
+                        (_, ContourKind::Vee | ContourKind::Channels) => {
+                            assert!(dv < 0.0, "{what} {dv}")
+                        }
+                        (_, ContourKind::DoubleConcave) => {}
                     }
-                    ContourKind::Vee | ContourKind::Channels => {
-                        assert!(dv < 0.0, "{t} {kind:?} {dv}")
+                    for s in &b.sections[b.real_sections()] {
+                        assert!(!self_intersects(&s.spline), "{what} at {}", s.position);
+                        assert!(
+                            s.spline
+                                .knots()
+                                .iter()
+                                .all(|k| k.points.iter().all(|p| p.is_finite()))
+                        );
                     }
-                    ContourKind::DoubleConcave => {}
+                    // The deck keeps its shape (the board may move down as a whole when the lowest rocker point
+                    // is raised).
+                    let dz = b.deck_at(l / 2.0) - b0.deck_at(l / 2.0);
+                    for i in 1..20 {
+                        let x = l * i as f64 / 20.0;
+                        assert!((b.width_at(x) - b0.width_at(x)).abs() < 1e-9);
+                        assert!(
+                            (b.deck_at(x) - b0.deck_at(x) - dz).abs() < 1e-6,
+                            "{what} deck at {x}"
+                        );
+                        let st = b.section_point(x, 1.0);
+                        assert!(st.y.abs() < 0.05, "{what} bottom centre at {x}: {st}");
+                        let dt = b.thickness_at(x) - b0.thickness_at(x);
+                        match keep {
+                            Keep::Stringer => assert!(dt.abs() < 1e-9, "{what}"),
+                            // Foam is only ever removed on the stringer.
+                            Keep::Rails => assert!(dt < 1e-3, "{what} thicker at {x}: {dt}"),
+                        }
+                    }
+                    if keep == Keep::Rails
+                        && matches!(
+                            kind,
+                            ContourKind::SingleConcave | ContourKind::DoubleConcave
+                        )
+                    {
+                        // Inside the zone at full depth: thinner on the stringer by about the depth (plus the
+                        // old rise of the bottom to the run-out), the rail edge where it was below the deck.
+                        let x = b0
+                            .real_sections()
+                            .map(|i| b0.sections[i].position)
+                            .find(|&x| z.fade_at(x) == 1.0)
+                            .expect("a section at full depth");
+                        let dt = b0.thickness_at(x) - b.thickness_at(x);
+                        assert!(dt > 0.9 * z.depth && dt < z.depth + 0.3, "{what} {dt}");
+                        let edge = |b: &Board| {
+                            let s = &b.sections[b.nearest_section_index(x).unwrap()];
+                            assert!((s.position - x).abs() < 1e-9);
+                            let u_r = s.spline.max_x() - 2.54;
+                            s.center_thickness() - s.bottom_at(u_r)
+                        };
+                        assert!(
+                            (edge(&b) - edge(&b0)).abs() < 0.02,
+                            "{what} rail edge moved"
+                        );
+                    }
+                    let mesh = Mesh::of_board(&b, MeshDetail::PREVIEW);
+                    assert!(!mesh.triangles.is_empty());
+                    assert!(mesh.positions.iter().all(|p| p.is_finite()));
                 }
-                for s in &b.sections[b.real_sections()] {
-                    assert!(
-                        !self_intersects(&s.spline),
-                        "{t} {kind:?} at {}",
-                        s.position
-                    );
-                    assert!(
-                        s.spline
-                            .knots()
-                            .iter()
-                            .all(|k| k.points.iter().all(|p| p.is_finite()))
-                    );
-                }
-                // Width, stringer thickness and rocker at stations are unchanged.
-                for i in 1..20 {
-                    let x = l * i as f64 / 20.0;
-                    assert!((b.width_at(x) - b0.width_at(x)).abs() < 1e-9);
-                    assert!((b.thickness_at(x) - b0.thickness_at(x)).abs() < 1e-9);
-                    let st = b.section_point(x, 1.0);
-                    assert!(st.y.abs() < 0.05, "{t} {kind:?} bottom centre at {x}: {st}");
-                }
-                let mesh = Mesh::of_board(&b, MeshDetail::PREVIEW);
-                assert!(!mesh.triangles.is_empty());
-                assert!(mesh.positions.iter().all(|p| p.is_finite()));
             }
         }
     }
 
     #[test]
-    fn remove_contours_flattens() {
-        let mut b = boards()[0].clone();
-        let z = ContourZone::for_board(ContourKind::SingleConcave, &b);
-        apply_contours(&mut b, &[z], DEFAULT_SPACING).unwrap();
+    fn foam_cut_rocker_is_fair() {
+        let b0 = boards()[0].clone();
+        let mut b = b0.clone();
+        let z = ContourZone {
+            start: 20.0,
+            end: 120.0,
+            fade_in: 0.0,
+            fade_out: 30.0,
+            depth: 0.4,
+            ..Default::default()
+        };
+        apply_contours(&mut b, std::slice::from_ref(&z), DEFAULT_SPACING).unwrap();
+        // The rocker rises smoothly: no step where the zone starts (a short ramp is added), no kinks.
+        let n = 400;
         let l = b.length();
-        let r = remove_contours(&mut b, 0.0, l, RunOut::FromRail(2.54)).unwrap();
-        assert!(r.sections_changed > 0);
-        for s in &b.sections[b.real_sections()] {
-            let u_r = s.spline.max_x() - 2.54;
-            for i in 0..=10 {
-                let u = u_r * i as f64 / 10.0;
-                assert!(
-                    s.bottom_at(u).abs() < 0.08,
-                    "{} {u} {}",
-                    s.position,
-                    s.bottom_at(u)
-                );
+        let lift = |x: f64| b0.thickness_at(x) - b.thickness_at(x);
+        let mut prev_slope: Option<f64> = None;
+        for i in 1..n {
+            let (x0, x1) = (l * (i - 1) as f64 / n as f64, l * i as f64 / n as f64);
+            let slope = (lift(x1) - lift(x0)) / (x1 - x0);
+            assert!(slope.abs() < 0.2, "steep at {x1}: {slope}");
+            if let Some(p) = prev_slope {
+                assert!((slope - p).abs() < 0.05, "kink at {x1}: {p} > {slope}");
+            }
+            prev_slope = Some(slope);
+        }
+        assert!(lift(80.0) > 0.35 && lift(80.0) < 0.6, "{}", lift(80.0));
+        assert!(
+            lift(10.0).abs() < 1e-4 && lift(150.0).abs() < 1e-4,
+            "{} {}",
+            lift(10.0),
+            lift(150.0)
+        );
+    }
+
+    #[test]
+    fn remove_contours_flattens() {
+        for keep in [Keep::Rails, Keep::Stringer] {
+            let mut b = boards()[0].clone();
+            let z = ContourZone {
+                keep,
+                ..ContourZone::for_board(ContourKind::SingleConcave, &b)
+            };
+            apply_contours(&mut b, &[z], DEFAULT_SPACING).unwrap();
+            let l = b.length();
+            let v = b.volume();
+            let r = remove_contours(&mut b, 0.0, l, RunOut::FromRail(2.54), keep).unwrap();
+            assert!(r.sections_changed > 0);
+            if keep == Keep::Rails {
+                assert!(r.volume_after < v, "cutting removes foam");
+            }
+            for s in &b.sections[b.real_sections()] {
+                let u_r = s.spline.max_x() - 2.54;
+                for i in 0..=10 {
+                    let u = u_r * i as f64 / 10.0;
+                    assert!(
+                        s.bottom_at(u).abs() < 0.08,
+                        "{keep:?} {} {u} {}",
+                        s.position,
+                        s.bottom_at(u)
+                    );
+                }
             }
         }
     }

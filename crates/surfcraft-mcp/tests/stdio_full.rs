@@ -194,7 +194,7 @@ fn every_tool_runs_headless() {
     );
     assert!(c["sections_changed"].as_u64().unwrap() > 0, "{c}");
     assert!(
-        c["volume_after_litres"].as_f64().unwrap() > c["volume_before_litres"].as_f64().unwrap()
+        c["volume_after_litres"].as_f64().unwrap() < c["volume_before_litres"].as_f64().unwrap()
     );
     m.fails("apply_bottom_contour", json!({"type": "spiral"}));
     let r = m.ok("set_rails", json!({"preset": "60/40", "tuck": "1/4\""}));

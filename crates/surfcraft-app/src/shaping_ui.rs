@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 use surfcraft_core::section::{APEX_ANGLE, TUCK_UNDER_ANGLE};
 use surfcraft_core::{Board, CrossSection, DVec2};
 use surfcraft_session::shaping::{
-    self, ContourKind, ContourZone, DEFAULT_SPACING, RAIL_PRESETS, RailParams, RailSpec, RunOut,
-    ShapeReport,
+    self, ContourKind, ContourZone, DEFAULT_SPACING, Keep, RAIL_PRESETS, RailParams, RailSpec,
+    RunOut, ShapeReport,
 };
 
 use crate::document::Document;
@@ -73,6 +73,24 @@ impl ShapingState {
     pub fn open_rails(&mut self) {
         self.rails_open = true;
         self.rail_view.needs_fit = true;
+    }
+}
+
+fn keep_label(k: Keep) -> &'static str {
+    match k {
+        Keep::Rails => tr("Rails (cut foam, like shaping a blank)"),
+        Keep::Stringer => tr("Stringer rocker"),
+    }
+}
+
+fn keep_hover(k: Keep) -> &'static str {
+    match k {
+        Keep::Rails => tr(
+            "The rail edge stays where it is and foam is cut away: a concave raises the stringer rocker by its depth (thinner on the stringer), a vee and channels cut towards the rails. The volume goes down.",
+        ),
+        Keep::Stringer => tr(
+            "The stringer rocker and thickness stay: a concave lowers the bottom towards the rails (more volume), a vee raises it.",
+        ),
     }
 }
 
@@ -242,6 +260,20 @@ fn zone_ui(ui: &mut egui::Ui, i: usize, z: &mut ContourZone, set: &Settings) -> 
                     }
                 });
             ui.end_row();
+            ui.label(tr("Keep"));
+            egui::ComboBox::from_id_salt(("contour-keep", i))
+                .selected_text(keep_label(z.keep))
+                .show_ui(ui, |ui| {
+                    for k in [Keep::Rails, Keep::Stringer] {
+                        changed |= ui
+                            .selectable_value(&mut z.keep, k, keep_label(k))
+                            .on_hover_text(keep_hover(k))
+                            .changed();
+                    }
+                })
+                .response
+                .on_hover_text(keep_hover(z.keep));
+            ui.end_row();
             if z.kind != ContourKind::Flat {
                 let label = if z.kind == ContourKind::Channels {
                     tr("Channel depth")
@@ -342,9 +374,9 @@ fn contours_window(
         .show(ctx, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 ui.weak(tr(
-                    "Depth is measured with a straight edge across the run-out points. The rocker on the \
-                     stringer is kept, so a concave lowers the bottom towards the rails (a little more volume) \
-                     and a vee raises it.",
+                    "Depth is measured with a straight edge across the run-out points. Keeping the rails cuts \
+                     foam as when shaping a blank: a concave raises the stringer rocker and the volume drops. \
+                     Keeping the stringer rocker moves the bottom near the rails instead.",
                 ));
                 let mut changed = false;
                 let mut remove = None;
@@ -446,13 +478,12 @@ fn contours_window(
                     ))
                     .clicked()
                 {
-                    let run_out = prefs.zones.first().map_or(RunOut::FromRail(2.54), |z| z.run_out);
-
-
-
-
+                    let (run_out, keep) = prefs
+                        .zones
+                        .first()
+                        .map_or((RunOut::FromRail(2.54), Keep::Rails), |z| (z.run_out, z.keep));
                     let mut b = doc.board.clone();
-                    match shaping::remove_contours(&mut b, r0, r1.max(r0 + 1.0), run_out) {
+                    match shaping::remove_contours(&mut b, r0, r1.max(r0 + 1.0), run_out, keep) {
                         Ok(r) => {
                             doc.edit(|d| *d = b);
                             st.preview = None;
