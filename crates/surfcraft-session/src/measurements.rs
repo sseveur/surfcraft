@@ -17,6 +17,18 @@ use crate::by_numbers::tail_corner;
 use crate::commands::{Context, ToolSpec};
 use crate::document::Document;
 use crate::fit::{self, Hermite, Pchip, Sample};
+use crate::shaping::{self, ContourKind, ContourZone, RAIL_PRESETS, RailParams, RailSpec};
+
+/// Bottom shapes offered for a board built from measurements (`None` in the table keeps the template's).
+pub const BOTTOMS: [ContourKind; 4] = [
+    ContourKind::Flat,
+    ContourKind::SingleConcave,
+    ContourKind::DoubleConcave,
+    ContourKind::Vee,
+];
+
+/// Deepest bottom contour accepted (cm): one inch.
+pub const MAX_BOTTOM_DEPTH: f64 = INCH;
 
 /// Shortest and longest board accepted (cm): 3' to 15'.
 pub const MIN_LENGTH: f64 = 3.0 * FOOT;
@@ -115,6 +127,12 @@ pub struct Table {
     /// Index into the built-in templates; `None` picks the one closest in length.
     pub template: Option<usize>,
     pub rows: Vec<Row>,
+    /// Bottom contour applied after the board is built; `None` keeps the template's bottom.
+    pub bottom: Option<ContourKind>,
+    /// Concave or vee depth as typed; empty for the usual depth of that bottom.
+    pub bottom_depth: String,
+    /// Index into the rail presets; `None` keeps the template's rails.
+    pub rail: Option<usize>,
 }
 
 impl Default for Table {
@@ -134,6 +152,9 @@ impl Default for Table {
             ]
             .map(Row::at)
             .to_vec(),
+            bottom: None,
+            bottom_depth: String::new(),
+            rail: None,
         }
     }
 }
@@ -146,6 +167,8 @@ pub enum Column {
     Width,
     Rocker,
     Thickness,
+    /// The bottom contour depth.
+    Depth,
 }
 
 impl Column {
@@ -157,6 +180,7 @@ impl Column {
             Column::Width => "Width",
             Column::Rocker => "Rocker",
             Column::Thickness => "Thickness",
+            Column::Depth => "Depth",
         }
     }
 }
@@ -202,6 +226,10 @@ pub enum Problem {
     NoThickness,
     /// The tail block is wider than the board just ahead of it.
     TailBlockTooWide,
+    /// Bottom depth of zero or less, or over [`MAX_BOTTOM_DEPTH`].
+    DepthOutOfRange,
+    /// The bottom contour or rail could not be applied (the shaping tool's reason, in English).
+    Shaping(String),
     /// A CSV line that is not a table row or a known setting.
     CsvLine {
         line: usize,
@@ -218,6 +246,10 @@ impl Problem {
                 column.label().to_lowercase()
             ),
             Problem::NoLength => "enter the board length".into(),
+            Problem::DepthOutOfRange => {
+                "the bottom depth must be more than zero and at most 1\"".into()
+            }
+            Problem::Shaping(e) => format!("could not shape the bottom or rails: {e}"),
             Problem::LengthOutOfRange => "the length must be between 3' and 15'".into(),
             Problem::OffBoard { row } => format!("row {row}: the station is not on the board"),
             Problem::Duplicate { row, other } => {
@@ -267,6 +299,10 @@ pub struct Measurements {
     pub nose_end: Station,
     /// Stations strictly between the ends, sorted.
     pub stations: Vec<Station>,
+    /// Bottom contour and its depth (`None` = the usual depth for that bottom).
+    pub bottom: Option<(ContourKind, Option<f64>)>,
+    /// Rail shape applied to every section.
+    pub rail: Option<RailSpec>,
 }
 
 /// Where a position text puts the station: `(from_tail, from_nose)` or the centre.
@@ -323,6 +359,25 @@ pub fn parse(table: &Table, unit: LengthUnit) -> Result<Measurements, Vec<Proble
                     row: 0,
                     column: Column::Length,
                     text: table.length.clone(),
+                });
+                None
+            }
+        }
+    };
+    let depth = if table.bottom_depth.trim().is_empty() {
+        None
+    } else {
+        match unit.parse(&table.bottom_depth) {
+            Some(d) if d > 0.0 && d <= MAX_BOTTOM_DEPTH => Some(d),
+            Some(_) => {
+                problems.push(Problem::DepthOutOfRange);
+                None
+            }
+            None => {
+                problems.push(Problem::Unreadable {
+                    row: 0,
+                    column: Column::Depth,
+                    text: table.bottom_depth.clone(),
                 });
                 None
             }
@@ -437,6 +492,8 @@ pub fn parse(table: &Table, unit: LengthUnit) -> Result<Measurements, Vec<Proble
             ..nose_end
         },
         stations,
+        bottom: table.bottom.map(|k| (k, depth)),
+        rail: table.rail.and_then(|i| RAIL_PRESETS.get(i)).map(|p| p.1),
     })
 }
 
@@ -533,8 +590,28 @@ fn smootherstep(u: f64) -> f64 {
     u * u * u * (u * (6.0 * u - 15.0) + 10.0)
 }
 
-/// Build the board. The result is a new, unsaved board with sections copied from the template.
-pub fn build(m: &Measurements) -> (Board, FitReport) {
+/// Build the board: fair curves through the measurements, sections copied from the template, then the rails and
+/// the bottom contour if asked for (the bottom keeps its rail line and the foam is cut, so a concave or vee
+/// lowers the stringer thickness and the volume). The fit report is taken before the bottom is shaped.
+pub fn build(m: &Measurements) -> Result<(Board, FitReport), Problem> {
+    let (mut b, report) = build_curves(m);
+    if let Some(spec) = m.rail {
+        shaping::apply_rails(&mut b, &RailParams::uniform(spec)).map_err(Problem::Shaping)?;
+    }
+    if let Some((kind, depth)) = m.bottom {
+        let mut z = ContourZone::for_board(kind, &b);
+        if let Some(d) = depth.filter(|_| kind != ContourKind::Flat) {
+            z.depth = d;
+            z.inner_depth = d / 2.0;
+        }
+        shaping::apply_contours(&mut b, &[z], shaping::DEFAULT_SPACING)
+            .map_err(Problem::Shaping)?;
+    }
+    Ok((b, report))
+}
+
+/// The board with its fitted curves and the template's sections.
+fn build_curves(m: &Measurements) -> (Board, FitReport) {
     let tb = TEMPLATES[m.template].board();
     let l = m.length;
     let k = l / tb.length();
@@ -813,6 +890,7 @@ pub fn sample(b: &Board, step: f64, unit: LengthUnit, fraction: u32) -> Table {
         },
         template: None,
         rows,
+        ..Default::default()
     }
 }
 
@@ -863,6 +941,19 @@ impl Table {
             self.template
                 .and_then(|i| TEMPLATES.get(i))
                 .map_or("auto".into(), |t| t.name.to_ascii_lowercase())
+        );
+        s += &format!(
+            "bottom,{}\n",
+            self.bottom.map_or("template", ContourKind::slug)
+        );
+        if !self.bottom_depth.trim().is_empty() {
+            s += &format!("bottom depth,{}\n", csv_field(&self.bottom_depth));
+        }
+        s += &format!(
+            "rail,{}\n",
+            self.rail
+                .and_then(|i| RAIL_PRESETS.get(i))
+                .map_or("template", |p| p.0)
         );
         s += CSV_HEADER;
         s.push('\n');
@@ -931,6 +1022,31 @@ impl Table {
                         )
                     };
                 }
+                "bottom" => {
+                    let v = second.to_ascii_lowercase();
+                    t.bottom = if v.is_empty() || v == "template" {
+                        None
+                    } else {
+                        Some(
+                            ContourKind::from_slug(&v)
+                                .filter(|k| BOTTOMS.contains(k))
+                                .ok_or_else(bad)?,
+                        )
+                    };
+                }
+                "bottom depth" | "depth" => t.bottom_depth = second,
+                "rail" | "rails" => {
+                    t.rail = if second.is_empty() || second.eq_ignore_ascii_case("template") {
+                        None
+                    } else {
+                        Some(
+                            RAIL_PRESETS
+                                .iter()
+                                .position(|p| p.0 == second)
+                                .ok_or_else(bad)?,
+                        )
+                    };
+                }
                 "position" | "station" => {
                     // Columns may come in any order; missing ones stay empty.
                     for (c, name) in ["position", "width", "rocker", "thickness"]
@@ -971,7 +1087,8 @@ pub fn tool_spec() -> ToolSpec {
                       stations with width, bottom rocker (height above a flat surface) and thickness. Positions \
                       are from the tail, or \"tail 12\\\"\", \"nose 12\\\"\", \"centre\"; \"tail 0\" / \"nose 0\" give \
                       the tail block width and the tail / nose lift. Curves are fitted fair through the points \
-                      and a template's cross-sections are scaled onto it. Replaces the open board (unsaved).",
+                      and a template's cross-sections are scaled onto it. Optionally a bottom contour (foam cut, \
+                      rail line kept) and a rail preset are applied afterwards. Replaces the open board (unsaved).",
         input_schema: json!({
             "type": "object",
             "properties": {
@@ -982,6 +1099,9 @@ pub fn tool_spec() -> ToolSpec {
                     "position": {"type": ["number", "string"]},
                     "width": len("width"), "rocker": len("bottom rocker"), "thickness": len("thickness")
                 }, "required": ["position"]}},
+                "bottom": {"type": "string", "enum": ["template", "flat", "single_concave", "double_concave", "vee"], "description": "Bottom contour (default: the template's bottom)"},
+                "bottom_depth": len("concave or vee depth, at most 1 inch (default: the usual depth for that bottom)"),
+                "rail": {"type": "string", "enum": ["template", "50/50", "60/40", "70/30", "80/20"], "description": "Rail preset (default: the template's rails)"},
                 "discard_unsaved": {"type": "boolean"}
             },
             "required": ["length", "stations"]
@@ -1044,11 +1164,36 @@ pub fn command(doc: &mut Document, ctx: &mut Context, a: &Value) -> Result<Value
             thickness: text(s.get("thickness"), "thickness")?,
         });
     }
+    let bottom = match get("bottom") {
+        None => None,
+        Some(Value::String(v)) if v == "template" => None,
+        Some(Value::String(v)) => Some(
+            ContourKind::from_slug(v)
+                .filter(|k| BOTTOMS.contains(k))
+                .ok_or_else(|| {
+                    format!("bottom: unknown {v:?}, expected template, flat, single_concave, double_concave or vee")
+                })?,
+        ),
+        Some(v) => return Err(format!("bottom: expected text, got {v}")),
+    };
+    let rail = match get("rail") {
+        None => None,
+        Some(Value::String(v)) if v == "template" => None,
+        Some(Value::String(v)) => {
+            Some(RAIL_PRESETS.iter().position(|p| p.0 == v).ok_or_else(|| {
+                format!("rail: unknown {v:?}, expected template, 50/50, 60/40, 70/30 or 80/20")
+            })?)
+        }
+        Some(v) => return Err(format!("rail: expected text, got {v}")),
+    };
     let table = Table {
         length: text(get("length"), "length")?,
         tail,
         template,
         rows,
+        bottom,
+        bottom_depth: text(get("bottom_depth"), "bottom_depth")?,
+        rail,
     };
     let m = parse(&table, LengthUnit::Centimetres).map_err(|ps| {
         ps.iter()
@@ -1056,7 +1201,7 @@ pub fn command(doc: &mut Document, ctx: &mut Context, a: &Value) -> Result<Value
             .collect::<Vec<_>>()
             .join("; ")
     })?;
-    let (mut b, report) = build(&m);
+    let (mut b, report) = build(&m).map_err(|p| p.message())?;
     b.model = doc.board.model;
     *doc = Document::new(b, None);
     ctx.current_section = doc
@@ -1083,7 +1228,7 @@ mod tests {
         let mut t = sample(b0, step, LengthUnit::Centimetres, 16);
         t.template = template;
         let m = parse(&t, LengthUnit::Centimetres).unwrap_or_else(|e| panic!("{e:?}"));
-        let (b, r) = build(&m);
+        let (b, r) = build(&m).unwrap();
         (b, m, r)
     }
 
@@ -1183,9 +1328,10 @@ mod tests {
                     ..Default::default()
                 },
             ],
+            ..Default::default()
         };
         let m = parse(&t, LengthUnit::FeetInchesFraction).unwrap();
-        let (b, r) = build(&m);
+        let (b, r) = build(&m).unwrap();
         assert!(r.worst() <= 0.1, "{r:?}");
         assert!((b.length() - 74.0 * INCH).abs() < 1e-6);
         assert!((b.width_at(b.length() / 2.0) - 20.25 * INCH).abs() < 0.1);
@@ -1299,5 +1445,114 @@ mod tests {
             Table::from_csv("template,banana\n"),
             Err(Problem::CsvLine { line: 1, .. })
         ));
+    }
+
+    #[test]
+    fn bottom_and_rail_options_shape_the_built_board() {
+        let base = sample(
+            &TEMPLATES[0].board(),
+            STATION_STEP,
+            LengthUnit::Centimetres,
+            16,
+        );
+        let build_with = |bottom: Option<ContourKind>, depth: &str, rail: Option<usize>| {
+            let t = Table {
+                bottom,
+                bottom_depth: depth.into(),
+                rail,
+                ..base.clone()
+            };
+            build(&parse(&t, LengthUnit::Centimetres).unwrap()).unwrap()
+        };
+        let (template, r0) = build_with(None, "", None);
+        let (flat, r1) = build_with(Some(ContourKind::Flat), "", None);
+        // The fit is reported on the measured curves, before shaping.
+        assert_eq!(r0, r1);
+        let v_flat = flat.volume();
+        assert!(
+            (v_flat - template.volume()).abs() / v_flat < 0.02,
+            "flat keeps about the template's volume"
+        );
+        for (kind, depth) in [
+            (ContourKind::SingleConcave, ""),
+            (ContourKind::SingleConcave, "0.6cm"),
+            (ContourKind::DoubleConcave, ""),
+            (ContourKind::Vee, ""),
+        ] {
+            let (b, _) = build_with(Some(kind), depth, None);
+            // Foam is cut, the rail line kept: less volume than the flat bottom.
+            assert!(
+                b.volume() < v_flat,
+                "{kind:?} {depth}: {} vs {v_flat}",
+                b.volume()
+            );
+            for s in &b.sections[b.real_sections()] {
+                assert!(
+                    !shaping::self_intersects(&s.spline),
+                    "{kind:?} at {}",
+                    s.position
+                );
+            }
+            assert_eq!(b.length(), flat.length());
+        }
+        // A deeper concave takes more foam.
+        let (shallow, _) = build_with(Some(ContourKind::SingleConcave), "0.2cm", None);
+        let (deep, _) = build_with(Some(ContourKind::SingleConcave), "0.8cm", None);
+        assert!(deep.volume() < shallow.volume());
+        // Rails: every section is reshaped, fitted and free of loops.
+        let (soft, _) = build_with(None, "", Some(0));
+        let (hard, _) = build_with(None, "", Some(3));
+        for b in [&soft, &hard] {
+            for s in &b.sections[b.real_sections()] {
+                let x = s.position;
+                assert!(!shaping::self_intersects(&s.spline), "section at {x}");
+                assert!(
+                    s.spline
+                        .knots()
+                        .iter()
+                        .all(|k| k.points.iter().all(|p| p.is_finite()))
+                );
+                assert!((s.width() - b.width_at(x)).abs() < 0.05, "width at {x}");
+                assert!(
+                    (s.center_thickness() - b.thickness_at(x)).abs() < 0.05,
+                    "thickness at {x}"
+                );
+            }
+            assert_ne!(b.sections, template.sections, "rails reshaped");
+        }
+        assert!(
+            (hard.volume() - soft.volume()).abs() / soft.volume() > 0.001,
+            "different rails, different volume"
+        );
+        // Depth checks.
+        for bad in ["0", "3cm", "deep"] {
+            let t = Table {
+                bottom: Some(ContourKind::Vee),
+                bottom_depth: bad.into(),
+                ..base.clone()
+            };
+            let e = parse(&t, LengthUnit::Centimetres).unwrap_err();
+            assert!(
+                e == vec![Problem::DepthOutOfRange]
+                    || matches!(
+                        e[0],
+                        Problem::Unreadable {
+                            column: Column::Depth,
+                            ..
+                        }
+                    ),
+                "{bad}: {e:?}"
+            );
+        }
+        // The choices survive a CSV round trip.
+        let t = Table {
+            bottom: Some(ContourKind::DoubleConcave),
+            bottom_depth: "3/16\"".into(),
+            rail: Some(2),
+            ..base.clone()
+        };
+        assert_eq!(Table::from_csv(&t.to_csv()).unwrap(), t);
+        assert!(Table::from_csv("bottom,channels\n").is_err());
+        assert!(Table::from_csv("rail,90/10\n").is_err());
     }
 }

@@ -233,3 +233,75 @@ fn measurements_csv_save_and_import() {
     assert_eq!(st.table.rows.len(), 1);
     assert_eq!(st.table.rows[0].width, "21\"");
 }
+
+#[test]
+fn measurements_window_applies_bottom_and_rail_choices() {
+    use surfcraft_session::measurements;
+    use surfcraft_session::shaping::ContourKind;
+    let mut h = harness_cm();
+    click(&mut h, "File");
+    click(&mut h, "New from measurements…");
+    let table = measurements::sample(
+        &surfcraft_io::templates::TEMPLATES[0].board(),
+        30.48,
+        surfcraft_core::LengthUnit::Centimetres,
+        16,
+    );
+    h.state_mut().dialogs.measure.as_mut().unwrap().table = table.clone();
+    h.run_steps(2);
+    // Bottom combo (the upper "As the template"), then the rail combo.
+    let combos = |h: &H| -> Vec<egui::Rect> {
+        let mut r: Vec<egui::Rect> = h
+            .query_all_by(|n| {
+                n.label().as_deref() == Some("As the template")
+                    || n.value().as_deref() == Some("As the template")
+            })
+            .map(|n| n.rect())
+            .collect();
+        r.sort_by(|a, b| a.min.y.total_cmp(&b.min.y));
+        r
+    };
+    let bottom = combos(&h)[0];
+    click_rect(&mut h, bottom);
+    click(&mut h, "Single concave");
+    let depth = field_on_row(&h, "Board from measurements", "Depth");
+    type_into(&mut h, depth, "0.5cm");
+    let rail = combos(&h)[0];
+    click_rect(&mut h, rail);
+    click(&mut h, "60/40");
+    snap(&mut h, "numbers-measurements-shaping");
+    let t = h.state().dialogs.measure.as_ref().unwrap().table.clone();
+    assert_eq!(t.bottom, Some(ContourKind::SingleConcave));
+    assert_eq!(t.bottom_depth, "0.5cm");
+    assert_eq!(t.rail, Some(1));
+    click(&mut h, "Create");
+    settle(&mut h);
+    let expected = measurements::build(
+        &measurements::parse(&t, surfcraft_core::LengthUnit::Centimetres).unwrap(),
+    )
+    .unwrap()
+    .0;
+    let b = &h.state().doc.board;
+    assert_eq!(b.sections, expected.sections);
+    let flat = measurements::build(
+        &measurements::parse(&table, surfcraft_core::LengthUnit::Centimetres).unwrap(),
+    )
+    .unwrap()
+    .0;
+    assert!(b.volume() < flat.volume());
+}
+
+fn click_rect(h: &mut H, rect: egui::Rect) {
+    let pos = rect.center();
+    h.hover_at(pos);
+    h.run_steps(1);
+    for pressed in [true, false] {
+        h.event(egui::Event::PointerButton {
+            pos,
+            button: egui::PointerButton::Primary,
+            pressed,
+            modifiers: Modifiers::NONE,
+        });
+    }
+    h.run_steps(3);
+}
