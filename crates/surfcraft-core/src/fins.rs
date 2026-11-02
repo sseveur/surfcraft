@@ -128,15 +128,16 @@ const MM: f64 = 0.1;
 
 // Box dimensions. Every value is documented, with its source, in docs/fins.md.
 
-/// FCS I (original / X-2): two round plugs. Hole: the 30 mm X-2 hole saw, 5/8" deep. Plug spacing: 53.5 mm
-/// centre to centre, derived from a measured fin's tabs (not published). Fin: FCS M5 base 4.37".
+/// FCS I (original): two round plugs, 53 mm centre to centre (two forum measurements agree), drilled with a
+/// 1 1/8" (28.6 mm) hole saw, 7/8" deep (plug 20 mm high + about 1/8"). X-2 plugs use a 30 mm saw, 5/8" deep.
+/// Fin: FCS M5 base 4.37".
 pub const FCS1: BoxSpec = BoxSpec {
     length: 0.0,
     width: 0.0,
     corner_radius: 0.0,
-    depth: Some(0.625 * INCH),
-    plug_diameter: 30.0 * MM,
-    plug_offsets: [-26.75 * MM, 26.75 * MM],
+    depth: Some(0.875 * INCH),
+    plug_diameter: 1.125 * INCH,
+    plug_offsets: [-26.5 * MM, 26.5 * MM],
     fin_base: 4.37 * INCH,
     confirmed: false,
 };
@@ -154,12 +155,12 @@ pub const FCS2: BoxSpec = BoxSpec {
     confirmed: true,
 };
 
-/// Futures box: 4 11/16" long (measured by a shaper), 1" wide (estimate, not published), corners of a 1/4"
-/// bit. Fin base 4.5".
+/// Futures ILT box (1/2" and 3/4" boxes share the footprint): routed flange 5 7/8" x 1 1/4" (149.8 x 31.8 mm)
+/// with fully round ends (Cleanline listing; a router jig modelled on the box agrees within 1 mm). Fin base 4.5".
 pub const FUTURES: BoxSpec = BoxSpec {
-    length: (4.0 + 11.0 / 16.0) * INCH,
-    width: 1.0 * INCH,
-    corner_radius: 0.125 * INCH,
+    length: 149.8 * MM,
+    width: 31.8 * MM,
+    corner_radius: 31.8 * MM / 2.0,
     depth: None,
     plug_diameter: 0.0,
     plug_offsets: [0.0, 0.0],
@@ -882,9 +883,9 @@ mod tests {
         }
         // The documented constants (docs/fins.md).
         assert!((FCS2.length - 11.0).abs() < 1e-12 && (FCS2.width - 3.75).abs() < 1e-12);
-        assert!((FCS1.plug_diameter - 3.0).abs() < 1e-12);
-        assert!((FCS1.plug_offsets[1] - FCS1.plug_offsets[0] - 5.35).abs() < 1e-12);
-        assert!((FUTURES.length - 4.6875 * INCH).abs() < 1e-12);
+        assert!((FCS1.plug_diameter - 2.8575).abs() < 1e-12);
+        assert!((FCS1.plug_offsets[1] - FCS1.plug_offsets[0] - 5.3).abs() < 1e-12);
+        assert!((FUTURES.length - 14.98).abs() < 1e-12 && (FUTURES.width - 3.18).abs() < 1e-12);
         assert!((US_BOX.length - 26.6).abs() < 1e-12 && (US_BOX.width - 2.5).abs() < 1e-12);
     }
 
