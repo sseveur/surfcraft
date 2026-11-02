@@ -5,9 +5,11 @@
 
 pub mod blank;
 pub mod board;
+pub mod fins;
 pub mod knot;
 pub mod math;
 pub mod mesh;
+pub mod rider;
 pub mod section;
 pub mod segment;
 pub mod spline;
@@ -17,6 +19,7 @@ pub mod weight;
 
 pub use blank::{Blank, BlankSetup, Placement};
 pub use board::{Board, BoardInfo, MachineData, Specs, SurfaceModel, fin};
+pub use fins::{BoxSystem, Fin, FinSetup, Preset};
 pub use glam::{DVec2, DVec3};
 pub use knot::{Handle, Knot, Locks};
 pub use mesh::{Mesh, MeshDetail};

@@ -172,12 +172,34 @@ fn every_tool_runs_headless() {
         "set_fins",
         json!({"side_rear_x": "4 1/2\"", "splay_degrees": 4}),
     );
+    let v = m.ok(
+        "suggest_volume",
+        json!({"weight_lb": 180, "skill": "advanced", "waves": "small"}),
+    );
+    assert!(v["middle_litres"].as_f64().unwrap() > 25.0);
+    let f = m.ok(
+        "set_fins",
+        json!({"preset": "5 fins", "box_system": "FCS II"}),
+    );
+    assert_eq!(f["setup"]["fins"].as_array().unwrap().len(), 5, "{f}");
     let w = m.ok("estimate_weight", json!({}));
     assert!(w["total_kg"].as_f64().unwrap() > 1.0);
     m.ok("set_surface_model", json!({"model": "control_point"}));
     m.ok("set_surface_model", json!({"model": "sblend"}));
     m.ok("flip_board", json!({}));
     m.ok("flip_board", json!({}));
+    let c = m.ok(
+        "apply_bottom_contour",
+        json!({"type": "single_concave", "depth": "1/8\"", "end": "4'", "fade_out": "1'"}),
+    );
+    assert!(c["sections_changed"].as_u64().unwrap() > 0, "{c}");
+    assert!(
+        c["volume_after_litres"].as_f64().unwrap() > c["volume_before_litres"].as_f64().unwrap()
+    );
+    m.fails("apply_bottom_contour", json!({"type": "spiral"}));
+    let r = m.ok("set_rails", json!({"preset": "60/40", "tuck": "1/4\""}));
+    assert!(r["sections_changed"].as_u64().unwrap() > 0, "{r}");
+    m.fails("set_rails", json!({"apex": 2}));
     assert_eq!(m.ok("undo", json!({}))["undone"], true);
     assert_eq!(m.ok("redo", json!({}))["redone"], true);
     for (what, format) in [
@@ -189,6 +211,8 @@ fn every_tool_runs_headless() {
         ("spec_sheet", "pdf"),
         ("model", "stl"),
         ("model", "obj"),
+        ("model", "3mf"),
+        ("model", "glb"),
         ("model", "step"),
     ] {
         let p = d.join(format!("mcp-{what}.{format}"));

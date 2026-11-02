@@ -35,6 +35,8 @@ pub(crate) enum Pending {
     New(Box<Board>),
     Open(PathBuf),
     Quit,
+    /// Open an autosave left by a crash.
+    Recover(Box<crate::autosave::Entry>),
 }
 
 // Fields are crate-visible so GUI tests (and the automation bridge) can inspect state.
@@ -64,6 +66,13 @@ pub struct SurfCraftApp {
     /// Guided tour (Help → Tour of SurfCraft; opens by itself on first launch).
     pub(crate) tour: Tour,
     pub(crate) tour_targets: tour::Targets,
+    /// Folder for logs (and autosaves); `None` in tests unless a test sets a temporary one.
+    pub(crate) data_dir: Option<PathBuf>,
+    pub(crate) trace: crate::app_log::Trace,
+    /// Help > Report a bug.
+    pub(crate) bug_report: Option<crate::bugreport_ui::BugReport>,
+    pub(crate) autosave: Option<crate::autosave::Autosave>,
+    pub(crate) recovery: crate::autosave_ui::Recovery,
 }
 
 /// Board formats the app can open.
@@ -102,6 +111,13 @@ impl SurfCraftApp {
                     .or_else(|| eframe::get_value(s, settings::OLD_STORAGE_KEY))
             })
             .unwrap_or_default();
+        if let Some(rs) = cc.wgpu_render_state.as_ref() {
+            let i = rs.adapter.get_info();
+            let gpu = format!("{} ({:?}, {:?})", i.name, i.backend, i.device_type);
+            log::info!("graphics: {gpu}");
+            crate::logging::set_gpu(gpu);
+        }
+        crate::logging::set_detailed(set.detailed_logging);
         let system_language = i18n::system_language();
         i18n::set_language(set.language.unwrap_or(system_language));
         let mut board = surfcraft_io::templates::TEMPLATES[0].board();
@@ -111,6 +127,9 @@ impl SurfCraftApp {
             open: !set.tour_done && args.screenshot.is_none() && !args.automation && !cfg!(test),
             step: 0,
         };
+        // Autosave except for screenshots and tests; crash recovery also not for the AI assistant.
+        let autosave = args.screenshot.is_none() && !cfg!(test);
+        let recover = autosave && !args.automation;
         let mut app = Self {
             ed: EditorState::default(),
             doc: Document::new(board, None),
@@ -132,8 +151,20 @@ impl SurfCraftApp {
             system_language,
             tour,
             tour_targets: Default::default(),
+            data_dir: if cfg!(test) {
+                None
+            } else {
+                crate::logging::data_dir()
+            },
+            trace: Default::default(),
+            bug_report: None,
+            autosave: None,
+            recovery: Default::default(),
         };
         app.ed.reset_for(&app.doc.board);
+        if autosave {
+            app.init_autosave(recover);
+        }
         if let Some(p) = args.open {
             app.open_path(&p);
             if args.untitled {
@@ -204,17 +235,20 @@ impl SurfCraftApp {
     }
 
     pub(crate) fn notify(&mut self, msg: impl Into<String>) {
-        self.status = Some((msg.into(), Instant::now()));
+        let msg = msg.into();
+        log::info!("message shown: {msg}");
+        self.status = Some((msg, Instant::now()));
     }
 
-    fn replace_document(&mut self, mut board: Board, path: Option<PathBuf>) {
+    pub(crate) fn replace_document(&mut self, mut board: Board, path: Option<PathBuf>) {
+        self.autosave_document_closed();
         board.model = self.set.model.into();
         self.doc = Document::new(board, path);
         self.ed.reset_for(&self.doc.board);
         self.results = None;
     }
 
-    fn guarded(&mut self, action: Pending) {
+    pub(crate) fn guarded(&mut self, action: Pending) {
         if self.doc.is_dirty() {
             self.pending = Some(action);
         } else {
@@ -226,6 +260,7 @@ impl SurfCraftApp {
         match action {
             Pending::New(b) => self.replace_document(*b, None),
             Pending::Open(p) => self.open_path(&p),
+            Pending::Recover(e) => self.recover(*e),
             Pending::Quit => {
                 self.allow_close = true;
             }
@@ -247,11 +282,15 @@ impl SurfCraftApp {
                     }
                     None
                 };
+                log::info!("opened {}", crate::logging::path(path));
                 self.replace_document(board, doc_path);
                 self.set.add_recent(path.to_path_buf());
                 self.notify(trf("Opened {0}", &[&path.display()]));
             }
-            Err(e) => self.notify(trf("Could not open {0}: {1}", &[&path.display(), &e])),
+            Err(e) => {
+                log::warn!("could not open {}: {e}", crate::logging::path(path));
+                self.notify(trf("Could not open {0}: {1}", &[&path.display(), &e]));
+            }
         }
     }
 
@@ -274,7 +313,7 @@ impl SurfCraftApp {
     }
 
     /// Native open dialog, or the next scripted path in tests and automation.
-    fn pick_file(&mut self, what: &str, exts: &[&str]) -> Option<PathBuf> {
+    pub(crate) fn pick_file(&mut self, what: &str, exts: &[&str]) -> Option<PathBuf> {
         if let Some(q) = self.scripted_dialogs.as_mut() {
             return q.pop_front();
         }
@@ -282,7 +321,12 @@ impl SurfCraftApp {
     }
 
     /// Native save dialog, or the next scripted path in tests and automation.
-    fn save_file(&mut self, what: &str, ext: &str, name: Option<&str>) -> Option<PathBuf> {
+    pub(crate) fn save_file(
+        &mut self,
+        what: &str,
+        ext: &str,
+        name: Option<&str>,
+    ) -> Option<PathBuf> {
         let mut p = match self.scripted_dialogs.as_mut() {
             Some(q) => q.pop_front()?,
             None => {
@@ -326,10 +370,14 @@ impl SurfCraftApp {
     fn save_to(&mut self, path: &Path) {
         match self.doc.save_to(path) {
             Ok(()) => {
+                log::info!("saved {}", crate::logging::path(path));
                 self.set.add_recent(path.to_path_buf());
                 self.notify(trf("Saved {0}", &[&path.display()]));
             }
-            Err(e) => self.notify(trf("Could not save {0}: {1}", &[&path.display(), &e])),
+            Err(e) => {
+                log::error!("could not save {}: {e}", crate::logging::path(path));
+                self.notify(trf("Could not save {0}: {1}", &[&path.display(), &e]));
+            }
         }
     }
 
@@ -417,9 +465,17 @@ impl SurfCraftApp {
     }
 
     pub fn write_export(&mut self, path: &Path, bytes: &[u8]) {
-        match write_with_backup(path, bytes) {
-            Ok(()) => self.notify(trf("Exported {0}", &[&path.display()])),
-            Err(e) => self.notify(trf("Export failed: {0}", &[&e])),
+        let r = write_with_backup(path, bytes);
+        let shown = crate::logging::path(path);
+        match r {
+            Ok(()) => {
+                log::info!("exported {shown} ({} bytes)", bytes.len());
+                self.notify(trf("Exported {0}", &[&path.display()]));
+            }
+            Err(e) => {
+                log::error!("export to {shown} failed: {e}");
+                self.notify(trf("Export failed: {0}", &[&e]));
+            }
         }
     }
 
@@ -556,6 +612,7 @@ impl SurfCraftApp {
                         self.doc.refresh_original();
                     }
                 }
+                self.autosave_menu(ui);
                 ui.separator();
                 if ui
                     .button(tr("Open ghost board…"))
@@ -572,6 +629,15 @@ impl SurfCraftApp {
                     .clicked()
                 {
                     self.ed.ghost = None;
+                }
+                if ui
+                    .button(tr("Compare with…"))
+                    .on_hover_text(tr(
+                        "Table of the differences with another board (or the ghost board)",
+                    ))
+                    .clicked()
+                {
+                    self.compare_with();
                 }
                 ui.separator();
                 if ui
@@ -769,11 +835,24 @@ impl SurfCraftApp {
                 if ui.button(tr("Board info…")).clicked() {
                     self.dialogs.info = true;
                 }
-                if ui.button(tr("Fins…")).clicked() {
+                if ui
+                    .button(tr("Fins…"))
+                    .on_hover_text(tr(
+                        "Fin setups (thruster, quad, 5 fins…) with FCS I, FCS II, Futures or US box footprints",
+                    ))
+                    .clicked()
+                {
                     self.dialogs.fins = true;
                 }
                 if ui.button(tr("Weight calculator…")).clicked() {
                     self.dialogs.weight = Some(crate::tools::WeightState::new(&self.doc.board));
+                }
+                if ui
+                    .button(tr("Volume advisor…"))
+                    .on_hover_text(tr("Suggested volume for a rider's weight, skill and waves"))
+                    .clicked()
+                {
+                    self.dialogs.volume_advisor = true;
                 }
                 if ui.button(tr("Guide points…")).clicked() {
                     self.dialogs.guides = true;
@@ -802,6 +881,22 @@ impl SurfCraftApp {
                 }
             });
             self.tour_targets.board = Some(board.response.rect);
+            ui.menu_button(tr("Shape"), |ui| {
+                if ui
+                    .button(tr("Bottom contours…"))
+                    .on_hover_text(tr("Concaves, vee and channels along the board, applied to every cross-section in a zone."))
+                    .clicked()
+                {
+                    self.dialogs.shaping.open_contours();
+                }
+                if ui
+                    .button(tr("Rails…"))
+                    .on_hover_text(tr("Rail shape for every cross-section: apex height (50/50, 60/40, 70/30), softness and tuck."))
+                    .clicked()
+                {
+                    self.dialogs.shaping.open_rails();
+                }
+            });
             let machine = ui.menu_button(tr("Machine"), |ui| {
                 if ui
                     .button(tr("Machine (CAM)…"))
@@ -817,6 +912,8 @@ impl SurfCraftApp {
                     self.tour.start();
                     ui.close();
                 }
+                ui.separator();
+                self.log_menu_items(ui);
                 ui.separator();
                 ui.label(tr("Shortcuts"));
                 ui.weak(tr(
@@ -1144,6 +1241,15 @@ impl eframe::App for SurfCraftApp {
             .filter(|r| r.revision == self.doc.revision)
             .map(|r| r.specs.volume);
         crate::tools::weight_window(&ctx, &mut self.dialogs.weight, &self.doc, volume, &self.set);
+        if self.dialogs.volume_advisor {
+            crate::volume_ui::advisor_window(
+                &ctx,
+                &mut self.dialogs.volume_advisor,
+                &mut self.doc,
+                volume,
+                &self.set,
+            );
+        }
         if self.dialogs.guides {
             let curve = self
                 .ed
@@ -1201,6 +1307,18 @@ impl eframe::App for SurfCraftApp {
                 self.save_export(&name, &bytes);
             }
         }
+        if let Some(msg) = crate::shaping_ui::windows(
+            &ctx,
+            &mut self.dialogs.shaping,
+            &mut self.doc,
+            &mut self.ed,
+            &mut self.set,
+        ) {
+            self.notify(msg);
+        }
+        self.compare_window(&ctx);
+        self.bug_report_window(&ctx);
+        self.autosave_frame(&ctx);
         let tour = self.tour.show(&ctx, &self.tour_targets);
         if let Some(tab) = tour.tab {
             self.tab = tab;
@@ -1213,10 +1331,16 @@ impl eframe::App for SurfCraftApp {
         if !ctx.egui_wants_keyboard_input() && !ctx.input(|i| i.pointer.any_down()) {
             self.doc.end_group();
         }
+        self.log_frame(&ctx);
     }
 
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, settings::STORAGE_KEY, &self.set);
+    }
+
+    fn on_exit(&mut self) {
+        self.autosave_shutdown();
+        log::info!("exit");
     }
 }
 

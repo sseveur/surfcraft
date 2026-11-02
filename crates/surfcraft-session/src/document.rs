@@ -18,6 +18,8 @@ pub struct Document {
     pub revision: u64,
     /// Board before an open edit group (typing in a field), committed as one undo step by [`Self::end_group`].
     group_before: Option<Board>,
+    /// Unsaved whatever the board's content (a board recovered after a crash), until the next save.
+    unsaved: bool,
 }
 
 impl Document {
@@ -32,6 +34,7 @@ impl Document {
             redo: Vec::new(),
             revision: 0,
             group_before: None,
+            unsaved: false,
         }
     }
 
@@ -53,7 +56,12 @@ impl Document {
     }
 
     pub fn is_dirty(&self) -> bool {
-        self.board != self.saved
+        self.unsaved || self.board != self.saved
+    }
+
+    /// Treat the board as having unsaved changes until it is saved (e.g. recovered from an autosave).
+    pub fn mark_unsaved(&mut self) {
+        self.unsaved = true;
     }
 
     pub fn title(&self) -> String {
@@ -87,6 +95,7 @@ impl Document {
         }
         self.redo.clear();
         self.revision += 1;
+        log::debug!("edit (undo depth {})", self.undo.len());
     }
 
     /// Apply a change as one undo step.
@@ -114,6 +123,7 @@ impl Document {
         if let Some(b) = self.undo.pop() {
             self.redo.push(std::mem::replace(&mut self.board, b));
             self.revision += 1;
+            log::debug!("undo (undo depth {})", self.undo.len());
         }
     }
 
@@ -122,6 +132,7 @@ impl Document {
         if let Some(b) = self.redo.pop() {
             self.undo.push(std::mem::replace(&mut self.board, b));
             self.revision += 1;
+            log::debug!("redo (undo depth {})", self.undo.len());
         }
     }
 
@@ -130,6 +141,7 @@ impl Document {
         write_with_backup(path, surfcraft_io::brd::write(&self.board).as_bytes())?;
         self.path = Some(path.to_path_buf());
         self.saved = self.board.clone();
+        self.unsaved = false;
         Ok(())
     }
 

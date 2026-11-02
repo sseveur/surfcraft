@@ -185,7 +185,11 @@ fn no_negative_zero_in_formatted_lengths() {
 #[test]
 fn tool_specs_are_complete_and_unique() {
     let specs = tool_specs();
-    assert_eq!(specs.len(), 26, "command count (25 + generate_toolpath)");
+    assert_eq!(
+        specs.len(),
+        29,
+        "command count (25 + generate_toolpath + suggest_volume + apply_bottom_contour + set_rails)"
+    );
     let mut names: Vec<_> = specs.iter().map(|s| s.name).collect();
     names.sort();
     names.dedup();
@@ -307,8 +311,49 @@ fn invalid_inputs_are_errors() {
             "export",
             json!({"what": "rail", "format": "pdf", "path": "/tmp/x.pdf"}),
         ),
+        (
+            "export",
+            json!({"what": "model", "format": "3mf", "path": "/tmp/x.3mf", "scale": 0}),
+        ),
+        (
+            "export",
+            json!({"what": "model", "format": "glb", "path": "/tmp/x.glb", "scale": "big"}),
+        ),
         ("set_surface_model", json!({})),
         ("set_surface_model", json!({"model": "loft"})),
+        ("apply_bottom_contour", json!({})),
+        ("apply_bottom_contour", json!({"type": "spiral"})),
+        ("apply_bottom_contour", json!({"type": "vee", "depth": -1})),
+        (
+            "apply_bottom_contour",
+            json!({"type": "vee", "start": 100, "end": 50}),
+        ),
+        (
+            "apply_bottom_contour",
+            json!({"type": "vee", "run_out_fraction": 0.5, "run_out_from_rail": 2}),
+        ),
+        (
+            "apply_bottom_contour",
+            json!({"type": "vee", "run_out_fraction": 3}),
+        ),
+        (
+            "apply_bottom_contour",
+            json!({"type": "channels", "channel_count": 0}),
+        ),
+        (
+            "apply_bottom_contour",
+            json!({"type": "channels", "channel_count": -2}),
+        ),
+        (
+            "apply_bottom_contour",
+            json!({"type": "single_concave", "section_spacing": 0.1}),
+        ),
+        ("set_rails", json!({"preset": "90/10"})),
+        ("set_rails", json!({"apex": 1.5})),
+        ("set_rails", json!({"softness": "soft"})),
+        ("set_rails", json!({"tuck": "a lot"})),
+        ("set_rails", json!({"tail": 3})),
+        ("set_rails", json!({"start": 100, "end": 20})),
         ("does_not_exist", json!({})),
     ];
     for (name, a) in cases {
@@ -381,6 +426,11 @@ fn undo_after_every_command_restores_exact_board() {
             ),
             ("set_surface_model", json!({"model": "control_point"})),
             ("flip_board", json!({})),
+            (
+                "apply_bottom_contour",
+                json!({"type": "single_concave", "depth": "1/8\"", "end": "4'"}),
+            ),
+            ("set_rails", json!({"preset": "70/30"})),
         ]
     };
     for (t, template) in TEMPLATES.iter().enumerate() {
@@ -419,6 +469,10 @@ fn read_only_commands_do_not_touch_history() {
         ("get_curve", json!({"curve": "section"})),
         ("section_info", json!({})),
         ("estimate_weight", json!({"foam_density": 0.03})),
+        (
+            "suggest_volume",
+            json!({"weight_kg": 75, "skill": "advanced", "board_type": "fish"}),
+        ),
     ] {
         ok(&mut d, &mut c, n, a);
     }
@@ -679,6 +733,44 @@ fn estimate_weight_is_plausible_and_reacts_to_overrides() {
         .as_f64()
         .unwrap();
     assert!(heavy > base);
+}
+
+#[test]
+fn suggest_volume_follows_the_guild_factor() {
+    let (mut d, mut c) = session(0);
+    let s = ok(
+        &mut d,
+        &mut c,
+        "suggest_volume",
+        json!({"weight_kg": 75, "skill": "intermediate"}),
+    );
+    assert_eq!(s["min_litres"], 30.0);
+    assert_eq!(s["max_litres"], 33.8);
+    let lb = ok(
+        &mut d,
+        &mut c,
+        "suggest_volume",
+        json!({"weight_lb": 165.35, "skill": "intermediate"}),
+    );
+    assert_eq!(lb["min_litres"], 30.0);
+    let long = ok(
+        &mut d,
+        &mut c,
+        "suggest_volume",
+        json!({"weight_kg": 75, "skill": "beginner", "board_type": "longboard", "waves": "small", "age": 60, "fitness": "low"}),
+    );
+    assert!(long["min_litres"].as_f64().unwrap() > 60.0);
+    for bad in [
+        json!({}),
+        json!({"weight_kg": 75, "weight_lb": 165}),
+        json!({"weight_kg": 2}),
+        json!({"weight_kg": 75, "skill": "god"}),
+    ] {
+        assert!(
+            execute(&mut d, &mut c, "suggest_volume", &bad).is_err(),
+            "{bad}"
+        );
+    }
 }
 
 #[test]
@@ -1118,6 +1210,33 @@ fn every_export_is_structurally_valid() {
                 assert!(i >= 1 && i <= nv, "OBJ index {i} of {nv}");
             }
         }
+        // 3MF and GLB: same mesh as the STL, at 1:10.
+        let p = dir.join(format!("t{t}.3mf"));
+        ok(
+            &mut d,
+            &mut c,
+            "export",
+            json!({"what": "model", "format": "3mf", "path": p, "scale": 0.1}),
+        );
+        let entries = surfcraft_export::zip::read(&std::fs::read(&p).unwrap()).unwrap();
+        let xml = String::from_utf8(entries[2].1.clone()).unwrap();
+        assert_eq!(xml.matches("<triangle ").count(), n, "3MF triangles");
+        assert!(xml.contains("Scale 1:10<"));
+        let p = dir.join(format!("t{t}.glb"));
+        ok(
+            &mut d,
+            &mut c,
+            "export",
+            json!({"what": "model", "format": "glb", "path": p}),
+        );
+        let (gl, _) = surfcraft_export::gltf::read(&std::fs::read(&p).unwrap()).unwrap();
+        assert_eq!(
+            gl["accessors"][2]["count"].as_u64().unwrap() as usize,
+            3 * n
+        );
+        let z = gl["accessors"][0]["max"][2].as_f64().unwrap()
+            - gl["accessors"][0]["min"][2].as_f64().unwrap();
+        assert!((z * 100.0 - d.board.length()).abs() < 0.3, "GLB in metres");
         // STEP re-imports to the same knots.
         let p = dir.join(format!("t{t}.stp"));
         ok(
@@ -1259,4 +1378,145 @@ fn remove_section_keeps_current_section_valid() {
 #[test]
 fn double_minus_is_rejected() {
     assert_eq!(LengthUnit::Centimetres.parse("--3"), None);
+}
+
+/// Shaping tools on every template: every contour type and rail preset as one undo step, volumes reported,
+/// widths and stringer thickness kept, mesh and CAM still work.
+#[test]
+fn shaping_commands_on_every_template() {
+    for t in 0..TEMPLATES.len() {
+        let kinds = [
+            json!({"type": "flat"}),
+            json!({"type": "single_concave", "depth": "3/16\"", "fade_out": "2'"}),
+            json!({"type": "double_concave", "depth": "1/8\"", "inner_depth": "1/16\"", "end": "3'"}),
+            json!({"type": "vee", "depth": "1/4\"", "end": "2'", "run_out_fraction": 0.85}),
+            json!({"type": "channels", "channel_count": 3, "channel_width": "3/4\"", "end": "18\""}),
+            json!({"type": "remove"}),
+        ];
+        let rails = ["50/50", "60/40", "70/30", "80/20"]
+            .map(|p| json!({"preset": p}))
+            .into_iter()
+            .chain([json!({"apex": 0.45, "softness": 0.5, "tuck": "1/4\"",
+                "tail": {"preset": "80/20"}, "nose": {"softness": 1}, "start": "1'", "end": "5'"})]);
+        let cases = kinds
+            .into_iter()
+            .map(|a| ("apply_bottom_contour", a))
+            .chain(rails.map(|a| ("set_rails", a)));
+        for (name, a) in cases {
+            let (mut d, mut c) = session(t);
+            let before = d.board.clone();
+            let r = ok(&mut d, &mut c, name, a.clone());
+            let (v0, v1) = (
+                r["volume_before_litres"].as_f64().unwrap(),
+                r["volume_after_litres"].as_f64().unwrap(),
+            );
+            assert!((v1 - v0).abs() < 0.06 * v0, "{t} {name} {a}: {v0} -> {v1}");
+            assert!(r["sections_changed"].as_u64().unwrap() > 0, "{t} {a}");
+            assert!(finite_board(&d.board));
+            let l = before.length();
+            for i in 1..20 {
+                let x = l * i as f64 / 20.0;
+                assert!((d.board.width_at(x) - before.width_at(x)).abs() < 1e-9);
+                assert!((d.board.thickness_at(x) - before.thickness_at(x)).abs() < 1e-9);
+            }
+            assert_eq!(d.board.outline, before.outline);
+            assert_eq!(d.board.bottom, before.bottom, "rocker kept");
+            assert_eq!(d.board.deck, before.deck);
+            let mesh =
+                surfcraft_core::Mesh::of_board(&d.board, surfcraft_core::MeshDetail::PREVIEW);
+            assert!(mesh.is_watertight(), "{t} {a}");
+            // One undo step restores the board exactly.
+            ok(&mut d, &mut c, "undo", json!({}));
+            assert_eq!(d.board, before, "{t} {a}");
+            assert!(!d.can_undo());
+        }
+    }
+}
+
+#[test]
+fn shaped_board_still_machines() {
+    for t in 0..TEMPLATES.len() {
+        let (mut d, mut c) = session(t);
+        ok(
+            &mut d,
+            &mut c,
+            "apply_bottom_contour",
+            json!({"type": "double_concave", "end": "3'"}),
+        );
+        ok(&mut d, &mut c, "set_rails", json!({"preset": "70/30"}));
+        let r = ok(
+            &mut d,
+            &mut c,
+            "generate_toolpath",
+            json!({"job": "bottom"}),
+        );
+        assert!(r.to_string().contains("passes"), "{r}");
+    }
+}
+
+#[test]
+fn set_fins_places_presets_with_boxes() {
+    let (mut d, mut c) = session(0);
+    let r = ok(
+        &mut d,
+        &mut c,
+        "set_fins",
+        json!({"preset": "five", "box_system": "fcs2"}),
+    );
+    let fins = r["setup"]["fins"].as_array().unwrap();
+    assert_eq!(fins.len(), 5, "{r}");
+    assert!(fins.iter().all(|f| f["box_system"] == "fcs2"));
+    assert_eq!(r["setup"]["preset"], "five");
+    assert_eq!(r["setup"]["stored"], true);
+    // The legacy marks follow the setup.
+    assert_eq!(
+        r["fins"].as_array().unwrap()[0].as_f64().unwrap(),
+        d.board.fins[0]
+    );
+    assert!(d.board.fins[0] > 0.0);
+    // One undo step.
+    ok(&mut d, &mut c, "undo", json!({}));
+    assert_eq!(d.board.fin_setup, None);
+    ok(&mut d, &mut c, "redo", json!({}));
+    // Changing only the box system keeps the positions.
+    let before = d.board.fin_setup.clone().unwrap();
+    let r = ok(&mut d, &mut c, "set_fins", json!({"box_system": "Futures"}));
+    let after = d.board.fin_setup.clone().unwrap();
+    assert_eq!(r["setup"]["box_system"], "futures");
+    for (a, b) in before.fins.iter().zip(&after.fins) {
+        assert_eq!((a.x, a.y), (b.x, b.y));
+    }
+    // 2+1: US box in the middle.
+    let r = ok(
+        &mut d,
+        &mut c,
+        "set_fins",
+        json!({"preset": "2+1", "box_system": "fcs1"}),
+    );
+    let systems: Vec<&str> = r["setup"]["fins"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|f| f["box_system"].as_str().unwrap())
+        .collect();
+    assert_eq!(systems, ["fcs1", "fcs1", "usbox"]);
+    // The old arguments still work, and replace the setup by plain marks.
+    let r = ok(&mut d, &mut c, "set_fins", json!({"side_rear_x": 25}));
+    assert_eq!(r["fins"][0], 25.0);
+    assert_eq!(d.board.fin_setup, None);
+    assert_eq!(r["setup"]["stored"], false);
+    // A call without arguments changes nothing.
+    ok(&mut d, &mut c, "set_fins", json!({"preset": "thruster"}));
+    let s = d.board.fin_setup.clone();
+    ok(&mut d, &mut c, "set_fins", json!({}));
+    assert_eq!(d.board.fin_setup, s);
+    for bad in [
+        json!({"preset": "hexa"}),
+        json!({"box_system": "glue"}),
+        json!({"preset": 3}),
+        json!({"preset": "custom"}),
+        json!({"preset": "quad", "side_rear_x": 20}),
+    ] {
+        err(&mut d, &mut c, "set_fins", bad);
+    }
 }

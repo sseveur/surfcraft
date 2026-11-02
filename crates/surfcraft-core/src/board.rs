@@ -194,6 +194,9 @@ pub struct Board {
     pub sections: Vec<CrossSection>,
     /// Fin marks, see [`fin`].
     pub fins: [f64; 9],
+    /// The fin setup with boxes (`.brd` p60); `None` for boards that only have the legacy marks in `fins`.
+    /// Kept in step with `fins` by [`Board::set_fin_setup`].
+    pub fin_setup: Option<crate::fins::FinSetup>,
     pub info: BoardInfo,
     pub machine: MachineData,
     pub model: SurfaceModel,
@@ -883,6 +886,10 @@ impl Board {
         for i in [fin::SIDE_REAR_Y, fin::SIDE_FRONT_Y] {
             self.fins[i] *= ry;
         }
+        if let Some(mut s) = self.fin_setup.take() {
+            s.scale(rx, ry);
+            self.set_fin_setup(s);
+        }
     }
 
     /// Swap nose and tail: mirror every curve, section position, guide point and fin mark along the length.
@@ -924,6 +931,10 @@ impl Board {
         if f[fin::CENTER_REAR_X] != 0.0 || f[fin::CENTER_FRONT_X] != 0.0 {
             self.fins[fin::CENTER_REAR_X] = fx(f[fin::CENTER_FRONT_X]);
             self.fins[fin::CENTER_FRONT_X] = fx(f[fin::CENTER_REAR_X]);
+        }
+        if let Some(mut s) = self.fin_setup.take() {
+            s.flip(l);
+            self.set_fin_setup(s);
         }
         self.apply_locks();
     }

@@ -210,8 +210,13 @@ fn guide_cross(d: &mut Drawing, p: DVec2) {
     d.cross(p, GUIDE_CROSS, Style::GUIDE);
 }
 
-/// Fin marks in the plan view (mm), each lengthwise position mapped through `map_x`.
-fn draw_fins(d: &mut Drawing, board: &Board, map_x: &dyn Fn(f64) -> f64, style: Style) {
+/// Fin marks in the plan view (mm), each lengthwise position mapped through `map_x`: the fin setup with its box
+/// footprints when the board has one (only the upper side's fins with `half`), else the legacy marks.
+fn draw_fins(d: &mut Drawing, board: &Board, map_x: &dyn Fn(f64) -> f64, style: Style, half: bool) {
+    if let Some(s) = &board.fin_setup {
+        crate::fins::draw(d, s, map_x, half, style);
+        return;
+    }
     let f = board.fins;
     let p = |x: f64, y: f64| DVec2::new(map_x(x * 10.0), y * 10.0);
     if f[fin::SIDE_REAR_X] != 0.0 || f[fin::SIDE_FRONT_X] != 0.0 {
@@ -286,7 +291,14 @@ pub fn outline(board: &Board, opts: OutlineOptions, fmt: &dyn Fn(f64) -> String)
         }
     }
     if opts.fins {
-        draw_fins(&mut d, board, &*map_x, Style::GUIDE);
+        draw_fins(&mut d, board, &*map_x, Style::GUIDE, !opts.full);
+        // Measurement table under the drawing, for marking out and installing the boxes.
+        if let Some(s) = &board.fin_setup
+            && !s.is_empty()
+        {
+            let (lo, _) = bounds_or_zero(&d);
+            crate::fins::draw_table(&mut d, board, s, DVec2::new(0.0, lo.y - 10.0), 3.0, fmt);
+        }
     }
     finish(
         d,
@@ -562,16 +574,18 @@ pub fn spec_sheet(board: &Board, volume: f64, page: DVec2, fmt: &dyn Fn(f64) -> 
     );
     {
         let mut fins = Drawing::default();
-        draw_fins(&mut fins, board, &|x| x, black);
+        draw_fins(&mut fins, board, &|x| x, black, false);
         for item in fins.items {
-            if let Item::Path { points, .. } = item {
-                d.path(
-                    points
-                        .iter()
-                        .map(|p| at(p.x / 10.0, p.y / 10.0, yc))
-                        .collect(),
-                    black,
-                );
+            if let Item::Path { points, closed, .. } = item {
+                let pts = points
+                    .iter()
+                    .map(|p| at(p.x / 10.0, p.y / 10.0, yc))
+                    .collect();
+                if closed {
+                    d.closed(pts, thin);
+                } else {
+                    d.path(pts, black);
+                }
             }
         }
     }
@@ -666,7 +680,30 @@ pub fn spec_sheet(board: &Board, volume: f64, page: DVec2, fmt: &dyn Fn(f64) -> 
     // Fins block, only when there is fin data.
     let f = board.fins;
     let fin_type = info.fin_type.trim();
-    if f[fin::SIDE_FRONT_X] != 0.0 || f[fin::CENTER_FRONT_X] != 0.0 || !fin_type.is_empty() {
+    let setup = board.fin_setup.as_ref().filter(|s| !s.is_empty());
+    if let Some(s) = setup {
+        y += line + 5.0 * PT;
+        put(margin, y, size, crate::fins::title(s), Anchor::Left);
+        if !fin_type.is_empty() {
+            y += line + 5.0 * PT;
+            put(
+                margin,
+                y,
+                size,
+                format!("Fin type: {fin_type}"),
+                Anchor::Left,
+            );
+        }
+        let rows = crate::fins::table_rows(board, s, fmt);
+        let cols = [0.0, 0.14, 0.26, 0.38, 0.54, 0.64, 0.76, 0.88];
+        for r in &rows {
+            y += line + 2.0 * PT;
+            for (c, t) in cols.iter().zip(r) {
+                put(margin + c * pw, y, size * 0.9, t.clone(), Anchor::Left);
+            }
+        }
+        y += line + 10.0 * PT;
+    } else if f[fin::SIDE_FRONT_X] != 0.0 || f[fin::CENTER_FRONT_X] != 0.0 || !fin_type.is_empty() {
         y += line + 5.0 * PT;
         put(margin, y, size, "Fins".into(), Anchor::Left);
         if !fin_type.is_empty() {

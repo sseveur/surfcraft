@@ -569,16 +569,43 @@ p35 : (
 
 ### 3.11 SurfCraft extensions
 
-SurfCraft stores a few things the original format has no field for under codes the original reader ignores
-(p58–p98). Each is one `pNN : value` line written after p31 and before the curve blocks; a file without them
-loads exactly as before, and the original program opens files that have them.
+SurfCraft stores data BoardCAD does not have under codes BoardCAD ignores, and keeps the legacy fields
+filled with their closest equivalent so the file still opens in BoardCAD. A file without these codes loads
+exactly as before, and nothing new is written for it.
 
-#### p63 — foam blank
+**p60: fin setup** (one line, written after p50, only when the board has a fin setup):
 
-The blank chosen in Fit in blank and where the board sits in it. Written only when a blank is chosen. The value
-is a space-separated list of `KEY=number` items followed by `name=` and the blank's name, which runs to the end of
-the line (it may contain spaces and `=`; line breaks are replaced by spaces). Numbers are centimetres or degrees,
-in the shortest form that reads back exactly.
+```
+p60 : 1 <preset> <system>[; <system> <x> <y> <base> <toe> <cant> <depth>]...
+```
+
+* `1` is the format version. A reader ignores a p60 it cannot read, and the fins then come from p50.
+* `<preset>`: `custom`, `single`, `twin`, `twin_trailer`, `thruster`, `quad`, `2+1` or `five`.
+* `<system>`: `none`, `fcs1`, `fcs2`, `futures` or `usbox`. The header holds the setup's system, and each fin has its own.
+* One group per fin, separated by `;`. Numbers are in Rust's shortest round-trip notation.
+  * `x`: tail to the fin's trailing edge (rear of the base), cm.
+  * `y`: signed offset of that point from the stringer, cm. Positive is the rider's left when standing on the deck facing the nose; 0 is a centre fin.
+  * `base`: base length, cm.
+  * `toe`: degrees, leading edge towards the stringer.
+  * `cant`: degrees, tip towards the rail.
+  * `depth`: cm.
+
+Example (a thruster):
+
+```
+p60 : 1 thruster fcs2; fcs2 27.94 21.3 11.1 3.28 6.5 11.43; fcs2 27.94 -21.3 11.1 3.28 6.5 11.43; fcs2 8.89 0 11.1 0 0 11.43
+```
+
+p50 is written from the setup:
+* The side fin is the frontmost fin on the left, or on the right if there is none on the left: its rear and front points, its depth, and its cant as the splay.
+* The centre fin is the frontmost fin on the stringer: its rear x, rear x + base, and its depth.
+
+A board read without p60 shows the setup described by p50: a pair of side fins if a side mark is set, a centre fin if a centre mark is set, and no boxes.
+
+**p63: foam blank** (one line, written after p31, only when a blank is chosen): the blank chosen in Fit in
+blank and where the board sits in it. The value is a space-separated list of `KEY=number` items followed by
+`name=` and the blank's name, which runs to the end of the line (it may contain spaces and `=`; line breaks are
+replaced by spaces). Numbers are centimetres or degrees, in the shortest form that reads back exactly.
 
 | Key | Meaning | Required |
 |---|---|---|

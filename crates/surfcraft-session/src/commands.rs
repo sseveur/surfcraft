@@ -10,7 +10,7 @@ use surfcraft_core::units::FOOT;
 use surfcraft_core::weight::{self, Layup};
 use surfcraft_core::{Board, DVec2, Handle, LengthUnit, Mesh, MeshDetail, SurfaceModel};
 use surfcraft_export::drawing::{Paper, fit_page, tile};
-use surfcraft_export::{dxf, mesh_formats, pdf, svg, templates, woodwork};
+use surfcraft_export::{dxf, gltf, mesh_formats, pdf, svg, templates, threemf, woodwork};
 
 /// Names accepted by the `export` command's `what`.
 fn export_names() -> Vec<&'static str> {
@@ -61,9 +61,9 @@ pub struct ToolSpec {
     pub input_schema: Value,
 }
 
-type R = Result<Value, String>;
+pub(crate) type R = Result<Value, String>;
 
-fn len_schema(desc: &str) -> Value {
+pub(crate) fn len_schema(desc: &str) -> Value {
     json!({"type": ["number", "string"], "description": format!("{desc} (cm, or a string with units like \"6'2\\\"\" or \"47cm\")")})
 }
 
@@ -74,7 +74,7 @@ fn curve_schema() -> Value {
     })
 }
 
-fn obj(props: Value, required: &[&str]) -> Value {
+pub(crate) fn obj(props: Value, required: &[&str]) -> Value {
     json!({"type": "object", "properties": props, "required": required})
 }
 
@@ -91,7 +91,7 @@ fn merge(a: Value, b: Value) -> Value {
 /// All commands with descriptions and JSON input schemas.
 pub fn tool_specs() -> Vec<ToolSpec> {
     let handle = json!({"type": "string", "enum": ["point", "prev", "next"], "description": "point = the knot itself; prev/next = its tangent handles"});
-    vec![
+    let mut specs = vec![
         ToolSpec {
             name: "board_summary",
             description: "Main dimensions and volume of the open board, its metadata and cross-section positions.",
@@ -241,9 +241,11 @@ pub fn tool_specs() -> Vec<ToolSpec> {
         },
         ToolSpec {
             name: "set_fins",
-            description: "Fin positions: side fin rear/front (x from tail, y from stringer), centre fin rear/front x, depths, splay (degrees).",
+            description: "Fin setup. Either `preset` (single, twin, twin_trailer, thruster, quad, 2+1, five) and/or `box_system` (fcs1, fcs2, futures, usbox, none): places the fins with standard positions for this board and box footprints; or the legacy BoardCAD marks: side fin rear/front (x from tail, y from stringer), centre fin rear/front x, depths, splay (degrees), which replace the setup by plain marks. Returns the legacy marks (`fins`) and the fin list (`setup`, cm and degrees).",
             input_schema: obj(
                 json!({
+                    "preset": {"type": "string", "enum": crate::fins_cmd::PRESETS, "description": "Standard fin arrangement, placed for this board"},
+                    "box_system": {"type": "string", "enum": crate::fins_cmd::BOX_SYSTEMS, "description": "Fin boxes: FCS I plugs, FCS II, Futures, single-fin US box, or none (position only)"},
                     "side_rear_x": len_schema("Side fin trailing edge, from tail"),
                     "side_rear_y": len_schema("Side fin trailing edge, out from stringer"),
                     "side_front_x": len_schema("Side fin leading edge, from tail"),
@@ -258,6 +260,21 @@ pub fn tool_specs() -> Vec<ToolSpec> {
             ),
         },
         ToolSpec {
+            name: "suggest_volume",
+            description: "Starting-point board volume (litres) for a rider by the Guild factor method (weight x factor by skill), adjusted for age, fitness, waves and board type; also reports the open board's volume. Give weight_kg or weight_lb.",
+            input_schema: obj(
+                json!({
+                    "weight_kg": {"type": "number"}, "weight_lb": {"type": "number"},
+                    "skill": {"type": "string", "enum": ["beginner", "intermediate", "advanced", "pro"]},
+                    "fitness": {"type": "string", "enum": ["low", "average", "high"]},
+                    "waves": {"type": "string", "enum": ["small", "average", "powerful"]},
+                    "board_type": {"type": "string", "enum": ["shortboard", "fish", "mid_length", "longboard"]},
+                    "age": {"type": "integer", "description": "Years (optional)"}
+                }),
+                &[],
+            ),
+        },
+        ToolSpec {
             name: "estimate_weight",
             description: "Finished weight estimate (kg) for a foam/stringer/glass layup. Optional overrides: foam_density, stringer_density (kg/L), deck_glass, bottom_glass (kg/m²), resin_ratio.",
             input_schema: obj(
@@ -267,9 +284,9 @@ pub fn tool_specs() -> Vec<ToolSpec> {
         },
         ToolSpec {
             name: "export",
-            description: "Write a template, spec sheet or 3D model. PDF is tiled 1:1 over pages (spec sheet: one page); SVG/DXF are one 1:1 sheet; STL/OBJ in mm. Also woodworking templates for sandwich, hollow wood (hws_*) and chambered construction.",
+            description: "Write a template, spec sheet or 3D model. PDF is tiled 1:1 over pages (spec sheet: one page); SVG/DXF are one 1:1 sheet; STL/OBJ/3MF in mm, GLB (glTF 2.0) in metres, Y up, nose +Z; scale for scale models (0.1 = 1:10). Also woodworking templates for sandwich, hollow wood (hws_*) and chambered construction.",
             input_schema: obj(
-                json!({"what": {"type": "string", "enum": export_names()}, "format": {"type": "string", "enum": ["pdf", "svg", "dxf", "stl", "obj", "step"], "description": "model: stl, obj or step (STEP holds the exact Bezier curves); drawings: pdf, svg or dxf"}, "path": {"type": "string"}, "paper": {"type": "string", "enum": ["A4", "A3", "Letter", "Tabloid"]}}),
+                json!({"what": {"type": "string", "enum": export_names()}, "format": {"type": "string", "enum": ["pdf", "svg", "dxf", "stl", "obj", "3mf", "glb", "step"], "description": "model: stl, obj, 3mf (3D printing), glb (glTF binary) or step (STEP holds the exact Bezier curves); drawings: pdf, svg or dxf"}, "path": {"type": "string"}, "paper": {"type": "string", "enum": ["A4", "A3", "Letter", "Tabloid"]}, "scale": {"type": "number", "description": "Model scale factor for stl/obj/3mf/glb, e.g. 0.1 for a 1:10 model (default 1)"}}),
                 &["what", "format", "path"],
             ),
         },
@@ -314,12 +331,14 @@ pub fn tool_specs() -> Vec<ToolSpec> {
             description: "Redo the last undone change.",
             input_schema: obj(json!({}), &[]),
         },
-    ]
+    ];
+    specs.extend(crate::shaping_commands::specs());
+    specs
 }
 
 // --------------------------------------------------------------------------------------------- helpers
 
-fn arg<'a>(a: &'a Value, k: &str) -> Option<&'a Value> {
+pub(crate) fn arg<'a>(a: &'a Value, k: &str) -> Option<&'a Value> {
     a.get(k).filter(|v| !v.is_null())
 }
 
@@ -327,7 +346,7 @@ fn arg<'a>(a: &'a Value, k: &str) -> Option<&'a Value> {
 /// length-proportional sampling bounded.
 const MAX_COORD: f64 = 1000.0;
 
-fn length(a: &Value, k: &str) -> Result<Option<f64>, String> {
+pub(crate) fn length(a: &Value, k: &str) -> Result<Option<f64>, String> {
     let v = match arg(a, k) {
         None => return Ok(None),
         Some(Value::Number(n)) => n.as_f64(),
@@ -347,7 +366,7 @@ fn length(a: &Value, k: &str) -> Result<Option<f64>, String> {
 }
 
 /// Optional plain number; an argument of the wrong type is an error, not silently ignored.
-fn number(a: &Value, k: &str) -> Result<Option<f64>, String> {
+pub(crate) fn number(a: &Value, k: &str) -> Result<Option<f64>, String> {
     match arg(a, k) {
         None => Ok(None),
         Some(v) => v
@@ -372,7 +391,7 @@ fn index(a: &Value, k: &str) -> Result<Option<usize>, String> {
     }
 }
 
-fn string<'a>(a: &'a Value, k: &str) -> Option<&'a str> {
+pub(crate) fn string<'a>(a: &'a Value, k: &str) -> Option<&'a str> {
     arg(a, k).and_then(Value::as_str)
 }
 
@@ -414,7 +433,7 @@ fn knot_index(board: &Board, id: CurveId, i: usize) -> Result<usize, String> {
     }
 }
 
-fn measure(ctx: &Context, cm: f64) -> Value {
+pub(crate) fn measure(ctx: &Context, cm: f64) -> Value {
     json!({"cm": (cm * 1000.0).round() / 1000.0, "text": ctx.fmt(cm)})
 }
 
@@ -517,6 +536,7 @@ pub fn render_export(
     paper: Paper,
     ctx: &Context,
     title: &str,
+    scale: f64,
 ) -> Result<Vec<u8>, String> {
     let fmt = |cm: f64| ctx.fmt(cm);
     if what == "model" && format == "step" {
@@ -531,17 +551,32 @@ pub fn render_export(
             },
         );
         return match format {
-            "stl" => Ok(mesh_formats::stl(&mesh, title)),
-            "obj" => Ok(mesh_formats::obj(&mesh, title).into_bytes()),
-            f => Err(format!("model exports are stl, obj or step, not {f}")),
+            "stl" => Ok(mesh_formats::stl(
+                &mesh_formats::scaled(&mesh, scale),
+                title,
+            )),
+            "obj" => Ok(mesh_formats::obj(&mesh_formats::scaled(&mesh, scale), title).into_bytes()),
+            "3mf" => Ok(threemf::write(&mesh, title, scale)),
+            "glb" => Ok(gltf::write(&mesh, title, scale)),
+            f => Err(format!(
+                "model exports are stl, obj, 3mf, glb or step, not {f}"
+            )),
         };
     }
     let d = match what {
-        "outline" => templates::outline(board, templates::OutlineOptions::default(), &fmt),
+        "outline" => templates::outline(
+            board,
+            templates::OutlineOptions {
+                fins: board.fin_setup.is_some(),
+                ..Default::default()
+            },
+            &fmt,
+        ),
         "outline_full" => templates::outline(
             board,
             templates::OutlineOptions {
                 full: true,
+                fins: board.fin_setup.is_some(),
                 ..Default::default()
             },
             &fmt,
@@ -863,6 +898,28 @@ pub fn execute(doc: &mut Document, ctx: &mut Context, name: &str, a: &Value) -> 
             Ok(json!({"ok": true}))
         }
         "set_fins" => {
+            const LEGACY: [&str; 9] = [
+                "side_rear_x",
+                "side_rear_y",
+                "side_front_x",
+                "side_front_y",
+                "centre_rear_x",
+                "centre_front_x",
+                "centre_depth",
+                "side_depth",
+                "splay_degrees",
+            ];
+            let has_legacy = LEGACY.iter().any(|k| arg(a, k).is_some());
+            if has_legacy && (arg(a, "preset").is_some() || arg(a, "box_system").is_some()) {
+                return Err(
+                    "set_fins: give either preset/box_system or the legacy marks, not both".into(),
+                );
+            }
+            if crate::fins_cmd::apply(doc, a)? {
+                return Ok(
+                    json!({"fins": doc.board.fins, "setup": crate::fins_cmd::setup_json(&doc.board)}),
+                );
+            }
             let mut fins = doc.board.fins;
             for (i, k) in [
                 "side_rear_x",
@@ -897,8 +954,93 @@ pub fn execute(doc: &mut Document, ctx: &mut Context, name: &str, a: &Value) -> 
                 }
                 fins[8] = v;
             }
-            doc.edit(|b| b.fins = fins);
-            Ok(json!({"fins": fins}))
+            // Hand-set marks replace a fin setup (their boxes can no longer be placed from them).
+            if fins != doc.board.fins || !has_legacy {
+                doc.edit(|b| {
+                    if b.fins != fins {
+                        b.fin_setup = None;
+                    }
+                    b.fins = fins;
+                });
+            }
+            Ok(json!({"fins": fins, "setup": crate::fins_cmd::setup_json(&doc.board)}))
+        }
+        "suggest_volume" => {
+            use surfcraft_core::rider::{BoardType, Fitness, Rider, Skill, Waves, suggest_volume};
+            let weight_kg = match (number(a, "weight_kg")?, number(a, "weight_lb")?) {
+                (Some(kg), None) => kg,
+                (None, Some(lb)) => lb / surfcraft_core::units::POUNDS_PER_KG,
+                _ => return Err("give weight_kg or weight_lb".into()),
+            };
+            fn pick<T: Copy>(
+                a: &Value,
+                k: &str,
+                options: &[(&str, T)],
+                default: T,
+            ) -> Result<T, String> {
+                match string(a, k) {
+                    None => Ok(default),
+                    Some(s) => options
+                        .iter()
+                        .find(|(n, _)| n.eq_ignore_ascii_case(s))
+                        .map(|o| o.1)
+                        .ok_or_else(|| format!("{k}: unknown value {s:?}")),
+                }
+            }
+            let rider = Rider {
+                weight_kg,
+                age: index(a, "age")?.unwrap_or(0).min(150) as u32,
+                skill: pick(
+                    a,
+                    "skill",
+                    &[
+                        ("beginner", Skill::Beginner),
+                        ("intermediate", Skill::Intermediate),
+                        ("advanced", Skill::Advanced),
+                        ("pro", Skill::Pro),
+                    ],
+                    Skill::Intermediate,
+                )?,
+                fitness: pick(
+                    a,
+                    "fitness",
+                    &[
+                        ("low", Fitness::Low),
+                        ("average", Fitness::Average),
+                        ("high", Fitness::High),
+                    ],
+                    Fitness::Average,
+                )?,
+                waves: pick(
+                    a,
+                    "waves",
+                    &[
+                        ("small", Waves::Small),
+                        ("average", Waves::Average),
+                        ("powerful", Waves::Powerful),
+                    ],
+                    Waves::Average,
+                )?,
+                board: pick(
+                    a,
+                    "board_type",
+                    &[
+                        ("shortboard", BoardType::Shortboard),
+                        ("fish", BoardType::Fish),
+                        ("mid_length", BoardType::MidLength),
+                        ("longboard", BoardType::Longboard),
+                    ],
+                    BoardType::Shortboard,
+                )?,
+            };
+            let advice = suggest_volume(&rider).ok_or("weight must be between 10 and 250 kg")?;
+            let r = |v: f64| (v * 10.0).round() / 10.0;
+            let board = doc.board.volume() / 1000.0;
+            Ok(json!({
+                "min_litres": r(advice.min), "max_litres": r(advice.max), "middle_litres": r(advice.middle()),
+                "board_litres": r(board), "board_in_range": advice.contains(board),
+                "note": "A starting point (Guild factor method); adjust to taste. scale_board with volume_litres applies it.",
+            }))
         }
         "estimate_weight" => {
             let mut l = Layup::defaults_for(&doc.board);
@@ -948,7 +1090,11 @@ pub fn execute(doc: &mut Document, ctx: &mut Context, name: &str, a: &Value) -> 
                 .trim_end_matches(" *")
                 .trim_end_matches(".brd")
                 .to_string();
-            let bytes = render_export(&doc.board, what, format, paper, ctx, &title)?;
+            let scale = number(a, "scale")?.unwrap_or(1.0);
+            if !(0.001..=10.0).contains(&scale) {
+                return Err(format!("scale must be between 0.001 and 10, got {scale}"));
+            }
+            let bytes = render_export(&doc.board, what, format, paper, ctx, &title, scale)?;
             write_with_backup(&path, &bytes).map_err(|e| format!("{}: {e}", path.display()))?;
             Ok(json!({"written": path.display().to_string(), "bytes": bytes.len()}))
         }
@@ -1039,6 +1185,8 @@ pub fn execute(doc: &mut Document, ctx: &mut Context, name: &str, a: &Value) -> 
             doc.redo();
             Ok(json!({"redone": can}))
         }
+        "apply_bottom_contour" => crate::shaping_commands::apply_bottom_contour(doc, ctx, a),
+        "set_rails" => crate::shaping_commands::set_rails(doc, ctx, a),
         other => Err(format!("unknown command {other:?}")),
     }
 }

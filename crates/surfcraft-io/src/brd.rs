@@ -358,6 +358,8 @@ fn scalar_field(b: &mut Board, code: u32, value: &str) -> Result<(), &'static st
         55 => i.aux1 = unescape(value),
         56 => i.aux2 = unescape(value),
         57 => i.aux3 = unescape(value),
+        // SurfCraft fin setup. An unreadable one is dropped: the legacy marks (p50) still describe the fins.
+        60 => b.fin_setup = surfcraft_core::FinSetup::decode(value),
         99 => m.tail_margin = real(value)?,
         // SurfCraft extension: the chosen foam blank. An unreadable value is ignored like an unknown field.
         63 => b.blank = surfcraft_core::BlankSetup::from_compact(value),
@@ -581,6 +583,9 @@ pub fn write(b: &Board) -> String {
         let _ = writeln!(o, "{code} : {value}");
     };
     field("p50", array(&b.fins));
+    if let Some(s) = &b.fin_setup {
+        field("p60", s.encode());
+    }
     field("p27", array(&m.strut1));
     field("p28", array(&m.strut2));
     field("p29", array(&m.cutter_start));

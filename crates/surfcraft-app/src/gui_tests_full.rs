@@ -283,6 +283,7 @@ fn every_menu_lists_its_items() {
                 "Save and set as original",
                 "Open ghost board…",
                 "Close ghost board",
+                "Compare with…",
                 "Print & export…",
                 "Import curves (.otl/.pfl/.crs)…",
                 "Load background image…",
@@ -334,6 +335,7 @@ fn every_menu_lists_its_items() {
                 "Board info…",
                 "Fins…",
                 "Weight calculator…",
+                "Volume advisor…",
                 "Guide points…",
                 "Flip nose and tail",
                 "Put lowest rocker point at zero",
@@ -848,6 +850,13 @@ fn check_export(path: &Path, format: Format) {
             assert!(n > 1000);
         }
         Format::Obj => assert!(String::from_utf8_lossy(&bytes).contains("\nf ")),
+        Format::ThreeMf => {
+            let entries = surfcraft_export::zip::read(&bytes).unwrap();
+            assert_eq!(entries.len(), 3);
+        }
+        Format::Glb => {
+            surfcraft_export::gltf::read(&bytes).unwrap();
+        }
     }
 }
 
@@ -860,7 +869,12 @@ fn print_and_export_every_what_format_and_paper() {
     for what in What::SHAPER {
         click(&mut h, what.label());
         let formats: &[(Format, &str)] = if what == What::Model {
-            &[(Format::Stl, "STL (binary, mm)"), (Format::Obj, "OBJ (mm)")]
+            &[
+                (Format::Stl, "STL (binary, mm)"),
+                (Format::Obj, "OBJ (mm)"),
+                (Format::ThreeMf, "3MF (3D printing, mm)"),
+                (Format::Glb, "glTF binary .glb (web, AR, metres)"),
+            ]
         } else {
             &[
                 (Format::Pdf, "PDF (print, tiled pages)"),
@@ -877,6 +891,8 @@ fn print_and_export_every_what_format_and_paper() {
                 Format::Dxf => "dxf",
                 Format::Stl => "stl",
                 Format::Obj => "obj",
+                Format::ThreeMf => "3mf",
+                Format::Glb => "glb",
             };
             let out = fresh("export", &format!("{what:?}.{ext}"));
             script(&mut h, &out);
@@ -922,6 +938,17 @@ fn print_and_export_every_what_format_and_paper() {
     click(&mut h, What::Model.label());
     click(&mut h, "High resolution mesh");
     assert!(!h.state().dialogs.export_state.fine_mesh);
+    // A 1:10 scale model as 3MF.
+    click(&mut h, "3MF (3D printing, mm)");
+    click(&mut h, "1:10");
+    assert_eq!(h.state().dialogs.export_state.scale_ratio, 10.0);
+    let out = fresh("export", "scale-model.3mf");
+    script(&mut h, &out);
+    click(&mut h, "Export…");
+    let entries = surfcraft_export::zip::read(&std::fs::read(&out).unwrap()).unwrap();
+    let xml = String::from_utf8(entries[2].1.clone()).unwrap();
+    assert!(xml.contains("Scale 1:10<"));
+    snap(&mut h, "qa-export-scale-model");
 }
 
 #[test]
@@ -1772,18 +1799,52 @@ fn board_info_typing_is_one_undo_step() {
 }
 
 #[test]
-fn fins_dialog_edits_positions() {
+fn fins_dialog_applies_a_five_fin_fcs2_setup() {
+    use surfcraft_core::fins::BoxSystem;
     let mut h = harness();
     menu(&mut h, "Board", "Fins…");
-    let p = field_in(&h, "Fins", "Side fin rear, from tail");
-    type_into(&mut h, p, "11\"");
-    let p = field_in(&h, "Fins", "Centre fin front, from tail");
-    type_into(&mut h, p, "6 1/2\"");
-    let f = h.state().doc.board.fins;
-    assert!(
-        (f[0] - 27.94).abs() < 1e-9 && (f[5] - 16.51).abs() < 1e-9,
-        "{f:?}"
+    step(&mut h);
+    assert!(has_label(
+        &h,
+        "No fins. Choose a setup and press Apply preset."
+    ));
+    click(&mut h, "Setup");
+    click(&mut h, "5 fins");
+    click(&mut h, "Box system");
+    click(&mut h, "FCS II");
+    let depth = undo_depth(&mut h);
+    click(&mut h, "Apply preset");
+    step(&mut h);
+    let s = h.state().doc.board.fin_setup.clone().expect("setup stored");
+    assert_eq!(s.fins.len(), 5);
+    assert!(s.fins.iter().all(|f| f.system == BoxSystem::FcsII));
+    for l in [
+        "Left front",
+        "Right front",
+        "Left rear",
+        "Right rear",
+        "Centre",
+    ] {
+        assert!(has_label(&h, l), "{l} not listed");
+    }
+    assert_eq!(
+        undo_depth(&mut h),
+        depth + 1,
+        "Apply preset is one undo step"
     );
+    // The legacy marks follow (BoardCAD shows the front pair and the centre fin).
+    assert!(h.state().doc.board.fins[0] > 0.0 && h.state().doc.board.fins[4] > 0.0);
+    // Typing a distance from the tail moves the fin and its mirror image.
+    let p = field_in(&h, "Fins", "Left front");
+    type_into(&mut h, p, "11 1/2\"");
+    let s = h.state().doc.board.fin_setup.clone().unwrap();
+    let moved: Vec<_> = s
+        .fins
+        .iter()
+        .filter(|f| (f.x - 29.21).abs() < 1e-9)
+        .collect();
+    assert_eq!(moved.len(), 2, "{s:?}");
+    assert_eq!(*moved[0], moved[1].mirrored());
     h.state_mut().set.view.fins = true;
     snap(&mut h, "qa-fins-dialog");
     set_tab(&mut h, Tab::Outline);

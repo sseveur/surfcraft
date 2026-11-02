@@ -182,7 +182,17 @@ pub fn window(
                         );
                         let repaint = ctx.clone();
                         std::thread::spawn(move || {
+                            log::info!("CAM: generating {job:?}");
+                            let start = std::time::Instant::now();
                             let r = generate(&b, &cfg, &hot, job);
+                            match &r {
+                                Ok(p) => log::info!(
+                                    "CAM: {job:?} done in {:.1} s, {} passes",
+                                    start.elapsed().as_secs_f64(),
+                                    p.toolpath.passes.len()
+                                ),
+                                Err(e) => log::error!("CAM: {job:?} failed: {e}"),
+                            }
                             *slot.lock().unwrap() = Some((job, revision, r));
                             repaint.request_repaint();
                         });
