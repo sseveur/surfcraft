@@ -43,7 +43,6 @@ pub fn open_folder(dir: &Path) -> std::io::Result<()> {
     }
 }
 
-#[allow(dead_code)] // TEMP: used by the bug report
 /// Show a file selected in the file manager (Linux: open its folder).
 pub fn reveal(file: &Path) -> std::io::Result<()> {
     log::info!("reveal {}", crate::logging::path(file));
@@ -67,7 +66,6 @@ pub fn reveal(file: &Path) -> std::io::Result<()> {
     }
 }
 
-#[allow(dead_code)] // TEMP: used by the bug report
 /// Open an `https:` or `mailto:` URL with the default browser or mail client.
 pub fn open_url(url: &str) -> std::io::Result<()> {
     // The URL may hold the user's description: log only where it goes.

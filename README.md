@@ -50,6 +50,9 @@ The builds are not signed with paid certificates yet, so the first launch needs 
   pieces. Saving keeps a `.bak` of the previous version.
 - **Languages**: English, French, Spanish, Portuguese, Dutch, Norwegian (View → Language).
 - **Guided tour** on first launch, any time from Help → Tour of SurfCraft.
+- **Report a bug** (Help menu): saves a zip with the recent log, system information and optionally the board, then
+  opens a prefilled GitHub issue or e-mail for you to send. A daily log is kept for 14 days (Help → Open log folder;
+  Help → Detailed logging records every edit and click).
 - **AI assistant (MCP)**: Claude or another MCP client can read and edit the board while you watch (see below).
 
 ## Using SurfCraft with an AI assistant (MCP)
@@ -85,6 +88,17 @@ Tools include `board_summary`, `sample_board`, `get_curve`, `set_knot`, `move_kn
 
 Security: the app only listens on 127.0.0.1, and only while control is enabled; every request needs a random token
 stored in a file readable only by your user account. The server never connects to the internet.
+
+## Reporting a bug
+
+Help → **Report a bug…** writes `SurfCraft-bug-report-<date>-<time>.zip` to your Downloads folder and shows it,
+then opens a new [GitHub issue](https://github.com/sseveur/surfcraft/issues) or an e-mail with your description and
+system information filled in: attach the zip and send. Choose how much of the log to include (1 hour to all) and
+preview it first; the board and a screenshot are optional. Your home folder is written as `~`, and SurfCraft sends
+nothing by itself.
+
+For a problem that is hard to describe, tick Help → **Detailed logging**, reproduce the problem, then report it.
+The log files are in the `logs` folder of SurfCraft's data folder (Help → Open log folder).
 
 ## Build from source
 

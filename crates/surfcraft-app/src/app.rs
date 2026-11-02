@@ -67,6 +67,8 @@ pub struct SurfCraftApp {
     /// Folder for logs (and autosaves); `None` in tests unless a test sets a temporary one.
     pub(crate) data_dir: Option<PathBuf>,
     pub(crate) trace: crate::app_log::Trace,
+    /// Help > Report a bug.
+    pub(crate) bug_report: Option<crate::bugreport_ui::BugReport>,
 }
 
 /// Board formats the app can open.
@@ -148,6 +150,7 @@ impl SurfCraftApp {
                 crate::logging::data_dir()
             },
             trace: Default::default(),
+            bug_report: None,
         };
         app.ed.reset_for(&app.doc.board);
         if let Some(p) = args.open {
@@ -1237,6 +1240,7 @@ impl eframe::App for SurfCraftApp {
                 self.save_export(&name, &bytes);
             }
         }
+        self.bug_report_window(&ctx);
         let tour = self.tour.show(&ctx, &self.tour_targets);
         if let Some(tab) = tour.tab {
             self.tab = tab;

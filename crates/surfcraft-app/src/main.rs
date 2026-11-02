@@ -3,6 +3,8 @@
 mod app;
 mod app_log;
 mod automation;
+mod bugreport;
+mod bugreport_ui;
 mod cam_ui;
 mod compute;
 mod dialogs;

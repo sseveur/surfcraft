@@ -80,7 +80,6 @@ pub fn parse_date(s: &str) -> Option<i64> {
     Some(days_from_civil(y as i64, m, d))
 }
 
-#[allow(dead_code)] // TEMP: used by the bug report
 /// Unix seconds of the timestamp a log line starts with (`YYYY-MM-DDTHH:MM:SS…`), if it has one.
 pub fn line_time(line: &str) -> Option<i64> {
     let head = line.get(..19)?;
@@ -147,7 +146,6 @@ pub fn cleanup(dir: &Path, today: i64, keep: i64) -> usize {
     removed
 }
 
-#[allow(dead_code)] // TEMP: used by the bug report
 /// Keep the lines at or after `since` (Unix seconds; `None` keeps all). Lines without a timestamp (continuation
 /// lines of a message, such as a backtrace) go with the line before them.
 pub fn filter_since(text: &str, since: Option<i64>) -> String {
@@ -165,7 +163,6 @@ pub fn filter_since(text: &str, since: Option<i64>) -> String {
     out
 }
 
-#[allow(dead_code)] // TEMP: used by the bug report
 /// Log text from all files in `dir` at or after `since`, oldest first, home folder shown as `~`.
 pub fn collect(dir: &Path, since: Option<i64>) -> String {
     let mut out = String::new();
@@ -257,7 +254,6 @@ pub fn set_gpu(info: String) {
     let _ = GPU.set(info);
 }
 
-#[allow(dead_code)] // TEMP: used by the bug report
 pub fn gpu() -> &'static str {
     GPU.get().map(String::as_str).unwrap_or("unknown")
 }

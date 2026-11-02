@@ -12,8 +12,16 @@ pub(crate) struct Trace {
 }
 
 impl SurfCraftApp {
-    /// Help menu: detailed logging and the log folder.
+    /// Help menu: bug report, detailed logging and the log folder.
     pub(crate) fn log_menu_items(&mut self, ui: &mut egui::Ui) {
+        if ui
+            .button(tr("Report a bug…"))
+            .on_hover_text(tr("Saves a zip with the recent log and opens a new GitHub issue or e-mail for you to send"))
+            .clicked()
+        {
+            self.open_bug_report();
+            ui.close();
+        }
         ui.checkbox(&mut self.set.detailed_logging, tr("Detailed logging"))
             .on_hover_text(tr("Also records every edit, click and view change in the log. To help with a bug: turn it on, reproduce the problem, then use Report a bug."));
         if ui
