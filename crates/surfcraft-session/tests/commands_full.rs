@@ -1498,7 +1498,7 @@ fn contours_cut_foam_by_default() {
             }
             if kind.ends_with("concave") {
                 // Thinner on the stringer inside the zone.
-                let x = 0.3 * l;
+                let x = 0.2 * l;
                 assert!(
                     before.thickness_at(x) - d.board.thickness_at(x) > 0.4,
                     "{t} {kind}"

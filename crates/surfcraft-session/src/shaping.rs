@@ -267,6 +267,11 @@ impl ContourZone {
     }
 }
 
+/// Largest deviation of a refitted section bottom from the contour shape (cm).
+const FIT_TOL: f64 = 0.02;
+/// Largest deviation of the refitted stringer rocker from the cut shape (cm).
+const ROCKER_TOL: f64 = 0.03;
+
 /// Shortest fade of a foam-cutting zone that starts or ends inside the board (cm).
 pub const MIN_RAMP: f64 = 10.0;
 
@@ -335,53 +340,81 @@ fn solve_x(s: &Segment, x: f64) -> f64 {
     0.5 * (lo + hi)
 }
 
-/// Knots `(u, y, slope in, slope out)` of a cubic Hermite fit of `f` over the sorted breakpoints, refined until
-/// the fit is within `tol` everywhere. Slopes are one-sided, so kinks at breakpoints are kept.
+/// Knots `(u, y, slope in, slope out)` of a cubic Hermite fit of `f` with as few knots as possible: one at each of
+/// the sorted `breaks`, then, while the fit strays more than `tol` from `f` anywhere, one more where it strays
+/// most. Slopes come from `f` itself (one-sided at a real kink of `f`, the same on both sides elsewhere, so the
+/// curve is smooth there).
 fn fit(f: &dyn Fn(f64) -> f64, breaks: &[f64], tol: f64) -> Vec<(f64, f64, f64, f64)> {
-    let d_right = |a: f64, b: f64| {
-        let h = (b - a) * 1e-4;
-        (-3.0 * f(a) + 4.0 * f(a + h) - f(a + 2.0 * h)) / (2.0 * h)
-    };
-    let d_left = |a: f64, b: f64| {
-        let h = (b - a) * 1e-4;
-        (3.0 * f(b) - 4.0 * f(b - h) + f(b - 2.0 * h)) / (2.0 * h)
-    };
-    // Intervals as (a, b, depth); refined depth first so the output is in order.
-    let mut stack: Vec<(f64, f64, u32)> =
-        breaks.windows(2).rev().map(|w| (w[0], w[1], 0)).collect();
-    let mut pieces: Vec<(f64, f64, f64, f64)> = Vec::new(); // (a, b, slope at a, slope at b)
-    while let Some((a, b, depth)) = stack.pop() {
-        let (sa, sb) = (d_right(a, b), d_left(a, b));
-        let (ya, yb) = (f(a), f(b));
-        let h = b - a;
-        let hermite = |t: f64| {
-            let (t2, t3) = (t * t, t * t * t);
-            (2.0 * t3 - 3.0 * t2 + 1.0) * ya
-                + (t3 - 2.0 * t2 + t) * h * sa
-                + (-2.0 * t3 + 3.0 * t2) * yb
-                + (t3 - t2) * h * sb
+    let (lo, hi) = (breaks[0], breaks[breaks.len() - 1]);
+    let h = ((hi - lo) * 1e-6).max(1e-9);
+    let d_right = |x: f64| (-3.0 * f(x) + 4.0 * f(x + h) - f(x + 2.0 * h)) / (2.0 * h);
+    let d_left = |x: f64| (3.0 * f(x) - 4.0 * f(x - h) + f(x - 2.0 * h)) / (2.0 * h);
+    let node = |x: f64, first: bool, last: bool| -> (f64, f64, f64, f64) {
+        let (dl, dr) = match (first, last) {
+            (true, _) => {
+                let d = d_right(x);
+                (d, d)
+            }
+            (_, true) => {
+                let d = d_left(x);
+                (d, d)
+            }
+            _ => (d_left(x), d_right(x)),
         };
-        let err = [0.2, 0.4, 0.5, 0.6, 0.8]
-            .iter()
-            .map(|&t| (hermite(t) - f(a + t * h)).abs())
-            .fold(0.0, f64::max);
-        if err > tol && depth < 8 {
-            let m = 0.5 * (a + b);
-            stack.push((m, b, depth + 1));
-            stack.push((a, m, depth + 1));
+        let smooth = (dl - dr).abs() <= 1e-3 * (1.0 + dl.abs().max(dr.abs()));
+        let (dl, dr) = if smooth {
+            let m = 0.5 * (dl + dr);
+            (m, m)
         } else {
-            pieces.push((a, b, sa, sb));
+            (dl, dr)
+        };
+        (x, f(x), dl, dr)
+    };
+    let mut xs: Vec<f64> = breaks.to_vec();
+    let build = |xs: &[f64]| -> Vec<(f64, f64, f64, f64)> {
+        let n = xs.len();
+        xs.iter()
+            .enumerate()
+            .map(|(i, &x)| node(x, i == 0, i + 1 == n))
+            .collect()
+    };
+    let mut nodes = build(&xs);
+    // Largest deviation of segment i (between nodes i and i + 1) and where it is.
+    let worst = |a: &(f64, f64, f64, f64), b: &(f64, f64, f64, f64)| -> (f64, f64) {
+        let w = b.0 - a.0;
+        let mut best = (0.0, a.0);
+        for k in 1..32 {
+            let t = k as f64 / 32.0;
+            let (t2, t3) = (t * t, t * t * t);
+            let y = (2.0 * t3 - 3.0 * t2 + 1.0) * a.1
+                + (t3 - 2.0 * t2 + t) * w * a.3
+                + (-2.0 * t3 + 3.0 * t2) * b.1
+                + (t3 - t2) * w * b.2;
+            let e = (y - f(a.0 + t * w)).abs();
+            if e > best.0 {
+                best = (e, a.0 + t * w);
+            }
         }
+        best
+    };
+    for _ in 0..60 {
+        let (err, x, i) = nodes
+            .windows(2)
+            .enumerate()
+            .map(|(i, w)| {
+                let (e, x) = worst(&w[0], &w[1]);
+                (e, x, i)
+            })
+            .fold((0.0, 0.0, 0), |acc, c| if c.0 > acc.0 { c } else { acc });
+        if err <= tol {
+            break;
+        }
+        let (a, b) = (xs[i], xs[i + 1]);
+        let x = x.clamp(a + 0.1 * (b - a), b - 0.1 * (b - a));
+        xs.insert(i + 1, x);
+        nodes = build(&xs);
     }
-    let mut out = Vec::with_capacity(pieces.len() + 1);
-    for (i, &(a, _, sa, _)) in pieces.iter().enumerate() {
-        let s_in = if i == 0 { sa } else { pieces[i - 1].3 };
-        out.push((a, f(a), s_in, sa));
-    }
-    if let Some(&(_, b, _, sb)) = pieces.last() {
-        out.push((b, f(b), sb, sb));
-    }
-    out
+    nodes
 }
 
 /// Bezier knots through the Hermite fit: handles at a third of the neighbouring intervals along the slopes.
@@ -605,39 +638,30 @@ fn contour_section_lifted(
         return Err("section too thin to cut");
     }
 
-    // Breakpoints: the ends, the original knots inside (kinks of the old bottom) and the contour's own features.
+    // Knots: the stringer and the run-out, plus the original knots inside where the old bottom still shows
+    // (partial fade, or channels cut into it); the fit adds the fewest knots that keep within 0.2 mm.
     let mut breaks = vec![o.x, u_r];
-    breaks.extend(
-        sp.knots()[1..=seg]
-            .iter()
-            .map(|k| k.point().x)
-            .filter(|&x| x > o.x + 1e-6 && x < u_r - 1e-6),
-    );
-    match kind {
-        ContourKind::DoubleConcave => breaks.push(o.x + DOUBLE_WIDTH * span),
-        ContourKind::Channels => {
-            for &c in &centres {
-                for k in [-1.0, -(1.0 - CHANNEL_WALL), 1.0 - CHANNEL_WALL, 1.0] {
-                    breaks.push(c + k * cw / 2.0);
-                }
+    if f < 1.0 || kind == ContourKind::Channels {
+        breaks.extend(
+            sp.knots()[1..=seg]
+                .iter()
+                .map(|k| k.point().x)
+                .filter(|&x| x > o.x + 0.05 && x < u_r - 0.05),
+        );
+    }
+    // Channel walls start and end with a level slope: a knot at each carries the wall exactly.
+    for &c in centres.iter().filter(|_| kind == ContourKind::Channels) {
+        for k in [-1.0, -(1.0 - CHANNEL_WALL), 1.0 - CHANNEL_WALL, 1.0] {
+            let x = c + k * cw / 2.0;
+            if x > o.x + 0.05 && x < u_r - 0.05 {
+                breaks.push(x);
             }
         }
-        _ => {}
     }
-    // At least six intervals across, so gentle shapes still get enough knots to be edited later.
-    for i in 1..6 {
-        breaks.push(o.x + span * i as f64 / 6.0);
-    }
-    breaks.retain(|&x| x >= o.x && x <= u_r);
     breaks.sort_by(f64::total_cmp);
     breaks.dedup_by(|a, b| (*a - *b).abs() < 0.05);
-    if let Some(l) = breaks.last_mut() {
-        *l = u_r;
-    }
-    if breaks[0] != o.x {
-        breaks.insert(0, o.x);
-    }
-    let fitted = fit(&new_bottom, &breaks, 0.002);
+    let fitted = fit(&new_bottom, &breaks, FIT_TOL);
+
     let mut new_knots = knots_from_fit(&fitted);
     // The stringer knot stays exactly where it was, its handle on the other side mirrored.
     {
@@ -813,9 +837,13 @@ struct Lift {
     samples: Vec<(f64, f64)>,
     /// Run-out height relative to the stringer that the contour asks for.
     target: f64,
+    length: f64,
     rocker: Bottom,
     deck: Bottom,
 }
+
+/// Distance from the tail and nose tips over which the stringer lift of a foam cut fades out (cm).
+const TIP_TAPER: f64 = 5.0;
 
 impl Lift {
     fn new(b: &Board, z: &ContourZone) -> Option<Lift> {
@@ -840,6 +868,7 @@ impl Lift {
             zone: z.clone(),
             samples,
             target,
+            length: b.length(),
             rocker: Bottom::new(&b.bottom, b.bottom.segment_count() - 1),
             deck: Bottom::new(&b.deck, b.deck.segment_count() - 1),
         })
@@ -862,71 +891,90 @@ impl Lift {
 
     fn at(&self, x: f64) -> f64 {
         let f = self.zone.fade_at(x);
-        if f <= 0.0 {
+        if f <= 0.0 || x <= 0.0 || x >= self.length {
             return 0.0;
         }
         let lift = (f * (self.run_out(x) - self.target)).max(0.0);
         let thickness = (self.deck.eval(x).0 - self.rocker.eval(x).0).max(0.0);
-        lift * smoothstep(thickness / (4.0 * (self.zone.depth + 0.3)))
+        // Nothing where the board is thinner than `t0`, full lift from twice that; fading out at the very tips.
+        let t0 = 2.0 * (self.zone.depth + 0.3);
+        lift * smoothstep((thickness - t0) / t0)
+            * smoothstep(x / TIP_TAPER)
+            * smoothstep((self.length - x) / TIP_TAPER)
+    }
+
+    /// Slope of the lift at `x`.
+    fn slope(&self, x: f64) -> f64 {
+        let h = 1e-4;
+        (self.at(x + h) - self.at(x - h)) / (2.0 * h)
     }
 }
 
-/// Raise the stringer rocker by `lift` inside its zone, refitting the bottom curve there (a fair curve: the lift
-/// fades in and out smoothly). `extra` are stations the new knots should include (the sections).
-fn lift_rocker(b: &mut Board, lift: &Lift, extra: &[f64]) {
-    let l = b.length();
-    let (a, e) = (lift.zone.start.clamp(0.0, l), lift.zone.end.clamp(0.0, l));
-    if e - a < 0.5 {
-        return;
-    }
+/// Raise the stringer rocker by the lift. The rocker keeps its own knots: each knot moves up by the lift at its
+/// station and its handles turn by the lift's slope there (so smooth knots stay smooth). Where the result strays
+/// more than [`ROCKER_TOL`] from the old rocker plus the lift, the old curve is split (which does not change its
+/// shape) at the worst place and the lift applied again, so the rocker gains as few knots as possible.
+fn lift_rocker(b: &mut Board, lift: &Lift) {
     let old = b.bottom.clone();
-    let rocker = |x: f64| lift.rocker.eval(x).0 + lift.at(x);
-    let z = &lift.zone;
-    let mut breaks = vec![a, e, z.start + z.fade_in, z.end - z.fade_out];
-    breaks.extend(old.knots().iter().map(|k| k.point().x));
-    breaks.extend_from_slice(extra);
-    for i in 1..16 {
-        breaks.push(a + (e - a) * i as f64 / 16.0);
-    }
-    breaks.retain(|&x| x >= a && x <= e);
-    breaks.sort_by(f64::total_cmp);
-    breaks.dedup_by(|p, q| (*p - *q).abs() < 0.2);
-    if let Some(x) = breaks.last_mut() {
-        *x = e;
-    }
-    breaks[0] = a;
-    if breaks.len() < 2 {
-        return;
-    }
-    let fitted = fit(&rocker, &breaks, 0.001);
-    let mut new_knots = knots_from_fit(&fitted);
-    // Split the old curve at both ends of the zone (the end first, so the start's index stays valid).
     let mut s = old.clone();
-    let at = |s: &Spline, x: f64| bottom_segment(s, x).unwrap_or((0, 0.0));
-    let (ie, te) = at(&s, e);
-    let je = split_or_existing(&mut s, ie, te);
-    let (ia, ta) = at(&s, a);
-    let ja = split_or_existing(&mut s, ia, ta);
-    let je = (ja + 1..s.len())
-        .find(|&i| (s.knots()[i].point().x - e).abs() < 1e-6)
-        .unwrap_or(je);
-    if je <= ja {
-        return;
+    let displaced = |s: &Spline| -> Spline {
+        let mut out = s.clone();
+        for k in out.knots_mut() {
+            let x = k.point().x;
+            let (u, m) = (lift.at(x), lift.slope(x));
+            if u == 0.0 && m == 0.0 {
+                continue;
+            }
+            for p in &mut k.points {
+                p.y += u + m * (p.x - x);
+            }
+        }
+        out
+    };
+    let target = |x: f64| lift.rocker.eval(x).0 + lift.at(x);
+    // Knots where the lift starts, reaches full depth, starts fading and ends: with zero lift slope at all four,
+    // a cubic segment between two of them carries a smoothstep fade exactly.
+    let z = &lift.zone;
+    for x in [z.start, z.start + z.fade_in, z.end - z.fade_out, z.end] {
+        if x <= 1.0
+            || x >= lift.length - 1.0
+            || s.knots().iter().any(|k| (k.point().x - x).abs() < 1.0)
+        {
+            continue;
+        }
+        if let Some((i, t)) = bottom_segment(&s, x) {
+            split_or_existing(&mut s, i, t);
+        }
     }
-    let first = s.knots()[ja].clone();
-    let last = s.knots()[je].clone();
-    let n = new_knots.len();
-    new_knots[0].set(surfcraft_core::Handle::Prev, first.prev());
-    new_knots[0].set(surfcraft_core::Handle::Point, first.point());
-    new_knots[n - 1].set(surfcraft_core::Handle::Next, last.next());
-    new_knots[n - 1].set(surfcraft_core::Handle::Point, last.point());
-    for k in [0, n - 1] {
-        new_knots[k].continuous = new_knots[k].is_geometrically_continuous();
+    for _ in 0..40 {
+        let cand = displaced(&s);
+        // Worst deviation, over the segments the lift touches.
+        let mut worst = (0.0, 0, 0.0);
+        for i in 0..cand.segment_count() {
+            let seg = cand.segment(i);
+            let moved = (0..4).any(|j| (seg.p[j] - s.segment(i).p[j]).length() > 0.0);
+            let near = (0..32).any(|k| lift.at(s.segment(i).point(k as f64 / 31.0).x) > 0.0);
+            if !moved && !near {
+                continue;
+            }
+            for k in 1..32 {
+                let t = k as f64 / 32.0;
+                let q = seg.point(t);
+                let e = (q.y - target(q.x)).abs();
+                if e > worst.0 {
+                    worst = (e, i, t);
+                }
+            }
+        }
+        if worst.0 <= ROCKER_TOL {
+            b.bottom = cand;
+            return;
+        }
+        // Split the old-shape curve where the displaced one strays most.
+        let (_, i, t) = worst;
+        s.split_at(i, t.clamp(0.1, 0.9));
     }
-    let mut knots = s.knots()[..ja].to_vec();
-    knots.extend(new_knots);
-    knots.extend_from_slice(&s.knots()[je + 1..]);
-    b.bottom = Spline::from_knots(knots);
+    b.bottom = displaced(&s);
 }
 
 /// Apply one zone: add sections (when `spacing` is given), raise the stringer rocker when cutting foam, reshape
@@ -947,7 +995,7 @@ fn apply_zone(
     if let Some(l) = &lift
         && positions.iter().any(|&x| l.at(x) > 1e-9)
     {
-        lift_rocker(b, l, &positions);
+        lift_rocker(b, l);
         lifted = true;
     }
     for i in b.real_sections() {
@@ -956,7 +1004,14 @@ fn apply_zone(
         if f <= 0.0 {
             continue;
         }
-        let u = lift.as_ref().map_or(0.0, |l| l.at(x));
+        // The lift the refitted rocker actually has here, so the rail edge stays exactly where it was.
+        let u = match (&lift, lifted) {
+            (Some(l), true) => {
+                let new = Bottom::new(&b.bottom, b.bottom.segment_count() - 1);
+                new.eval(x).0 - l.rocker.eval(x).0
+            }
+            _ => 0.0,
+        };
         let mut cs = b.sections[i].clone();
         match contour_section_lifted(&mut cs, &z, f, u) {
             Ok(true) => {
@@ -1619,6 +1674,50 @@ mod tests {
                     let mesh = Mesh::of_board(&b, MeshDetail::PREVIEW);
                     assert!(!mesh.triangles.is_empty());
                     assert!(mesh.positions.iter().all(|p| p.is_finite()));
+                }
+            }
+        }
+    }
+
+    /// Knots of a section from the bottom centre out to the run-out of `z`.
+    fn bottom_knots(s: &CrossSection, z: &ContourZone) -> usize {
+        let u_r = z.run_out.at(s.spline.max_x());
+        s.spline
+            .knots()
+            .iter()
+            .take_while(|k| k.point().x <= u_r + 1e-6)
+            .count()
+    }
+
+    /// The refits stay easy to edit by hand: few new rocker knots per zone, few knots across a contoured bottom.
+    #[test]
+    fn refits_use_few_knots() {
+        for (t, b0) in boards().into_iter().enumerate() {
+            for keep in [Keep::Rails, Keep::Stringer] {
+                for kind in ContourKind::ALL {
+                    let mut b = b0.clone();
+                    let z = ContourZone {
+                        keep,
+                        ..ContourZone::for_board(kind, &b)
+                    };
+                    apply_contours(&mut b, std::slice::from_ref(&z), DEFAULT_SPACING).unwrap();
+                    let what = format!("{t} {keep:?} {kind:?}");
+                    let added = b.bottom.len() - b0.bottom.len();
+                    // A flat zone over the whole board follows the run-out height of every section, tip to tip.
+                    let max_added = if kind == ContourKind::Flat { 6 } else { 4 };
+                    assert!(added <= max_added, "{what}: rocker gained {added} knots");
+                    // Channels need a knot at each wall end: four per channel.
+                    let limit = if kind == ContourKind::Channels {
+                        4 * z.channel_count as usize + 6
+                    } else {
+                        8
+                    };
+                    for s in &b.sections[b.real_sections()] {
+                        if z.fade_at(s.position) > 0.0 {
+                            let n = bottom_knots(s, &z);
+                            assert!(n <= limit, "{what} at {}: {n} bottom knots", s.position);
+                        }
+                    }
                 }
             }
         }

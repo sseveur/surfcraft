@@ -24,10 +24,21 @@ so the contour has sections to follow.
   is removed, as a shaper cuts a contour into a blank. A concave raises the stringer rocker inside the zone (the
   stringer rocker deepens, the deck stays, so the thickness on the stringer drops by the depth plus the old rise of
   the bottom to the run-out); a vee and channels cut towards the rails with the stringer left alone. The volume
-  always goes down. The new stringer rocker is refitted inside the zone as a fair curve: the lift follows the
-  zone's fades (smoothstep), tapers to nothing where the board gets thin at the tail and nose tips, and a zone
+  always goes down. The stringer rocker is raised as a fair curve: the lift follows the zone's fades
+  (smoothstep), fades out over the last 5 cm at the tail and nose tips and where the board gets thin, and a zone
   that starts or ends inside the board fades over at least 10 cm. The lowest rocker point is then put back at zero,
   as after any rocker edit.
+
+  The rocker keeps its own knots so it stays easy to edit by hand: each knot moves up by the lift at its station
+  and its handles turn by the lift's slope (smooth knots stay smooth). New knots go only where the zone starts,
+  reaches full depth, starts fading and ends, plus one wherever the result would still stray more than 0.3 mm
+  from the intended rocker; a zone typically adds 3-4 knots (a flat zone over the whole board up to 6). Each
+  section is then cut by the lift the refitted rocker really has at its station, so the rail edge stays exactly
+  where it was.
+
+**Knots on a contoured section.** The bottom from the stringer to the run-out is refitted with the fewest knots
+that stay within 0.2 mm of the contour shape: usually 2 (stringer and run-out) for a single concave, vee or flat
+bottom, 4 for a double concave, plus four per channel (one at each end of each channel wall).
 - **Stringer rocker**. The rocker and the thickness on the stringer stay; the bottom moves near the rails instead
   (a concave lowers it there and adds a little volume, a vee raises it). This is how CAD programs that define
   the rocker on the stringer behave.
