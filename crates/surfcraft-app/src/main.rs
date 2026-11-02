@@ -7,6 +7,7 @@ mod compare_ui;
 mod compute;
 mod dialogs;
 mod export_ui;
+mod fins_ui;
 #[cfg(test)]
 mod gui_tests;
 #[cfg(test)]

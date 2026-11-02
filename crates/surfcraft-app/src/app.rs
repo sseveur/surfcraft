@@ -778,7 +778,13 @@ impl SurfCraftApp {
                 if ui.button(tr("Board info…")).clicked() {
                     self.dialogs.info = true;
                 }
-                if ui.button(tr("Fins…")).clicked() {
+                if ui
+                    .button(tr("Fins…"))
+                    .on_hover_text(tr(
+                        "Fin setups (thruster, quad, 5 fins…) with FCS I, FCS II, Futures or US box footprints",
+                    ))
+                    .clicked()
+                {
                     self.dialogs.fins = true;
                 }
                 if ui.button(tr("Weight calculator…")).clicked() {

@@ -2,6 +2,7 @@
 
 pub mod drawing;
 pub mod dxf;
+pub mod fins;
 pub mod gltf;
 pub mod mesh_formats;
 pub mod pdf;

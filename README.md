@@ -39,6 +39,9 @@ The builds are not signed with paid certificates yet, so the first launch needs 
 - **New board from a template** at a target length, width, thickness and volume (litres).
 - **Volume advisor** (Board menu, and "Suggest volume" in New board): a starting-point volume range from the
   rider's weight, skill, fitness, age, waves and board type (Guild factor method, see `docs/volume-advisor.md`).
+- **Fins** (Board > Fins): single, twin, twin + trailer, thruster, quad, 2+1 and 5-fin presets placed for the board,
+  with FCS I, FCS II, Futures or US box footprints, printed 1:1 on the outline template with a measurement table
+  (dimensions and sources in `docs/fins.md`).
 - **Weight calculator**: foam, stringer, glass, laps, resin, hot coat.
 - **Print**: outline (half or full), spin, profile and cross-section templates at true 1:1 scale, tiled and centred
   over A4/A3/Letter/Tabloid with registration marks and a 100 mm check bar; one-page spec sheet. PDF, SVG or DXF.

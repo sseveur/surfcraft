@@ -241,9 +241,11 @@ pub fn tool_specs() -> Vec<ToolSpec> {
         },
         ToolSpec {
             name: "set_fins",
-            description: "Fin positions: side fin rear/front (x from tail, y from stringer), centre fin rear/front x, depths, splay (degrees).",
+            description: "Fin setup. Either `preset` (single, twin, twin_trailer, thruster, quad, 2+1, five) and/or `box_system` (fcs1, fcs2, futures, usbox, none): places the fins with standard positions for this board and box footprints; or the legacy BoardCAD marks: side fin rear/front (x from tail, y from stringer), centre fin rear/front x, depths, splay (degrees), which replace the setup by plain marks. Returns the legacy marks (`fins`) and the fin list (`setup`, cm and degrees).",
             input_schema: obj(
                 json!({
+                    "preset": {"type": "string", "enum": crate::fins_cmd::PRESETS, "description": "Standard fin arrangement, placed for this board"},
+                    "box_system": {"type": "string", "enum": crate::fins_cmd::BOX_SYSTEMS, "description": "Fin boxes: FCS I plugs, FCS II, Futures, single-fin US box, or none (position only)"},
                     "side_rear_x": len_schema("Side fin trailing edge, from tail"),
                     "side_rear_y": len_schema("Side fin trailing edge, out from stringer"),
                     "side_front_x": len_schema("Side fin leading edge, from tail"),
@@ -560,11 +562,19 @@ pub fn render_export(
         };
     }
     let d = match what {
-        "outline" => templates::outline(board, templates::OutlineOptions::default(), &fmt),
+        "outline" => templates::outline(
+            board,
+            templates::OutlineOptions {
+                fins: board.fin_setup.is_some(),
+                ..Default::default()
+            },
+            &fmt,
+        ),
         "outline_full" => templates::outline(
             board,
             templates::OutlineOptions {
                 full: true,
+                fins: board.fin_setup.is_some(),
                 ..Default::default()
             },
             &fmt,
@@ -886,6 +896,28 @@ pub fn execute(doc: &mut Document, ctx: &mut Context, name: &str, a: &Value) -> 
             Ok(json!({"ok": true}))
         }
         "set_fins" => {
+            const LEGACY: [&str; 9] = [
+                "side_rear_x",
+                "side_rear_y",
+                "side_front_x",
+                "side_front_y",
+                "centre_rear_x",
+                "centre_front_x",
+                "centre_depth",
+                "side_depth",
+                "splay_degrees",
+            ];
+            let has_legacy = LEGACY.iter().any(|k| arg(a, k).is_some());
+            if has_legacy && (arg(a, "preset").is_some() || arg(a, "box_system").is_some()) {
+                return Err(
+                    "set_fins: give either preset/box_system or the legacy marks, not both".into(),
+                );
+            }
+            if crate::fins_cmd::apply(doc, a)? {
+                return Ok(
+                    json!({"fins": doc.board.fins, "setup": crate::fins_cmd::setup_json(&doc.board)}),
+                );
+            }
             let mut fins = doc.board.fins;
             for (i, k) in [
                 "side_rear_x",
@@ -920,8 +952,16 @@ pub fn execute(doc: &mut Document, ctx: &mut Context, name: &str, a: &Value) -> 
                 }
                 fins[8] = v;
             }
-            doc.edit(|b| b.fins = fins);
-            Ok(json!({"fins": fins}))
+            // Hand-set marks replace a fin setup (their boxes can no longer be placed from them).
+            if fins != doc.board.fins || !has_legacy {
+                doc.edit(|b| {
+                    if b.fins != fins {
+                        b.fin_setup = None;
+                    }
+                    b.fins = fins;
+                });
+            }
+            Ok(json!({"fins": fins, "setup": crate::fins_cmd::setup_json(&doc.board)}))
         }
         "suggest_volume" => {
             use surfcraft_core::rider::{BoardType, Fitness, Rider, Skill, Waves, suggest_volume};
