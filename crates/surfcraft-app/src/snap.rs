@@ -75,7 +75,7 @@ pub enum Pane {
 impl Pane {
     pub fn of(id: CurveId) -> Self {
         match id {
-            CurveId::Outline => Pane::Outline,
+            CurveId::Outline | CurveId::OutlineLeft => Pane::Outline,
             CurveId::Deck | CurveId::Bottom => Pane::Profile,
             CurveId::Section(i) => Pane::Section(i),
         }
@@ -216,11 +216,26 @@ impl ViewSnap {
         settings: SnapSettings,
     ) -> Self {
         let alt = ui.input(|i| i.modifiers.alt);
+        // Targets are kept in the display frame of the curve being snapped (y times `y_scale`). On an asymmetric
+        // board the outline view shows each rail on its own side: the left rail above the stringer (sign +1), the
+        // right rail mirrored below it (sign -1), and `y_scale` is the snapped curve's sign.
+        let asym_outline = pane == Pane::Outline && board.is_asymmetric();
         let disp = |p: DVec2| DVec2::new(p.x, p.y * y_scale);
         let (ids, mirror): (Vec<CurveId>, Option<DVec2>) = match pane {
+            Pane::Outline if asym_outline => (vec![CurveId::OutlineLeft, CurveId::Outline], None),
             Pane::Outline => (vec![CurveId::Outline], Some(DVec2::new(1.0, -1.0))),
             Pane::Profile => (vec![CurveId::Deck, CurveId::Bottom], None),
             Pane::Section(i) => (vec![CurveId::Section(i)], Some(DVec2::new(-1.0, 1.0))),
+        };
+        // World y per curve y of each target curve, divided by the snapped curve's `y_scale`.
+        let sign = |id: CurveId| {
+            if asym_outline && id == CurveId::Outline {
+                -y_scale
+            } else if asym_outline {
+                y_scale
+            } else {
+                1.0
+            }
         };
         let mut knots = Vec::new();
         let mut curves = Vec::new();
@@ -228,15 +243,16 @@ impl ViewSnap {
             let Some(s) = id.spline(board) else {
                 continue;
             };
+            let k_sign = sign(id);
             for (i, k) in s.knots().iter().enumerate() {
-                let p = disp(k.point());
+                let p = disp(k.point()) * DVec2::new(1.0, k_sign);
                 knots.push((id, i, p));
                 if let Some(m) = mirror {
                     knots.push((id, i, p * m));
                 }
             }
             let mut d = s.clone();
-            d.scale(1.0, y_scale);
+            d.scale(1.0, y_scale * k_sign);
             if let Some(m) = mirror {
                 let mut c = d.clone();
                 c.scale(m.x, m.y);
@@ -245,6 +261,17 @@ impl ViewSnap {
             curves.push(d);
         }
         let guides: Vec<DVec2> = match pane {
+            Pane::Outline if asym_outline => board
+                .outline_left_guides
+                .iter()
+                .map(|g| DVec2::new(g.x, g.y * sign(CurveId::OutlineLeft)))
+                .chain(
+                    board
+                        .outline_guides
+                        .iter()
+                        .map(|g| DVec2::new(g.x, g.y * sign(CurveId::Outline))),
+                )
+                .collect(),
             Pane::Outline => board.outline_guides.clone(),
             Pane::Profile => [&board.deck_guides[..], &board.bottom_guides[..]].concat(),
             Pane::Section(i) => board

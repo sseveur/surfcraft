@@ -2,6 +2,7 @@
 
 mod app;
 mod app_log;
+mod asym_ui;
 mod automation;
 mod autosave;
 mod autosave_ui;
@@ -15,6 +16,8 @@ mod export_ui;
 mod fins_ui;
 #[cfg(test)]
 mod gui_tests;
+#[cfg(test)]
+mod gui_tests_asym;
 #[cfg(test)]
 mod gui_tests_cam;
 #[cfg(test)]

@@ -200,6 +200,21 @@ fn every_tool_runs_headless() {
     let r = m.ok("set_rails", json!({"preset": "60/40", "tuck": "1/4\""}));
     assert!(r["sections_changed"].as_u64().unwrap() > 0, "{r}");
     m.fails("set_rails", json!({"apex": 2}));
+    m.fails("get_curve", json!({"curve": "outline_left"}));
+    let a = m.ok("set_asymmetric", json!({"on": true}));
+    assert_eq!(a["asymmetric"], true, "{a}");
+    let k = m.ok("get_curve", json!({"curve": "outline_left"}));
+    assert!(k["knots"].as_array().unwrap().len() >= 2, "{k}");
+    let s = m.ok("board_summary", json!({}));
+    assert!(
+        s["asymmetry"]["left_rail"]["max_half_width"]["cm"]
+            .as_f64()
+            .unwrap()
+            > 0.0,
+        "{s}"
+    );
+    let a = m.ok("set_asymmetric", json!({"on": false, "keep": "left"}));
+    assert_eq!(a["asymmetric"], false, "{a}");
     assert_eq!(m.ok("undo", json!({}))["undone"], true);
     assert_eq!(m.ok("redo", json!({}))["redone"], true);
     for (what, format) in [

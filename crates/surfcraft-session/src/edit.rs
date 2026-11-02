@@ -12,7 +12,10 @@ use surfcraft_core::{Board, DVec2, Handle, Spline};
 /// One of the board's editable curves.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum CurveId {
+    /// The outline: the right rail of an asymmetric board, both rails of a symmetric one.
     Outline,
+    /// The left rail's outline of an asymmetric board (absent on a symmetric board).
+    OutlineLeft,
     Deck,
     Bottom,
     /// Index into `Board::sections`.
@@ -24,6 +27,7 @@ impl CurveId {
     pub fn label(self) -> &'static str {
         match self {
             CurveId::Outline => "Outline",
+            CurveId::OutlineLeft => "Left outline",
             CurveId::Deck => "Deck",
             CurveId::Bottom => "Bottom",
             CurveId::Section(_) => "Cross-section",
@@ -33,6 +37,7 @@ impl CurveId {
     pub fn spline(self, b: &Board) -> Option<&Spline> {
         match self {
             CurveId::Outline => Some(&b.outline),
+            CurveId::OutlineLeft => b.outline_left.as_ref(),
             CurveId::Deck => Some(&b.deck),
             CurveId::Bottom => Some(&b.bottom),
             CurveId::Section(i) => b.sections.get(i).map(|s| &s.spline),
@@ -42,6 +47,7 @@ impl CurveId {
     pub fn spline_mut(self, b: &mut Board) -> Option<&mut Spline> {
         match self {
             CurveId::Outline => Some(&mut b.outline),
+            CurveId::OutlineLeft => b.outline_left.as_mut(),
             CurveId::Deck => Some(&mut b.deck),
             CurveId::Bottom => Some(&mut b.bottom),
             CurveId::Section(i) => b.sections.get_mut(i).map(|s| &mut s.spline),
@@ -51,6 +57,7 @@ impl CurveId {
     pub fn guides(self, b: &Board) -> Option<&Vec<DVec2>> {
         match self {
             CurveId::Outline => Some(&b.outline_guides),
+            CurveId::OutlineLeft => b.outline_left.as_ref().map(|_| &b.outline_left_guides),
             CurveId::Deck => Some(&b.deck_guides),
             CurveId::Bottom => Some(&b.bottom_guides),
             CurveId::Section(i) => b.sections.get(i).map(|s| &s.guide_points),
@@ -60,9 +67,32 @@ impl CurveId {
     pub fn guides_mut(self, b: &mut Board) -> Option<&mut Vec<DVec2>> {
         match self {
             CurveId::Outline => Some(&mut b.outline_guides),
+            CurveId::OutlineLeft => {
+                if b.outline_left.is_some() {
+                    Some(&mut b.outline_left_guides)
+                } else {
+                    None
+                }
+            }
             CurveId::Deck => Some(&mut b.deck_guides),
             CurveId::Bottom => Some(&mut b.bottom_guides),
             CurveId::Section(i) => b.sections.get_mut(i).map(|s| &mut s.guide_points),
+        }
+    }
+
+    /// Whether the curve is one of the outlines (plan-view curves).
+    pub fn is_outline(self) -> bool {
+        matches!(self, CurveId::Outline | CurveId::OutlineLeft)
+    }
+
+    /// The board rail an outline curve belongs to on `b` (`None` for the other curves). The outline of a
+    /// symmetric board counts as the left rail: it is drawn above the stringer.
+    pub fn rail(self, b: &Board) -> Option<surfcraft_core::Rail> {
+        match self {
+            CurveId::OutlineLeft => Some(surfcraft_core::Rail::Left),
+            CurveId::Outline if b.is_asymmetric() => Some(surfcraft_core::Rail::Right),
+            CurveId::Outline => Some(surfcraft_core::Rail::Left),
+            _ => None,
         }
     }
 
@@ -295,7 +325,7 @@ pub fn remove_section(b: &mut Board, i: usize) -> bool {
 /// rocker point at zero after a profile edit, editing constraints on every knot (also new ones).
 pub fn after_edit(b: &mut Board, id: CurveId) {
     match id {
-        CurveId::Outline => b.on_outline_changed(),
+        CurveId::Outline | CurveId::OutlineLeft => b.on_outline_changed(),
         CurveId::Deck | CurveId::Bottom => b.on_rocker_changed(),
         CurveId::Section(_) => b.fit_sections(),
     }

@@ -40,6 +40,15 @@ pub fn specs(
                 tr("Wide point"),
                 format!("{} @ {}", f(b.max_width()), f(b.max_width_pos())),
             );
+            if b.is_asymmetric() {
+                for (name, rail) in [
+                    (tr("Left half width"), surfcraft_core::Rail::Left),
+                    (tr("Right half width"), surfcraft_core::Rail::Right),
+                ] {
+                    let (w, x) = b.max_half_width(rail);
+                    row(ui, name, format!("{} @ {}", f(w), f(x)));
+                }
+            }
             row(ui, tr("Width centre"), f(b.center_width()));
             row(ui, tr("Nose 1 ft"), f(b.width_at(length - FOOT)));
             row(ui, tr("Tail 1 ft"), f(b.width_at(FOOT)));
@@ -119,14 +128,20 @@ pub fn knot_inspector(ui: &mut egui::Ui, doc: &mut Document, ed: &mut EditorStat
         return;
     };
     let index = sel.primary().unwrap_or(0);
-    let mut heading = trf("{0} knot {1}", &[&tr(sel.curve.label()), &(index + 1)]);
+    // On an asymmetric board the outline is the right rail.
+    let curve_name = if sel.curve == CurveId::Outline && doc.board.is_asymmetric() {
+        tr("Right outline")
+    } else {
+        tr(sel.curve.label())
+    };
+    let mut heading = trf("{0} knot {1}", &[&curve_name, &(index + 1)]);
     if sel.knots.len() > 1 {
         heading.push(' ');
         heading.push_str(&trf("(+{0} more)", &[&(sel.knots.len() - 1)]));
     }
     ui.label(heading);
     let (xl, yl) = match sel.curve {
-        CurveId::Outline => (tr("from tail"), tr("half width")),
+        CurveId::Outline | CurveId::OutlineLeft => (tr("from tail"), tr("half width")),
         CurveId::Bottom | CurveId::Deck => (tr("from tail"), tr("height")),
         CurveId::Section(_) => (tr("from stringer"), tr("height")),
     };

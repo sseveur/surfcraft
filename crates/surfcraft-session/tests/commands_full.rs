@@ -187,8 +187,8 @@ fn tool_specs_are_complete_and_unique() {
     let specs = tool_specs();
     assert_eq!(
         specs.len(),
-        29,
-        "command count (25 + generate_toolpath + suggest_volume + apply_bottom_contour + set_rails)"
+        30,
+        "command count (25 + generate_toolpath + suggest_volume + apply_bottom_contour + set_rails + set_asymmetric)"
     );
     let mut names: Vec<_> = specs.iter().map(|s| s.name).collect();
     names.sort();
@@ -436,6 +436,7 @@ fn undo_after_every_command_restores_exact_board() {
                 json!({"type": "single_concave", "depth": "1/8\"", "end": "4'"}),
             ),
             ("set_rails", json!({"preset": "70/30"})),
+            ("set_asymmetric", json!({"on": true})),
         ]
     };
     for (t, template) in TEMPLATES.iter().enumerate() {
@@ -1580,4 +1581,74 @@ fn set_fins_places_presets_with_boxes() {
     ] {
         err(&mut d, &mut c, "set_fins", bad);
     }
+}
+
+#[test]
+fn set_asymmetric_and_left_outline_editing() {
+    let (mut d, mut c) = session(0);
+    err(
+        &mut d,
+        &mut c,
+        "get_curve",
+        json!({"curve": "outline_left"}),
+    );
+    let s = ok(&mut d, &mut c, "board_summary", json!({}));
+    assert_eq!(s["asymmetry"]["asymmetric"], false);
+    let sym = d.board.clone();
+    ok(&mut d, &mut c, "set_asymmetric", json!({"on": true}));
+    assert!(d.board.is_asymmetric());
+    // Turning it on again changes nothing and adds no undo step.
+    ok(&mut d, &mut c, "set_asymmetric", json!({"on": true}));
+    ok(&mut d, &mut c, "undo", json!({}));
+    assert_eq!(d.board, sym);
+    ok(&mut d, &mut c, "redo", json!({}));
+    // Widen the left rail at its middle knot: only the left half changes.
+    let k = ok(
+        &mut d,
+        &mut c,
+        "get_curve",
+        json!({"curve": "outline_left"}),
+    );
+    let n = k["knots"].as_array().unwrap().len();
+    let i = n / 2;
+    let p = &k["knots"][i]["point"];
+    let (x, y) = (p[0].as_f64().unwrap(), p[1].as_f64().unwrap());
+    let right_before = d.board.outline.clone();
+    ok(
+        &mut d,
+        &mut c,
+        "set_knot",
+        json!({"curve": "outline_left", "index": i, "x": x, "y": y + 2.0}),
+    );
+    assert_eq!(d.board.outline, right_before);
+    let s = ok(&mut d, &mut c, "board_summary", json!({}));
+    let left = s["asymmetry"]["left_rail"]["max_half_width"]["cm"]
+        .as_f64()
+        .unwrap();
+    let right = s["asymmetry"]["right_rail"]["max_half_width"]["cm"]
+        .as_f64()
+        .unwrap();
+    assert!(left > right + 1.0, "{s}");
+    let w = s["max_width"]["cm"].as_f64().unwrap();
+    assert!(w < left * 2.0 && w > right * 2.0, "{s}");
+    // Scaling the width scales both rails.
+    ok(&mut d, &mut c, "scale_board", json!({"width": w * 0.9}));
+    assert!((d.board.max_width() - w * 0.9).abs() < 0.01);
+    // Off, keeping the left rail.
+    let left_outline = d.board.outline_left.clone().unwrap();
+    ok(
+        &mut d,
+        &mut c,
+        "set_asymmetric",
+        json!({"on": false, "keep": "left"}),
+    );
+    assert!(!d.board.is_asymmetric());
+    assert_eq!(d.board.outline, left_outline);
+    err(&mut d, &mut c, "set_asymmetric", json!({"on": "yes"}));
+    err(
+        &mut d,
+        &mut c,
+        "set_asymmetric",
+        json!({"on": false, "keep": "middle"}),
+    );
 }

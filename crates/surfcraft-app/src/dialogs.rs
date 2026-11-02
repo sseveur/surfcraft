@@ -25,6 +25,8 @@ pub struct Dialogs {
     pub shaping: crate::shaping_ui::ShapingState,
     pub compare: crate::compare_ui::CompareState,
     pub volume_advisor: bool,
+    /// "Make the outline symmetric" window (which rail to keep).
+    pub asym_keep: bool,
 }
 
 /// Scale `board` to the given overall size.

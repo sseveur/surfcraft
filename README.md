@@ -48,6 +48,8 @@ The builds are not signed with paid certificates yet, so the first launch needs 
 - **New board from a template** at a target length, width, thickness and volume (litres).
 - **Volume advisor** (Board menu, and "Suggest volume" in New board): a starting-point volume range from the
   rider's weight, skill, fitness, age, waves and board type (Guild factor method, see `docs/volume-advisor.md`).
+- **Asymmetric boards** (Board > Asymmetric outline): a separate outline for each rail (toe side and heel side),
+  both edited in the Outline view; volume, specs, 3D, exports, templates and CNC use each rail's own shape.
 - **Fins** (Board > Fins): single, twin, twin + trailer, thruster, quad, 2+1 and 5-fin presets placed for the board,
   with FCS I, FCS II, Futures or US box footprints, printed 1:1 on the outline template with a measurement table
   (dimensions and sources in `docs/fins.md`).
@@ -101,7 +103,7 @@ Claude Desktop (`claude_desktop_config.json`):
 ```
 
 Tools include `board_summary`, `sample_board`, `get_curve`, `set_knot`, `move_knot`, `add_knot`, `section_info`,
-`add_section`, `scale_board` (with target volume), `new_board`, `open_board`, `save_board`, `set_fins`,
+`add_section`, `scale_board` (with target volume), `new_board`, `open_board`, `save_board`, `set_fins`, `set_asymmetric`,
 `estimate_weight`, `suggest_volume`, `export`, `generate_toolpath`, `apply_bottom_contour`, `set_rails`, `undo`/`redo`,
 `launch_app`, `screenshot`, `set_view`.
 

@@ -597,6 +597,33 @@ Invariants maintained by these hooks and by the constraints of §2.9:
 * **Copy / paste section**: paste replaces the current section's spline by a copy of the copied section's spline and scales it to (thickness, width) at the current section's position.
 * Undo/redo of section and knot commands re-runs the edited view's hook.
 
+### 6.8 Asymmetric boards (SurfCraft extension)
+
+Not in the original. A board MAY carry a second outline, making it asymmetric; without it everything above
+applies unchanged and results are bit-identical to a board that never had one.
+
+* **Rails.** "Left" and "right" are the rider's, standing on the deck facing the nose. The board frame of §1.2 is
+  right-handed (x to the nose, z up), so **y > 0 is the left rail** and y < 0 the right rail. In the Outline view
+  (deck seen from above, nose to the right) the left rail is drawn above the stringer and the right rail below.
+* **Data.** The outline of §1.3 is the **right** rail's half outline; the **left** outline is a second spline of
+  the same kind (same knot rules, locks and fixed end points, so both have length L), with its own guide points.
+  Stored in `.brd` under p61 (`file-formats.md` §3.11). A symmetric board's single outline describes both rails.
+* **Surface.** Sections stay symmetric shapes. On each half the surface models of §8 use that rail's half width
+  wherever they use the outline: the section-blend model scales each neighbouring section to (2 · half width of the
+  rail, stringer thickness); the control-point model scales the interpolated section to the same; the fallback
+  shape likewise. A point of the right half is computed on the y ≥ 0 side and mirrored (y → −y, n_y → −n_y). The
+  stored sections are fitted (§6.6) to the full width (left + right half), i.e. to the average half width.
+* **Metrics.** width(x) = left half width + right half width; the wide point is the maximum of that sum
+  (sampled, then refined); section area = area of the left half + area of the right half, so volume, centre of
+  mass and the volume distribution follow, and the volume equals the average of the volumes of the two
+  symmetric boards made by mirroring each rail. Glass areas and the rail length of the weight calculator use the
+  average of the two rails. Per-rail figures: maximum half width and its position.
+* **Operations.** Making a board asymmetric copies the outline to the left rail. Making it symmetric keeps one
+  rail's outline (and guide points) for both sides and re-fits the sections. Scaling scales both outlines by the
+  same factors (the width factor is new maximum width / old maximum width). Flipping nose and tail mirrors both
+  outlines along the length, each staying on its rail. Fin presets place each side fin from its own rail.
+* **Points at (x, y).** deck/bottom height at (x, y) of an asymmetric board use the rail on the side of y and |y|.
+
 ---
 
 ## 7. Cross-section model

@@ -69,7 +69,7 @@ pub(crate) fn len_schema(desc: &str) -> Value {
 
 fn curve_schema() -> Value {
     json!({
-        "curve": {"type": "string", "enum": ["outline", "deck", "bottom", "section"], "description": "Which curve. Outline: x from tail, y half width. Deck/bottom: x from tail, y height. Section: x from stringer, y height."},
+        "curve": {"type": "string", "enum": ["outline", "outline_left", "deck", "bottom", "section"], "description": "Which curve. Outline: x from tail, y half width (on an asymmetric board: the rider's right rail; outline_left is the left rail). Deck/bottom: x from tail, y height. Section: x from stringer, y height."},
         "section_index": {"type": "integer", "description": "For curve=section: index into board.sections (real sections are 1..n-2). Defaults to the current section."}
     })
 }
@@ -333,6 +333,7 @@ pub fn tool_specs() -> Vec<ToolSpec> {
         },
     ];
     specs.extend(crate::shaping_commands::specs());
+    specs.extend(crate::asym_commands::specs());
     specs
 }
 
@@ -398,6 +399,10 @@ pub(crate) fn string<'a>(a: &'a Value, k: &str) -> Option<&'a str> {
 fn curve(a: &Value, board: &Board, ctx: &Context) -> Result<CurveId, String> {
     let id = match string(a, "curve").ok_or("missing curve")? {
         "outline" => CurveId::Outline,
+        "outline_left" if board.is_asymmetric() => CurveId::OutlineLeft,
+        "outline_left" => {
+            return Err("outline_left: the board is symmetric (set_asymmetric on first)".into());
+        }
         "deck" => CurveId::Deck,
         "bottom" => CurveId::Bottom,
         "section" => {
@@ -466,7 +471,8 @@ pub fn summary(board: &Board, ctx: &Context) -> Value {
         "center_of_mass_from_tail": measure(ctx, board.center_of_mass()),
         "surface_model": match board.model { SurfaceModel::SBlend => "sblend", SurfaceModel::ControlPoint => "control_point" },
         "sections": board.real_sections().map(|i| json!({"index": i, "position": measure(ctx, board.sections[i].position)})).collect::<Vec<_>>(),
-        "knot_counts": {"outline": board.outline.len(), "deck": board.deck.len(), "bottom": board.bottom.len()},
+        "knot_counts": {"outline": board.outline.len(), "outline_left": board.outline_left.as_ref().map(|s| s.len()), "deck": board.deck.len(), "bottom": board.bottom.len()},
+        "asymmetry": crate::asym_commands::rails(board, ctx),
     })
 }
 
@@ -1187,6 +1193,7 @@ pub fn execute(doc: &mut Document, ctx: &mut Context, name: &str, a: &Value) -> 
         }
         "apply_bottom_contour" => crate::shaping_commands::apply_bottom_contour(doc, ctx, a),
         "set_rails" => crate::shaping_commands::set_rails(doc, ctx, a),
+        "set_asymmetric" => crate::asym_commands::set_asymmetric(doc, ctx, a),
         other => Err(format!("unknown command {other:?}")),
     }
 }

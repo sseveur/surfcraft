@@ -4,7 +4,7 @@ use std::collections::BTreeSet;
 
 use eframe::egui::{self, Align2, Color32, Key, Rect, Stroke, StrokeKind};
 use surfcraft_core::section::{APEX_ANGLE, TUCK_UNDER_ANGLE};
-use surfcraft_core::{Board, DVec2, Handle, Spline, units::FOOT};
+use surfcraft_core::{Board, DVec2, Handle, Rail, Spline, units::FOOT};
 
 use crate::document::Document;
 use crate::edit::{self, CurveId, Selection};
@@ -258,10 +258,16 @@ fn interact(
     }
     let mods = ui.input(|i| i.modifiers);
     let space = ui.input(|i| i.key_down(Key::Space));
-    let snap = curves.first().map(|e| {
-        let pane = crate::snap::Pane::of(e.id);
-        crate::snap::ViewSnap::new(ui, canvas, &doc.board, pane, e.y_scale, set.snap)
-    });
+    // Snap targets for a curve shown with display scale `ys` (the outline view of an asymmetric board shows its
+    // right rail mirrored, `ys` = -1).
+    let snap_for = |board: &Board, ys: f64| {
+        curves.first().map(|e| {
+            let pane = crate::snap::Pane::of(e.id);
+            crate::snap::ViewSnap::new(ui, canvas, board, pane, ys, set.snap)
+        })
+    };
+    let first_ys = curves.first().map_or(1.0, |e| e.y_scale);
+    let snap = snap_for(&doc.board, first_ys);
     // Where a click with an add tool lands, snapped; shown with a ring while hovering.
     let placed = match (&snap, ed.tool) {
         (Some(snap), Tool::AddKnot | Tool::AddGuide) if ed.drag.is_none() => {
@@ -315,7 +321,14 @@ fn interact(
                         .iter()
                         .find(|e| e.id == id)
                         .map_or(1.0, |e| e.y_scale);
-                    let target = placed.map_or(DVec2::new(world.x, world.y / ys), |s| s.pos);
+                    // The snapped point is in the first curve's coordinates.
+                    let target = placed.map_or(DVec2::new(world.x, world.y / ys), |s| {
+                        if ys == first_ys {
+                            s.pos
+                        } else {
+                            DVec2::new(s.pos.x, s.pos.y * first_ys / ys)
+                        }
+                    });
                     let mut new_index = None;
                     doc.edit(|b| new_index = edit::add_knot(b, id, target));
                     if let Some(i) = new_index {
@@ -324,9 +337,22 @@ fn interact(
                 }
             }
             Tool::AddGuide => {
-                if let Some(e) = curves.first() {
+                // The curve on the clicked side of the stringer (the outline view of an asymmetric board shows
+                // one rail on each side), else the first one.
+                let e = curves
+                    .iter()
+                    .find(|e| world.y * e.y_scale.signum() >= 0.0)
+                    .or(curves.first());
+                if let Some(e) = e {
                     let id = e.id;
-                    let target = placed.map_or(DVec2::new(world.x, world.y / e.y_scale), |s| s.pos);
+                    let ys = e.y_scale;
+                    let target = placed.map_or(DVec2::new(world.x, world.y / ys), |s| {
+                        if ys == first_ys {
+                            s.pos
+                        } else {
+                            DVec2::new(s.pos.x, s.pos.y * first_ys / ys)
+                        }
+                    });
                     doc.edit(|b| {
                         if let Some(g) = id.guides_mut(b) {
                             g.push(target);
@@ -403,8 +429,18 @@ fn interact(
                 doc.touch();
             }
         }
-        // Snapping (or Shift) moves the grabbed element to its snapped target instead.
-        if let Some(snap) = &snap {
+        // Snapping (or Shift) moves the grabbed element to its snapped target instead, in the dragged curve's
+        // coordinates.
+        let drag_ys = curves
+            .iter()
+            .find(|e| e.id == drag.curve)
+            .map_or(first_ys, |e| e.y_scale);
+        let drag_snap = if drag_ys == first_ys {
+            None
+        } else {
+            snap_for(&doc.board, drag_ys)
+        };
+        if let Some(snap) = drag_snap.as_ref().or(snap.as_ref()) {
             drag.absolute |= snap.drag_snaps() || mods.shift;
             if drag.absolute
                 && let Some(sel) = ed.selection.clone()
@@ -633,8 +669,8 @@ fn draw_overlay_board(canvas: &Canvas, b: &Board, which: View, color: Color32, y
     let s = Stroke::new(1.2, color);
     match which {
         View::Outline => {
-            canvas.dashed(sample(&b.outline, 24, ident), s);
-            canvas.dashed(sample(&b.outline, 24, mirror_y), s);
+            canvas.dashed(sample(b.outline_of(Rail::Left), 24, ident), s);
+            canvas.dashed(sample(b.outline_of(Rail::Right), 24, mirror_y), s);
         }
         View::Profile => {
             canvas.dashed(sample(&b.deck, 24, |p| DVec2::new(p.x, p.y * ys)), s);
@@ -659,8 +695,18 @@ pub fn outline(
     pal: &Palette,
 ) {
     let length = doc.board.length().max(1.0);
-    let half = (doc.board.max_width() / 2.0).max(1.0);
-    let bounds = (DVec2::new(0.0, -half), DVec2::new(length, half));
+    let asym = doc.board.is_asymmetric();
+    // Extent above (left rail) and below (right rail) the stringer.
+    let (half, half_right) = if asym {
+        (
+            doc.board.max_half_width(Rail::Left).0.max(1.0),
+            doc.board.max_half_width(Rail::Right).0.max(1.0),
+        )
+    } else {
+        let h = (doc.board.max_width() / 2.0).max(1.0);
+        (h, h)
+    };
+    let bounds = (DVec2::new(0.0, -half_right), DVec2::new(length, half));
     let canvas = Canvas::show(ui, &mut ed.outline_view, bounds, pal.bg);
     let v = &set.view;
     if v.background_image
@@ -734,20 +780,52 @@ pub fn outline(
     if v.section_positions {
         for i in board.real_sections() {
             let x = board.sections[i].position;
-            let w = board.width_at(x) / 2.0;
+            let (wl, wr) = (
+                board.half_width_at(x, Rail::Left),
+                board.half_width_at(x, Rail::Right),
+            );
             let color = if i == ed.current_section {
                 pal.accent
             } else {
                 pal.section_line
             };
-            canvas.segment(DVec2::new(x, -w), DVec2::new(x, w), Stroke::new(1.0, color));
+            canvas.segment(
+                DVec2::new(x, -wr),
+                DVec2::new(x, wl),
+                Stroke::new(1.0, color),
+            );
         }
     }
     let stroke = Stroke::new(2.0, pal.curve);
-    canvas.polyline(sample(&board.outline, 32, ident), stroke);
-    canvas.polyline(sample(&board.outline, 32, mirror_y), stroke);
+    canvas.polyline(sample(board.outline_of(Rail::Left), 32, ident), stroke);
+    canvas.polyline(sample(board.outline_of(Rail::Right), 32, mirror_y), stroke);
     if v.curvature {
-        draw_curvature(&canvas, &board.outline, ident, 300.0, pal.accent);
+        draw_curvature(
+            &canvas,
+            board.outline_of(Rail::Left),
+            ident,
+            300.0,
+            pal.accent,
+        );
+        if asym {
+            draw_curvature(&canvas, &board.outline, mirror_y, 300.0, pal.accent);
+        }
+    }
+    if asym {
+        // Which rail is which: the deck seen from above, nose to the right.
+        let gap = 8.0 / canvas.xf.scale as f64;
+        canvas.text(
+            DVec2::new(0.0, half + gap),
+            Align2::LEFT_BOTTOM,
+            tr("Left rail"),
+            pal.text,
+        );
+        canvas.text(
+            DVec2::new(0.0, -half_right - gap),
+            Align2::LEFT_TOP,
+            tr("Right rail"),
+            pal.text,
+        );
     }
     if v.fins {
         crate::fins_ui::draw_outline(&canvas, board, pal.fin);
@@ -755,17 +833,16 @@ pub fn outline(
     if v.measurements {
         for x in [FOOT, length / 2.0, length - FOOT] {
             let w = board.width_at(x);
+            let (wl, wr) = (
+                board.half_width_at(x, Rail::Left),
+                board.half_width_at(x, Rail::Right),
+            );
             canvas.segment(
-                DVec2::new(x, -w / 2.0),
-                DVec2::new(x, w / 2.0),
+                DVec2::new(x, -wr),
+                DVec2::new(x, wl),
                 Stroke::new(1.0, pal.inactive),
             );
-            canvas.text(
-                DVec2::new(x, -w / 2.0),
-                Align2::CENTER_TOP,
-                set.fmt(w),
-                pal.text,
-            );
+            canvas.text(DVec2::new(x, -wr), Align2::CENTER_TOP, set.fmt(w), pal.text);
         }
         let mx = board.max_width_pos();
         // A little above the rail so the label never sits on the curve.
@@ -776,21 +853,37 @@ pub fn outline(
             pal.text,
         );
     }
-    let editable = [Editable {
-        id: CurveId::Outline,
-        y_scale: 1.0,
-    }];
+    // An asymmetric board's left rail is edited above the stringer, its right rail (the outline) below it.
+    let editable: Vec<Editable> = if asym {
+        vec![
+            Editable {
+                id: CurveId::OutlineLeft,
+                y_scale: 1.0,
+            },
+            Editable {
+                id: CurveId::Outline,
+                y_scale: -1.0,
+            },
+        ]
+    } else {
+        vec![Editable {
+            id: CurveId::Outline,
+            y_scale: 1.0,
+        }]
+    };
     if v.guide_points {
-        draw_guides(&canvas, &board.outline_guides, 1.0, pal);
+        for e in &editable {
+            if let Some(g) = e.id.guides(board) {
+                draw_guides(&canvas, g, e.y_scale, pal);
+            }
+        }
     }
     if v.control_points {
-        draw_knots(
-            &canvas,
-            &board.outline,
-            editable[0],
-            ed.selection.as_ref(),
-            pal,
-        );
+        for e in &editable {
+            if let Some(s) = e.id.spline(board) {
+                draw_knots(&canvas, s, *e, ed.selection.as_ref(), pal);
+            }
+        }
     }
     interact(ui, &canvas, doc, ed, &editable, set);
     section_click(ui, &canvas, doc, ed);
@@ -1021,6 +1114,32 @@ pub fn section(
         canvas.dashed(sample(&ps.spline, 32, mirror_x), st);
     }
     let cs = &board.sections[idx];
+    if board.is_asymmetric() {
+        // The section shape is scaled to each rail's own half width: those real halves, dashed, seen from the
+        // tail (the right rail on the right).
+        let st = Stroke::new(1.5, pal.curve_alt);
+        for (rail, map) in [
+            (Rail::Right, ident as fn(DVec2) -> DVec2),
+            (Rail::Left, mirror_x),
+        ] {
+            if let Some(s) = board.interpolated_section_on(cs.position, rail) {
+                canvas.dashed(sample(&s.spline, 32, map), st);
+            }
+        }
+        let y = -0.5;
+        canvas.text(
+            DVec2::new(-half, y),
+            Align2::LEFT_TOP,
+            tr("Left rail"),
+            pal.curve_alt,
+        );
+        canvas.text(
+            DVec2::new(half, y),
+            Align2::RIGHT_TOP,
+            tr("Right rail"),
+            pal.curve_alt,
+        );
+    }
     let stroke = Stroke::new(2.0, pal.curve);
     canvas.polyline(sample(&cs.spline, 32, ident), stroke);
     canvas.polyline(sample(&cs.spline, 32, mirror_x), stroke);

@@ -1,5 +1,6 @@
 //! Editing session shared by the GUI and the automation/MCP interface.
 
+mod asym_commands;
 pub mod automation;
 pub mod commands;
 pub mod compare;

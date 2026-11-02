@@ -234,6 +234,7 @@ pub fn guide_window(
 fn curve_guides(b: &Board, curve: CurveId) -> Vec<DVec2> {
     match curve {
         CurveId::Outline => b.outline_guides.clone(),
+        CurveId::OutlineLeft => b.outline_left_guides.clone(),
         CurveId::Bottom => b.bottom_guides.clone(),
         CurveId::Deck => b.deck_guides.clone(),
         CurveId::Section(i) => b

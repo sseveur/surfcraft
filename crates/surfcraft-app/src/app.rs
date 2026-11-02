@@ -203,6 +203,7 @@ impl SurfCraftApp {
             {
                 vec![CurveId::Section(self.ed.current_section)]
             }
+            _ if self.doc.board.is_asymmetric() => vec![CurveId::OutlineLeft, CurveId::Outline],
             _ => vec![CurveId::Outline],
         }
     }
@@ -864,6 +865,12 @@ impl SurfCraftApp {
                 if ui.button(tr("Guide points…")).clicked() {
                     self.dialogs.guides = true;
                 }
+                crate::asym_ui::menu_item(
+                    ui,
+                    &mut self.doc,
+                    &mut self.ed,
+                    &mut self.dialogs.asym_keep,
+                );
                 ui.separator();
                 if ui.button(tr("Flip nose and tail")).clicked() {
                     self.doc.edit(Board::flip);
@@ -1258,6 +1265,14 @@ impl eframe::App for SurfCraftApp {
             .filter(|r| r.revision == self.doc.revision)
             .map(|r| r.specs.volume);
         crate::tools::weight_window(&ctx, &mut self.dialogs.weight, &self.doc, volume, &self.set);
+        if self.dialogs.asym_keep {
+            crate::asym_ui::keep_window(
+                &ctx,
+                &mut self.dialogs.asym_keep,
+                &mut self.doc,
+                &mut self.ed,
+            );
+        }
         if self.dialogs.volume_advisor {
             crate::volume_ui::advisor_window(
                 &ctx,

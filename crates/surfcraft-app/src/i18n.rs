@@ -229,6 +229,7 @@ pub(crate) fn dynamic_keys() -> Vec<&'static str> {
     keys.extend(
         [
             CurveId::Outline,
+            CurveId::OutlineLeft,
             CurveId::Deck,
             CurveId::Bottom,
             CurveId::Section(0),
