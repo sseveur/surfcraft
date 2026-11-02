@@ -144,6 +144,8 @@ fn every_tool_runs_headless() {
         "set_smooth",
         json!({"curve": "bottom", "index": 1, "smooth": false}),
     );
+    let s = m.ok("smooth_curve", json!({"curve": "outline", "indices": [1]}));
+    assert_eq!(s["smoothed"], 1, "the tail corner is smoothed when picked");
     let k = m.ok("add_knot", json!({"curve": "outline", "x": 150, "y": 15}));
     m.ok(
         "delete_knot",

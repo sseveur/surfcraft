@@ -144,6 +144,20 @@ pub fn tool_specs() -> Vec<ToolSpec> {
             ),
         },
         ToolSpec {
+            name: "smooth_curve",
+            description: "Remove kinks: make knots smooth with both handles along one tangent, keeping handle \
+                          lengths. With `indices`, smooth those knots; without, smooth every small kink (corners \
+                          turning less than 30 degrees; deliberate corners such as a squash tail stay). End knots \
+                          never change. Returns how many knots changed.",
+            input_schema: obj(
+                merge(
+                    curve_schema(),
+                    json!({"indices": {"type": "array", "items": {"type": "integer"}}}),
+                ),
+                &["curve"],
+            ),
+        },
+        ToolSpec {
             name: "add_knot",
             description: "Insert a knot on the curve at the point nearest (x, y) without changing its shape.",
             input_schema: obj(
@@ -663,6 +677,29 @@ pub fn execute(doc: &mut Document, ctx: &mut Context, name: &str, a: &Value) -> 
                 .ok_or("missing smooth")?;
             doc.edit(|b| edit::set_continuous(b, id, i, smooth));
             Ok(json!({"smooth": smooth}))
+        }
+        "smooth_curve" => {
+            let id = curve(a, &doc.board, ctx)?;
+            let picked = match arg(a, "indices") {
+                None | Some(Value::Null) => None,
+                Some(Value::Array(items)) => {
+                    let mut set = BTreeSet::new();
+                    for v in items {
+                        let i = v.as_u64().ok_or("indices must be non-negative integers")?;
+                        set.insert(knot_index(&doc.board, id, i as usize)?);
+                    }
+                    Some(set)
+                }
+                Some(_) => return Err("indices must be an array of integers".into()),
+            };
+            // Only record an undo step when something changes.
+            let mut probe = doc.board.clone();
+            if edit::smooth_knots(&mut probe, id, picked.as_ref()) == 0 {
+                return Ok(json!({"smoothed": 0}));
+            }
+            let mut n = 0;
+            doc.edit(|b| n = edit::smooth_knots(b, id, picked.as_ref()));
+            Ok(json!({"smoothed": n}))
         }
         "add_knot" => {
             let id = curve(a, &doc.board, ctx)?;

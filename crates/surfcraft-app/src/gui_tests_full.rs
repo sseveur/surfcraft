@@ -2253,3 +2253,69 @@ fn tour_starts_on_first_launch_only() {
     );
     assert_eq!(old.unit, crate::settings::Unit::Centimetres);
 }
+
+// ------------------------------------------------------------------------------------------------ smoothing
+
+#[test]
+fn smoothing_from_the_edit_menu() {
+    let mut h = harness_t();
+    set_tab(&mut h, Tab::Outline);
+    // Put a small kink in the outline at its widest knot.
+    let wide = {
+        let b = &h.state().doc.board;
+        (1..b.outline.len() - 1)
+            .max_by(|&i, &j| {
+                let y = |k: usize| b.outline.knots()[k].point().y;
+                y(i).total_cmp(&y(j))
+            })
+            .unwrap()
+    };
+    h.state_mut().doc.edit(|b| {
+        let k = &mut b.outline.knots_mut()[wide];
+        k.continuous = false;
+        k.rotate_handle(Handle::Next, (-8.0f64).to_radians());
+    });
+    step(&mut h);
+    let kinked = h.state().doc.board.clone();
+    let tail_corner = (1..kinked.outline.len() - 1)
+        .find(|&i| i != wide && !kinked.outline.knots()[i].continuous)
+        .expect("squash-tail corner");
+    // Whole curve: the kink goes, the deliberate tail corner stays; one undo step.
+    menu(&mut h, "Edit", "Smooth kinks in this curve");
+    step(&mut h);
+    let b = h.state().doc.board.clone();
+    assert!(b.outline.knots()[wide].continuous);
+    assert_eq!(
+        b.outline.knots()[tail_corner],
+        kinked.outline.knots()[tail_corner]
+    );
+    assert!(status(&h).contains("Smoothed 1 point."), "{}", status(&h));
+    snap(&mut h, "qa-smooth-kinks");
+    h.key_press_modifiers(Modifiers::COMMAND, Key::Z);
+    step(&mut h);
+    assert_eq!(h.state().doc.board, kinked, "one undo restores the kink");
+    // Nothing to do: says so and records no edit.
+    menu(&mut h, "Edit", "Smooth kinks in this curve");
+    step(&mut h);
+    menu(&mut h, "Edit", "Smooth kinks in this curve");
+    step(&mut h);
+    assert!(status(&h).contains("No kinks"), "{}", status(&h));
+    // Selected points: smooths even the deliberate corner.
+    h.state_mut().ed.selection = Some(Selection::single(
+        CurveId::Outline,
+        tail_corner,
+        Handle::Point,
+    ));
+    step(&mut h);
+    menu(&mut h, "Edit", "Smooth selected points");
+    step(&mut h);
+    assert!(h.state().doc.board.outline.knots()[tail_corner].continuous);
+    // Disabled without a selection.
+    h.state_mut().ed.selection = None;
+    step(&mut h);
+    click(&mut h, "Edit");
+    let enabled = h
+        .query_by_label("Smooth selected points")
+        .map(|n| !n.accesskit_node().is_disabled());
+    assert_eq!(enabled, Some(false));
+}

@@ -185,7 +185,7 @@ fn no_negative_zero_in_formatted_lengths() {
 #[test]
 fn tool_specs_are_complete_and_unique() {
     let specs = tool_specs();
-    assert_eq!(specs.len(), 25, "command count (24 + generate_toolpath)");
+    assert_eq!(specs.len(), 26, "command count (25 + generate_toolpath)");
     let mut names: Vec<_> = specs.iter().map(|s| s.name).collect();
     names.sort();
     names.dedup();
@@ -265,6 +265,13 @@ fn invalid_inputs_are_errors() {
         ("move_knot", json!({"curve": "outline"})),
         ("move_knot", json!({"curve": "outline", "index": 50})),
         ("set_smooth", json!({"curve": "outline", "index": 2})),
+        ("smooth_curve", json!({"curve": "outline", "indices": [99]})),
+        (
+            "smooth_curve",
+            json!({"curve": "outline", "indices": "all"}),
+        ),
+        ("smooth_curve", json!({"curve": "outline", "indices": [-1]})),
+        ("smooth_curve", json!({"curve": "nose"})),
         ("add_knot", json!({"curve": "outline", "x": 10})),
         ("delete_knot", json!({"curve": "outline", "index": 0})),
         ("delete_knot", json!({"curve": "outline", "index": 99})),
@@ -319,6 +326,10 @@ fn undo_after_every_command_restores_exact_board() {
         let smooth = (1..b.outline.len() - 1)
             .find(|&i| b.outline.knots()[i].continuous)
             .expect("a smooth outline knot");
+        // A corner outline knot (the tail corner), so that smoothing it changes the board.
+        let corner = (1..b.outline.len() - 1)
+            .find(|&i| !b.outline.knots()[i].continuous)
+            .expect("a corner outline knot");
         // A free station: the middle of the widest gap between two sections.
         let free = b
             .sections
@@ -347,6 +358,10 @@ fn undo_after_every_command_restores_exact_board() {
             (
                 "set_smooth",
                 json!({"curve": "outline", "index": smooth, "smooth": false}),
+            ),
+            (
+                "smooth_curve",
+                json!({"curve": "outline", "indices": [corner]}),
             ),
             ("add_knot", json!({"curve": "outline", "x": 60, "y": 20})),
             ("add_knot", json!({"curve": "section", "x": 10, "y": 3})),

@@ -151,6 +151,58 @@ impl SurfCraftApp {
         app
     }
 
+    /// Curves the user is working on: the selection's curve, else those shown by the current view.
+    pub(crate) fn active_curves(&self) -> Vec<crate::edit::CurveId> {
+        use crate::edit::CurveId;
+        if let Some(sel) = &self.ed.selection {
+            return vec![sel.curve];
+        }
+        match self.tab {
+            Tab::Profile => match self.ed.profile_target {
+                views::ProfileTarget::Deck => vec![CurveId::Deck],
+                views::ProfileTarget::Bottom => vec![CurveId::Bottom],
+                views::ProfileTarget::Both => vec![CurveId::Deck, CurveId::Bottom],
+            },
+            Tab::Section
+                if self
+                    .doc
+                    .board
+                    .real_sections()
+                    .contains(&self.ed.current_section) =>
+            {
+                vec![CurveId::Section(self.ed.current_section)]
+            }
+            _ => vec![CurveId::Outline],
+        }
+    }
+
+    /// Smooth knots of `curves` (see [`crate::edit::smooth_knots`]) as one undo step, and say what happened.
+    pub(crate) fn smooth(
+        &mut self,
+        curves: &[crate::edit::CurveId],
+        knots: Option<&std::collections::BTreeSet<usize>>,
+    ) {
+        let mut probe = self.doc.board.clone();
+        let n: usize = curves
+            .iter()
+            .map(|&c| crate::edit::smooth_knots(&mut probe, c, knots))
+            .sum();
+        if n == 0 {
+            self.notify(tr("No kinks to smooth."));
+            return;
+        }
+        self.doc.edit(|b| {
+            for &c in curves {
+                crate::edit::smooth_knots(b, c, knots);
+            }
+        });
+        if n == 1 {
+            self.notify(tr("Smoothed 1 point."));
+        } else {
+            self.notify(trf("Smoothed {0} points.", &[&n]));
+        }
+    }
+
     pub(crate) fn notify(&mut self, msg: impl Into<String>) {
         self.status = Some((msg.into(), Instant::now()));
     }
@@ -630,6 +682,27 @@ impl SurfCraftApp {
                         crate::edit::delete_knots(b, sel.curve, &sel.knots);
                     });
                 }
+                ui.separator();
+                if ui
+                    .add_enabled(
+                        self.ed.selection.is_some(),
+                        egui::Button::new(tr("Smooth selected points")),
+                    )
+                    .on_hover_text(tr("Removes the corner at each selected point: both handles turn to one tangent and keep their lengths."))
+                    .clicked()
+                    && let Some(sel) = self.ed.selection.clone()
+                {
+                    self.smooth(&[sel.curve], Some(&sel.knots));
+                }
+                if ui
+                    .button(tr("Smooth kinks in this curve"))
+                    .on_hover_text(tr("Smooths every corner that turns by less than 30°. Bigger corners, such as a squash tail, stay; on a cross-section this also rounds a hard rail edge."))
+                    .clicked()
+                {
+                    let curves = self.active_curves();
+                    self.smooth(&curves, None);
+                }
+                ui.separator();
                 if ui.button(tr("Clear guide points")).clicked() {
                     self.doc.edit(|b| {
                         b.outline_guides.clear();
