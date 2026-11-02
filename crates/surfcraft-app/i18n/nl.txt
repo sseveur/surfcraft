@@ -744,3 +744,4 @@ The bottom depth must be more than zero and at most 1". = De diepte van de bodem
 The bottom or rail shape could not be applied to this board. = De vorm van de bodem of de rails kon niet op deze plank worden toegepast.
 depth = diepte
 usual = gebruikelijk
+Board created; it matches your measurements. = Plank gemaakt; hij komt overeen met uw maten.

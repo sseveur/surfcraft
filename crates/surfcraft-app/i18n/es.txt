@@ -744,3 +744,4 @@ The bottom depth must be more than zero and at most 1". = La profundidad del fon
 The bottom or rail shape could not be applied to this board. = No se pudo aplicar la forma del fondo o de los cantos a esta tabla.
 depth = profundidad
 usual = habitual
+Board created; it matches your measurements. = Tabla creada; coincide con sus medidas.

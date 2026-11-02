@@ -266,11 +266,19 @@ impl SurfCraftApp {
         match action {
             MeasureAction::Create(board, worst) => {
                 self.guarded(Pending::New(board));
+                if self.pending.is_some() {
+                    // Waiting for the unsaved-changes answer; the board may never be created.
+                    return;
+                }
                 let fit = self.set.fmt(worst);
-                self.notify(trf(
-                    "Board created; it is within {0} of your measurements.",
-                    &[&fit],
-                ));
+                if fit == self.set.fmt(0.0) {
+                    self.notify(tr("Board created; it matches your measurements."));
+                } else {
+                    self.notify(trf(
+                        "Board created; it is within {0} of your measurements.",
+                        &[&fit],
+                    ));
+                }
             }
             MeasureAction::ImportCsv => {
                 let Some(p) = self.pick_file("CSV", &["csv", "txt"]) else {

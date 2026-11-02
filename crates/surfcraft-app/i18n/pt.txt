@@ -744,3 +744,4 @@ The bottom depth must be more than zero and at most 1". = A profundidade do fund
 The bottom or rail shape could not be applied to this board. = Não foi possível aplicar a forma do fundo ou das bordas a esta prancha.
 depth = profundidade
 usual = habitual
+Board created; it matches your measurements. = Prancha criada; corresponde às suas medidas.

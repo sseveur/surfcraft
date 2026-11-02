@@ -744,3 +744,4 @@ The bottom depth must be more than zero and at most 1". = La profondeur du desso
 The bottom or rail shape could not be applied to this board. = La forme du dessous ou des rails n'a pas pu être appliquée à cette planche.
 depth = profondeur
 usual = habituelle
+Board created; it matches your measurements. = Planche créée ; elle correspond à vos mesures.

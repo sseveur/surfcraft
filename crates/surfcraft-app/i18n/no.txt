@@ -744,3 +744,4 @@ The bottom depth must be more than zero and at most 1". = Bunndybden må være s
 The bottom or rail shape could not be applied to this board. = Bunn- eller railformen kunne ikke brukes på dette brettet.
 depth = dybde
 usual = vanlig
+Board created; it matches your measurements. = Brett laget; det stemmer med målene dine.
