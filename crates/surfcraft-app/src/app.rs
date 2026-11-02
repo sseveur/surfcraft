@@ -832,6 +832,13 @@ impl SurfCraftApp {
                 if ui.button(tr("Scale…")).clicked() {
                     self.dialogs.scale = Some(Scale::of(&self.doc.board));
                 }
+                if ui
+                    .button(tr("Design by numbers…"))
+                    .on_hover_text(tr("Set widths, rocker and thickness at the standard stations to exact values"))
+                    .clicked()
+                {
+                    self.dialogs.numbers = Some(Default::default());
+                }
                 if ui.button(tr("Board info…")).clicked() {
                     self.dialogs.info = true;
                 }
@@ -1210,6 +1217,7 @@ impl eframe::App for SurfCraftApp {
             self.guarded(Pending::New(Box::new(b)));
         }
         dialogs::scale_window(&ctx, &mut self.dialogs.scale, &mut self.doc, &self.set);
+        crate::numbers_ui::window(&ctx, &mut self.dialogs.numbers, &mut self.doc, &self.set);
         if self.dialogs.info {
             dialogs::info_window(&ctx, &mut self.dialogs.info, &mut self.doc);
         }

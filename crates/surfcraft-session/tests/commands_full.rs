@@ -187,8 +187,8 @@ fn tool_specs_are_complete_and_unique() {
     let specs = tool_specs();
     assert_eq!(
         specs.len(),
-        27,
-        "command count (25 + generate_toolpath + suggest_volume)"
+        28,
+        "command count (25 + generate_toolpath + suggest_volume + set_dimension)"
     );
     let mut names: Vec<_> = specs.iter().map(|s| s.name).collect();
     names.sort();
@@ -733,6 +733,49 @@ fn suggest_volume_follows_the_guild_factor() {
             "{bad}"
         );
     }
+}
+
+#[test]
+fn set_dimension_reaches_the_number_as_one_undo_step() {
+    for t in 0..TEMPLATES.len() {
+        let (mut d, mut c) = session(t);
+        let before = d.board.clone();
+        let r = ok(
+            &mut d,
+            &mut c,
+            "set_dimension",
+            json!({"name": "tail_width_12in", "value": "15 1/2\""}),
+        );
+        let got = r["dimensions"]["tail_width_12in"]["cm"].as_f64().unwrap();
+        assert!((got - 15.5 * 2.54).abs() < 0.01, "t{t}: {got}");
+        assert!((d.board.width_at(30.48) - 15.5 * 2.54).abs() < 0.01);
+        ok(
+            &mut d,
+            &mut c,
+            "set_dimension",
+            json!({"name": "nose_rocker", "value": 14.0, "keep_flat": true}),
+        );
+        assert!((d.board.rocker_at(d.board.length() - 0.005) - 14.0).abs() < 0.01);
+        ok(&mut d, &mut c, "undo", json!({}));
+        ok(&mut d, &mut c, "undo", json!({}));
+        assert_eq!(d.board, before);
+    }
+    let (mut d, mut c) = session(0);
+    let before = d.board.clone();
+    for bad in [
+        json!({"name": "girth", "value": 3}),
+        json!({"name": "max_width"}),
+        json!({"name": "max_width", "value": "wide"}),
+        json!({"name": "max_width", "value": -5}),
+        json!({"name": "max_width", "value": 50, "span": 0.1}),
+        json!({"name": "nose_rocker", "value": 10, "keep_flat": "yes"}),
+    ] {
+        assert!(
+            execute(&mut d, &mut c, "set_dimension", &bad).is_err(),
+            "{bad}"
+        );
+    }
+    assert_eq!(d.board, before);
 }
 
 #[test]

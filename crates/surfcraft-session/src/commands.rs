@@ -213,6 +213,7 @@ pub fn tool_specs() -> Vec<ToolSpec> {
                 &[],
             ),
         },
+        crate::by_numbers::tool_spec(),
         ToolSpec {
             name: "new_board",
             description: "Start a new board from a template (shortboard, funboard, longboard), optionally at a target size and volume. Replaces the open board.",
@@ -816,6 +817,7 @@ pub fn execute(doc: &mut Document, ctx: &mut Context, name: &str, a: &Value) -> 
             doc.edit(|d| *d = b);
             Ok(summary(&doc.board, ctx))
         }
+        "set_dimension" => crate::by_numbers::command(doc, ctx, a),
         "new_board" | "open_board"
             if doc.is_dirty()
                 && !arg(a, "discard_unsaved")

@@ -21,8 +21,11 @@ mod gui_tests_cam;
 mod gui_tests_full;
 #[cfg(test)]
 mod gui_tests_infra;
+#[cfg(test)]
+mod gui_tests_numbers;
 mod i18n;
 mod logging;
+mod numbers_ui;
 mod panels;
 mod platform;
 mod preview3d;

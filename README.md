@@ -36,6 +36,8 @@ The builds are not signed with paid certificates yet, so the first launch needs 
   tail / nose). File > Compare with… tabulates the differences with another board (specs and every foot / 30 cm),
   copyable as CSV.
 - **3D**: GPU view with zebra stripes for checking fairness.
+- **Design by numbers** (Board menu): type a new max width, wide point, nose/tail width at 12", tail block, rocker
+  or thickness at the standard stations and the curves reshape smoothly around that station (one undo step).
 - **New board from a template** at a target length, width, thickness and volume (litres).
 - **Volume advisor** (Board menu, and "Suggest volume" in New board): a starting-point volume range from the
   rider's weight, skill, fitness, age, waves and board type (Guild factor method, see `docs/volume-advisor.md`).
@@ -92,7 +94,8 @@ Claude Desktop (`claude_desktop_config.json`):
 ```
 
 Tools include `board_summary`, `sample_board`, `get_curve`, `set_knot`, `move_knot`, `add_knot`, `section_info`,
-`add_section`, `scale_board` (with target volume), `new_board`, `open_board`, `save_board`, `set_fins`,
+`add_section`, `scale_board` (with target volume), `set_dimension`, `new_board`,
+`open_board`, `save_board`, `set_fins`,
 `estimate_weight`, `suggest_volume`, `export`, `generate_toolpath`, `undo`/`redo`, `launch_app`, `screenshot`, `set_view`.
 
 Security: the app only listens on 127.0.0.1, and only while control is enabled; every request needs a random token

@@ -177,6 +177,11 @@ fn every_tool_runs_headless() {
         json!({"weight_lb": 180, "skill": "advanced", "waves": "small"}),
     );
     assert!(v["middle_litres"].as_f64().unwrap() > 25.0);
+    let n = m.ok(
+        "set_dimension",
+        json!({"name": "nose_width_12in", "value": "12 1/2\""}),
+    );
+    assert!((n["dimensions"]["nose_width_12in"]["cm"].as_f64().unwrap() - 31.75).abs() < 0.01);
     let f = m.ok(
         "set_fins",
         json!({"preset": "5 fins", "box_system": "FCS II"}),
