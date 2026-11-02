@@ -364,3 +364,8 @@ Smooths every corner that turns by less than 30°. Bigger corners, such as a squ
 No kinks to smooth. = Geen knikken om glad te maken.
 Smoothed {0} points. = {0} punten gladgemaakt.
 Smoothed 1 point. = 1 punt gladgemaakt.
+Detailed logging = Uitgebreid logboek
+Also records every edit, click and view change in the log. To help with a bug: turn it on, reproduce the problem, then use Report a bug. = Legt ook elke bewerking, klik en weergavewijziging vast in het logboek. Om bij een fout te helpen: zet het aan, laat het probleem opnieuw gebeuren en gebruik dan Een fout melden.
+Open log folder = Logboekmap openen
+The log files SurfCraft keeps for the last 14 days, one per day = De logbestanden die SurfCraft van de laatste 14 dagen bewaart, één per dag
+This system has no folder for the log = Dit systeem heeft geen map voor het logboek

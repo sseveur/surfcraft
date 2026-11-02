@@ -64,6 +64,9 @@ pub struct SurfCraftApp {
     /// Guided tour (Help → Tour of SurfCraft; opens by itself on first launch).
     pub(crate) tour: Tour,
     pub(crate) tour_targets: tour::Targets,
+    /// Folder for logs (and autosaves); `None` in tests unless a test sets a temporary one.
+    pub(crate) data_dir: Option<PathBuf>,
+    pub(crate) trace: crate::app_log::Trace,
 }
 
 /// Board formats the app can open.
@@ -102,6 +105,13 @@ impl SurfCraftApp {
                     .or_else(|| eframe::get_value(s, settings::OLD_STORAGE_KEY))
             })
             .unwrap_or_default();
+        if let Some(rs) = cc.wgpu_render_state.as_ref() {
+            let i = rs.adapter.get_info();
+            let gpu = format!("{} ({:?}, {:?})", i.name, i.backend, i.device_type);
+            log::info!("graphics: {gpu}");
+            crate::logging::set_gpu(gpu);
+        }
+        crate::logging::set_detailed(set.detailed_logging);
         let system_language = i18n::system_language();
         i18n::set_language(set.language.unwrap_or(system_language));
         let mut board = surfcraft_io::templates::TEMPLATES[0].board();
@@ -132,6 +142,12 @@ impl SurfCraftApp {
             system_language,
             tour,
             tour_targets: Default::default(),
+            data_dir: if cfg!(test) {
+                None
+            } else {
+                crate::logging::data_dir()
+            },
+            trace: Default::default(),
         };
         app.ed.reset_for(&app.doc.board);
         if let Some(p) = args.open {
@@ -204,7 +220,9 @@ impl SurfCraftApp {
     }
 
     pub(crate) fn notify(&mut self, msg: impl Into<String>) {
-        self.status = Some((msg.into(), Instant::now()));
+        let msg = msg.into();
+        log::info!("message shown: {msg}");
+        self.status = Some((msg, Instant::now()));
     }
 
     fn replace_document(&mut self, mut board: Board, path: Option<PathBuf>) {
@@ -247,11 +265,15 @@ impl SurfCraftApp {
                     }
                     None
                 };
+                log::info!("opened {}", crate::logging::path(path));
                 self.replace_document(board, doc_path);
                 self.set.add_recent(path.to_path_buf());
                 self.notify(trf("Opened {0}", &[&path.display()]));
             }
-            Err(e) => self.notify(trf("Could not open {0}: {1}", &[&path.display(), &e])),
+            Err(e) => {
+                log::warn!("could not open {}: {e}", crate::logging::path(path));
+                self.notify(trf("Could not open {0}: {1}", &[&path.display(), &e]));
+            }
         }
     }
 
@@ -326,10 +348,14 @@ impl SurfCraftApp {
     fn save_to(&mut self, path: &Path) {
         match self.doc.save_to(path) {
             Ok(()) => {
+                log::info!("saved {}", crate::logging::path(path));
                 self.set.add_recent(path.to_path_buf());
                 self.notify(trf("Saved {0}", &[&path.display()]));
             }
-            Err(e) => self.notify(trf("Could not save {0}: {1}", &[&path.display(), &e])),
+            Err(e) => {
+                log::error!("could not save {}: {e}", crate::logging::path(path));
+                self.notify(trf("Could not save {0}: {1}", &[&path.display(), &e]));
+            }
         }
     }
 
@@ -417,9 +443,17 @@ impl SurfCraftApp {
     }
 
     pub fn write_export(&mut self, path: &Path, bytes: &[u8]) {
-        match write_with_backup(path, bytes) {
-            Ok(()) => self.notify(trf("Exported {0}", &[&path.display()])),
-            Err(e) => self.notify(trf("Export failed: {0}", &[&e])),
+        let r = write_with_backup(path, bytes);
+        let shown = crate::logging::path(path);
+        match r {
+            Ok(()) => {
+                log::info!("exported {shown} ({} bytes)", bytes.len());
+                self.notify(trf("Exported {0}", &[&path.display()]));
+            }
+            Err(e) => {
+                log::error!("export to {shown} failed: {e}");
+                self.notify(trf("Export failed: {0}", &[&e]));
+            }
         }
     }
 
@@ -818,6 +852,8 @@ impl SurfCraftApp {
                     ui.close();
                 }
                 ui.separator();
+                self.log_menu_items(ui);
+                ui.separator();
                 ui.label(tr("Shortcuts"));
                 ui.weak(tr(
                     "Drag: move · Alt+drag: fine · Shift/Cmd+click: multi-select",
@@ -1213,10 +1249,15 @@ impl eframe::App for SurfCraftApp {
         if !ctx.egui_wants_keyboard_input() && !ctx.input(|i| i.pointer.any_down()) {
             self.doc.end_group();
         }
+        self.log_frame(&ctx);
     }
 
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, settings::STORAGE_KEY, &self.set);
+    }
+
+    fn on_exit(&mut self) {
+        log::info!("exit");
     }
 }
 

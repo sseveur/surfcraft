@@ -87,6 +87,7 @@ impl Document {
         }
         self.redo.clear();
         self.revision += 1;
+        log::debug!("edit (undo depth {})", self.undo.len());
     }
 
     /// Apply a change as one undo step.
@@ -114,6 +115,7 @@ impl Document {
         if let Some(b) = self.undo.pop() {
             self.redo.push(std::mem::replace(&mut self.board, b));
             self.revision += 1;
+            log::debug!("undo (undo depth {})", self.undo.len());
         }
     }
 
@@ -122,6 +124,7 @@ impl Document {
         if let Some(b) = self.redo.pop() {
             self.undo.push(std::mem::replace(&mut self.board, b));
             self.revision += 1;
+            log::debug!("redo (undo depth {})", self.undo.len());
         }
     }
 

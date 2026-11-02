@@ -120,6 +120,8 @@ pub struct Settings {
     pub language: Option<crate::i18n::Language>,
     /// The first-launch tour was finished or closed.
     pub tour_done: bool,
+    /// Also log debug-level events (edits, clicks, view changes) to help reproduce a bug.
+    pub detailed_logging: bool,
 }
 
 impl Default for Settings {
@@ -136,6 +138,7 @@ impl Default for Settings {
             profile_exaggeration: 1.0,
             language: None,
             tour_done: false,
+            detailed_logging: false,
         }
     }
 }

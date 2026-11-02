@@ -19,6 +19,8 @@ surfcraft-session.workspace = true
 surfcraft-cam.workspace = true
 serde.workspace = true
 serde_json = "1"
+log = "0.4"
+directories = "6"
 eframe = { version = "0.37", default-features = false, features = [
     "wgpu",
     "default_fonts",

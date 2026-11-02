@@ -364,3 +364,8 @@ Smooths every corner that turns by less than 30°. Bigger corners, such as a squ
 No kinks to smooth. = Aucune cassure à lisser.
 Smoothed {0} points. = {0} points lissés.
 Smoothed 1 point. = 1 point lissé.
+Detailed logging = Journal détaillé
+Also records every edit, click and view change in the log. To help with a bug: turn it on, reproduce the problem, then use Report a bug. = Enregistre aussi chaque modification, clic et changement de vue dans le journal. Pour aider à corriger un bug : activez-le, reproduisez le problème, puis utilisez Signaler un bug.
+Open log folder = Ouvrir le dossier du journal
+The log files SurfCraft keeps for the last 14 days, one per day = Les fichiers journaux que SurfCraft garde pour les 14 derniers jours, un par jour
+This system has no folder for the log = Ce système n'a pas de dossier pour le journal

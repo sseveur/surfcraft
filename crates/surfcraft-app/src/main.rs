@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod app;
+mod app_log;
 mod automation;
 mod cam_ui;
 mod compute;
@@ -12,8 +13,12 @@ mod gui_tests;
 mod gui_tests_cam;
 #[cfg(test)]
 mod gui_tests_full;
+#[cfg(test)]
+mod gui_tests_infra;
 mod i18n;
+mod logging;
 mod panels;
+mod platform;
 mod preview3d;
 mod screenshot;
 mod settings;
@@ -76,6 +81,12 @@ fn migrate_old_settings() {
 fn main() -> eframe::Result {
     let args = parse_args();
     migrate_old_settings();
+    if let Some(base) = logging::data_dir()
+        && let Err(e) = logging::init(&base)
+    {
+        eprintln!("no log file: {e}");
+    }
+    log::info!("{} starting", logging::app_line());
     let options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default()
             .with_title("SurfCraft")

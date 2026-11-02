@@ -364,3 +364,8 @@ Smooths every corner that turns by less than 30°. Bigger corners, such as a squ
 No kinks to smooth. = Nenhuma quebra para suavizar.
 Smoothed {0} points. = {0} pontos suavizados.
 Smoothed 1 point. = 1 ponto suavizado.
+Detailed logging = Registo detalhado
+Also records every edit, click and view change in the log. To help with a bug: turn it on, reproduce the problem, then use Report a bug. = Regista também cada edição, clique e mudança de vista. Para ajudar com um erro: ative-o, reproduza o problema e depois use Comunicar um erro.
+Open log folder = Abrir a pasta de registos
+The log files SurfCraft keeps for the last 14 days, one per day = Os ficheiros de registo que o SurfCraft guarda dos últimos 14 dias, um por dia
+This system has no folder for the log = Este sistema não tem pasta para os registos

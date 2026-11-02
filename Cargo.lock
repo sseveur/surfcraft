@@ -3075,10 +3075,12 @@ name = "surfcraft-app"
 version = "4.0.0-alpha.1"
 dependencies = [
  "bytemuck",
+ "directories",
  "eframe",
  "egui_kittest",
  "glam",
  "image",
+ "log",
  "rfd",
  "serde",
  "serde_json",
@@ -3146,6 +3148,7 @@ name = "surfcraft-session"
 version = "4.0.0-alpha.1"
 dependencies = [
  "directories",
+ "log",
  "serde_json",
  "surfcraft-cam",
  "surfcraft-core",

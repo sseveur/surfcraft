@@ -364,3 +364,8 @@ Smooths every corner that turns by less than 30°. Bigger corners, such as a squ
 No kinks to smooth. = Ingen knekker å glatte.
 Smoothed {0} points. = {0} punkter glattet.
 Smoothed 1 point. = 1 punkt glattet.
+Detailed logging = Detaljert logg
+Also records every edit, click and view change in the log. To help with a bug: turn it on, reproduce the problem, then use Report a bug. = Registrerer også hver endring, hvert klikk og hver visningsendring i loggen. For å hjelpe med en feil: slå det på, gjenskap problemet og bruk deretter Rapporter en feil.
+Open log folder = Åpne loggmappen
+The log files SurfCraft keeps for the last 14 days, one per day = Loggfilene SurfCraft tar vare på for de siste 14 dagene, én per dag
+This system has no folder for the log = Dette systemet har ingen mappe for loggen
