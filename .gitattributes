@@ -1,3 +1,6 @@
 # Test data is compared byte for byte: never convert line endings on checkout.
 tests/fixtures/** -text
 crates/*/tests/data/** -text
+
+# Translation tables only ever gain lines; merge parallel branches by keeping both sides.
+crates/surfcraft-app/i18n/*.txt merge=union
