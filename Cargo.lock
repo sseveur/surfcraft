@@ -3146,6 +3146,7 @@ name = "surfcraft-session"
 version = "4.0.0-alpha.1"
 dependencies = [
  "directories",
+ "serde",
  "serde_json",
  "surfcraft-cam",
  "surfcraft-core",

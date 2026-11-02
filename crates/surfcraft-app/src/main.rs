@@ -12,11 +12,14 @@ mod gui_tests;
 mod gui_tests_cam;
 #[cfg(test)]
 mod gui_tests_full;
+#[cfg(test)]
+mod gui_tests_shaping;
 mod i18n;
 mod panels;
 mod preview3d;
 mod screenshot;
 mod settings;
+mod shaping_ui;
 mod tools;
 mod tour;
 mod view2d;

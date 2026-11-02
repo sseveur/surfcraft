@@ -185,7 +185,11 @@ fn no_negative_zero_in_formatted_lengths() {
 #[test]
 fn tool_specs_are_complete_and_unique() {
     let specs = tool_specs();
-    assert_eq!(specs.len(), 26, "command count (25 + generate_toolpath)");
+    assert_eq!(
+        specs.len(),
+        27,
+        "command count (25 + generate_toolpath + apply_bottom_contour)"
+    );
     let mut names: Vec<_> = specs.iter().map(|s| s.name).collect();
     names.sort();
     names.dedup();
@@ -309,6 +313,33 @@ fn invalid_inputs_are_errors() {
         ),
         ("set_surface_model", json!({})),
         ("set_surface_model", json!({"model": "loft"})),
+        ("apply_bottom_contour", json!({})),
+        ("apply_bottom_contour", json!({"type": "spiral"})),
+        ("apply_bottom_contour", json!({"type": "vee", "depth": -1})),
+        (
+            "apply_bottom_contour",
+            json!({"type": "vee", "start": 100, "end": 50}),
+        ),
+        (
+            "apply_bottom_contour",
+            json!({"type": "vee", "run_out_fraction": 0.5, "run_out_from_rail": 2}),
+        ),
+        (
+            "apply_bottom_contour",
+            json!({"type": "vee", "run_out_fraction": 3}),
+        ),
+        (
+            "apply_bottom_contour",
+            json!({"type": "channels", "channel_count": 0}),
+        ),
+        (
+            "apply_bottom_contour",
+            json!({"type": "channels", "channel_count": -2}),
+        ),
+        (
+            "apply_bottom_contour",
+            json!({"type": "single_concave", "section_spacing": 0.1}),
+        ),
         ("does_not_exist", json!({})),
     ];
     for (name, a) in cases {
@@ -381,6 +412,10 @@ fn undo_after_every_command_restores_exact_board() {
             ),
             ("set_surface_model", json!({"model": "control_point"})),
             ("flip_board", json!({})),
+            (
+                "apply_bottom_contour",
+                json!({"type": "single_concave", "depth": "1/8\"", "end": "4'"}),
+            ),
         ]
     };
     for (t, template) in TEMPLATES.iter().enumerate() {
@@ -1259,4 +1294,69 @@ fn remove_section_keeps_current_section_valid() {
 #[test]
 fn double_minus_is_rejected() {
     assert_eq!(LengthUnit::Centimetres.parse("--3"), None);
+}
+
+/// Shaping tools on every template: every contour type as one undo step, volumes reported,
+/// widths and stringer thickness kept, mesh and CAM still work.
+#[test]
+fn shaping_commands_on_every_template() {
+    for t in 0..TEMPLATES.len() {
+        let kinds = [
+            json!({"type": "flat"}),
+            json!({"type": "single_concave", "depth": "3/16\"", "fade_out": "2'"}),
+            json!({"type": "double_concave", "depth": "1/8\"", "inner_depth": "1/16\"", "end": "3'"}),
+            json!({"type": "vee", "depth": "1/4\"", "end": "2'", "run_out_fraction": 0.85}),
+            json!({"type": "channels", "channel_count": 3, "channel_width": "3/4\"", "end": "18\""}),
+            json!({"type": "remove"}),
+        ];
+        let cases = kinds.into_iter().map(|a| ("apply_bottom_contour", a));
+        for (name, a) in cases {
+            let (mut d, mut c) = session(t);
+            let before = d.board.clone();
+            let r = ok(&mut d, &mut c, name, a.clone());
+            let (v0, v1) = (
+                r["volume_before_litres"].as_f64().unwrap(),
+                r["volume_after_litres"].as_f64().unwrap(),
+            );
+            assert!((v1 - v0).abs() < 0.06 * v0, "{t} {name} {a}: {v0} -> {v1}");
+            assert!(r["sections_changed"].as_u64().unwrap() > 0, "{t} {a}");
+            assert!(finite_board(&d.board));
+            let l = before.length();
+            for i in 1..20 {
+                let x = l * i as f64 / 20.0;
+                assert!((d.board.width_at(x) - before.width_at(x)).abs() < 1e-9);
+                assert!((d.board.thickness_at(x) - before.thickness_at(x)).abs() < 1e-9);
+            }
+            assert_eq!(d.board.outline, before.outline);
+            assert_eq!(d.board.bottom, before.bottom, "rocker kept");
+            assert_eq!(d.board.deck, before.deck);
+            let mesh =
+                surfcraft_core::Mesh::of_board(&d.board, surfcraft_core::MeshDetail::PREVIEW);
+            assert!(mesh.is_watertight(), "{t} {a}");
+            // One undo step restores the board exactly.
+            ok(&mut d, &mut c, "undo", json!({}));
+            assert_eq!(d.board, before, "{t} {a}");
+            assert!(!d.can_undo());
+        }
+    }
+}
+
+#[test]
+fn shaped_board_still_machines() {
+    for t in 0..TEMPLATES.len() {
+        let (mut d, mut c) = session(t);
+        ok(
+            &mut d,
+            &mut c,
+            "apply_bottom_contour",
+            json!({"type": "double_concave", "end": "3'"}),
+        );
+        let r = ok(
+            &mut d,
+            &mut c,
+            "generate_toolpath",
+            json!({"job": "bottom"}),
+        );
+        assert!(r.to_string().contains("passes"), "{r}");
+    }
 }

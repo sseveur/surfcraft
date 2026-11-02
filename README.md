@@ -31,6 +31,8 @@ The builds are not signed with paid certificates yet, so the first launch needs 
   (Alt = fine), box select, arrow-key nudge, add/delete points, exact numeric entry in any unit
   (`6'2"`, `18 1/2"`, `47cm`), guide points, curvature combs, rail apex and tuck-under markers. Edit → Smooth
   removes kinks (selected points, or every small kink of a curve while keeping deliberate corners).
+- **Bottom contours** (Shape menu): single concave, double concave inside a single, vee and channels over a zone
+  with fade-in and fade-out, applied to every cross-section as one undo step with a preview; or flatten a range.
 - **Live specs**: length, widths, thickness, rocker at standard stations, planform area, volume, centre of mass.
 - **Compare**: ghost board overlay, "original" snapshot, background photo tracing (hold T / N and click the photo's
   tail / nose).
@@ -81,7 +83,8 @@ Claude Desktop (`claude_desktop_config.json`):
 
 Tools include `board_summary`, `sample_board`, `get_curve`, `set_knot`, `move_knot`, `add_knot`, `section_info`,
 `add_section`, `scale_board` (with target volume), `new_board`, `open_board`, `save_board`, `set_fins`,
-`estimate_weight`, `export`, `generate_toolpath`, `undo`/`redo`, `launch_app`, `screenshot`, `set_view`.
+`estimate_weight`, `export`, `generate_toolpath`, `apply_bottom_contour`, `undo`/`redo`, `launch_app`, `screenshot`,
+`set_view`.
 
 Security: the app only listens on 127.0.0.1, and only while control is enabled; every request needs a random token
 stored in a file readable only by your user account. The server never connects to the internet.

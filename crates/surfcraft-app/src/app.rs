@@ -802,6 +802,15 @@ impl SurfCraftApp {
                 }
             });
             self.tour_targets.board = Some(board.response.rect);
+            ui.menu_button(tr("Shape"), |ui| {
+                if ui
+                    .button(tr("Bottom contours…"))
+                    .on_hover_text(tr("Concaves, vee and channels along the board, applied to every cross-section in a zone."))
+                    .clicked()
+                {
+                    self.dialogs.shaping.open_contours();
+                }
+            });
             let machine = ui.menu_button(tr("Machine"), |ui| {
                 if ui
                     .button(tr("Machine (CAM)…"))
@@ -1200,6 +1209,15 @@ impl eframe::App for SurfCraftApp {
             ) {
                 self.save_export(&name, &bytes);
             }
+        }
+        if let Some(msg) = crate::shaping_ui::windows(
+            &ctx,
+            &mut self.dialogs.shaping,
+            &mut self.doc,
+            &mut self.ed,
+            &mut self.set,
+        ) {
+            self.notify(msg);
         }
         let tour = self.tour.show(&ctx, &self.tour_targets);
         if let Some(tab) = tour.tab {

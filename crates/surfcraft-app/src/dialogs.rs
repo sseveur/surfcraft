@@ -22,6 +22,7 @@ pub struct Dialogs {
     pub guides: bool,
     pub cam: bool,
     pub cam_state: crate::cam_ui::CamState,
+    pub shaping: crate::shaping_ui::ShapingState,
 }
 
 /// Scale `board` to the given overall size.

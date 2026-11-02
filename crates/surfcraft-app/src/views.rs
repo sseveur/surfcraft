@@ -48,6 +48,8 @@ pub struct EditorState {
     pub profile_view: ViewState,
     pub section_view: ViewState,
     pub ghost: Option<Board>,
+    /// Result previewed by a Shape menu window, drawn dashed in the Section view.
+    pub shaping_preview: Option<Board>,
     /// Photo/drawing under the outline view for tracing.
     pub background: Option<crate::tools::Background>,
     /// Latest computed centre of mass (cm from tail), for the marker.
@@ -69,6 +71,7 @@ impl Default for EditorState {
             profile_view: ViewState::default(),
             section_view: ViewState::default(),
             ghost: None,
+            shaping_preview: None,
             background: None,
             center_of_mass: None,
             cursor: None,
@@ -926,6 +929,13 @@ pub fn section(
         let st = Stroke::new(1.2, pal.ghost);
         canvas.dashed(sample(&gs.spline, 24, ident), st);
         canvas.dashed(sample(&gs.spline, 24, mirror_x), st);
+    }
+    if let Some(p) = &ed.shaping_preview
+        && let Some(ps) = crate::shaping_ui::section_at(p, board.sections[idx].position)
+    {
+        let st = Stroke::new(2.0, pal.accent);
+        canvas.dashed(sample(&ps.spline, 32, ident), st);
+        canvas.dashed(sample(&ps.spline, 32, mirror_x), st);
     }
     let cs = &board.sections[idx];
     let stroke = Stroke::new(2.0, pal.curve);

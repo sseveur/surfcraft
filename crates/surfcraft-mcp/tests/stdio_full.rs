@@ -178,6 +178,15 @@ fn every_tool_runs_headless() {
     m.ok("set_surface_model", json!({"model": "sblend"}));
     m.ok("flip_board", json!({}));
     m.ok("flip_board", json!({}));
+    let c = m.ok(
+        "apply_bottom_contour",
+        json!({"type": "single_concave", "depth": "1/8\"", "end": "4'", "fade_out": "1'"}),
+    );
+    assert!(c["sections_changed"].as_u64().unwrap() > 0, "{c}");
+    assert!(
+        c["volume_after_litres"].as_f64().unwrap() > c["volume_before_litres"].as_f64().unwrap()
+    );
+    m.fails("apply_bottom_contour", json!({"type": "spiral"}));
     assert_eq!(m.ok("undo", json!({}))["undone"], true);
     assert_eq!(m.ok("redo", json!({}))["redone"], true);
     for (what, format) in [
