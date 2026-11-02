@@ -31,6 +31,8 @@ The builds are not signed with paid certificates yet, so the first launch needs 
   (Alt = fine), box select, arrow-key nudge, add/delete points, exact numeric entry in any unit
   (`6'2"`, `18 1/2"`, `47cm`), guide points, curvature combs, rail apex and tuck-under markers. Edit → Smooth
   removes kinks (selected points, or every small kink of a curve while keeping deliberate corners).
+- **Snapping** (View > Snap, toolbar Snap): dragged and placed points snap to other control points, guide points
+  or the visible grid; Shift keeps a drag on its start x or y; Alt (fine drag) never snaps.
 - **Live specs**: length, widths, thickness, rocker at standard stations, planform area, volume, centre of mass.
 - **Compare**: ghost board overlay, "original" snapshot, background photo tracing (hold T / N and click the photo's
   tail / nose). File > Compare with… tabulates the differences with another board (specs and every foot / 30 cm),

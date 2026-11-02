@@ -111,6 +111,8 @@ pub struct Canvas {
     pub response: egui::Response,
     pub rect: Rect,
     pub xf: Transform,
+    /// Spacing (cm) of the grid drawn this frame, for grid snapping; `None` when no grid is shown.
+    pub grid_step: std::cell::Cell<Option<f64>>,
 }
 
 impl Canvas {
@@ -161,6 +163,7 @@ impl Canvas {
             response,
             rect,
             xf: state.xf,
+            grid_step: Default::default(),
         }
     }
 
@@ -203,6 +206,7 @@ impl Canvas {
         while self.xf.scale as f64 * step < 6.0 {
             step *= 10.0;
         }
+        self.grid_step.set(Some(step));
         let faint = Stroke::new(1.0, color.gamma_multiply(0.45));
         let strong = Stroke::new(1.0, color);
         let i0 = (min.x / step).floor() as i64;

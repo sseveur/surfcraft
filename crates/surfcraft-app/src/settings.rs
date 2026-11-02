@@ -124,6 +124,8 @@ pub struct Settings {
     pub detailed_logging: bool,
     /// Minutes between autosaves of unsaved changes; 0 = off.
     pub autosave_minutes: u32,
+    /// Snapping in the 2D views (View > Snap).
+    pub snap: crate::snap::SnapSettings,
 }
 
 impl Default for Settings {
@@ -142,6 +144,7 @@ impl Default for Settings {
             tour_done: false,
             detailed_logging: false,
             autosave_minutes: 2,
+            snap: Default::default(),
         }
     }
 }
