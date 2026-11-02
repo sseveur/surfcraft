@@ -554,6 +554,13 @@ impl SurfCraftApp {
                     self.dialogs.new_board = Some(NewBoard::new());
                 }
                 if ui
+                    .button(tr("New from measurements…"))
+                    .on_hover_text(tr("Copy a board you measured with a tape: widths, rocker and thickness at stations"))
+                    .clicked()
+                {
+                    self.dialogs.measure = Some(Default::default());
+                }
+                if ui
                     .add(
                         egui::Button::new(tr("Open…"))
                             .shortcut_text(ui.ctx().format_shortcut(&SC_OPEN)),
@@ -1218,6 +1225,9 @@ impl eframe::App for SurfCraftApp {
         }
         dialogs::scale_window(&ctx, &mut self.dialogs.scale, &mut self.doc, &self.set);
         crate::numbers_ui::window(&ctx, &mut self.dialogs.numbers, &mut self.doc, &self.set);
+        if let Some(a) = crate::measure_ui::window(&ctx, &mut self.dialogs.measure, &self.set) {
+            self.measure_action(a);
+        }
         if self.dialogs.info {
             dialogs::info_window(&ctx, &mut self.dialogs.info, &mut self.doc);
         }

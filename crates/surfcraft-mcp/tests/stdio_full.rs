@@ -219,6 +219,17 @@ fn every_tool_runs_headless() {
     let brd = d.join("mcp.brd");
     m.ok("save_board", json!({"path": brd}));
     m.ok("save_board", json!({}));
+    let s = m.ok(
+        "board_from_measurements",
+        json!({"length": "6'", "tail": "squash", "stations": [
+            {"position": "tail 0", "width": "10\"", "rocker": "2\""},
+            {"position": "tail 12\"", "width": "14\"", "thickness": "2\""},
+            {"position": "centre", "width": "19 1/4\"", "thickness": "2 1/2\""},
+            {"position": "nose 12\"", "width": "11 1/2\"", "thickness": "1 7/8\""},
+            {"position": "nose 0", "rocker": "5\""}
+        ]}),
+    );
+    assert_eq!(s["length"]["text"], "6' 0\"");
     let s = m.ok("new_board", json!({"template": "longboard"}));
     assert_eq!(s["length"]["text"], "9' 2\"");
     let s = m.ok("open_board", json!({"path": brd}));

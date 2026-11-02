@@ -39,6 +39,8 @@ The builds are not signed with paid certificates yet, so the first launch needs 
 - **Design by numbers** (Board menu): type a new max width, wide point, nose/tail width at 12", tail block, rocker
   or thickness at the standard stations and the curves reshape smoothly around that station (one undo step).
 - **New board from a template** at a target length, width, thickness and volume (litres).
+- **New board from measurements** (File menu): copy a board measured with a tape (widths, rocker, thickness at
+  stations, tail shape) as fair, editable curves; the table imports from and saves to CSV.
 - **Volume advisor** (Board menu, and "Suggest volume" in New board): a starting-point volume range from the
   rider's weight, skill, fitness, age, waves and board type (Guild factor method, see `docs/volume-advisor.md`).
 - **Fins** (Board > Fins): single, twin, twin + trailer, thruster, quad, 2+1 and 5-fin presets placed for the board,
@@ -94,7 +96,7 @@ Claude Desktop (`claude_desktop_config.json`):
 ```
 
 Tools include `board_summary`, `sample_board`, `get_curve`, `set_knot`, `move_knot`, `add_knot`, `section_info`,
-`add_section`, `scale_board` (with target volume), `set_dimension`, `new_board`,
+`add_section`, `scale_board` (with target volume), `set_dimension`, `new_board`, `board_from_measurements`,
 `open_board`, `save_board`, `set_fins`,
 `estimate_weight`, `suggest_volume`, `export`, `generate_toolpath`, `undo`/`redo`, `launch_app`, `screenshot`, `set_view`.
 

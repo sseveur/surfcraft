@@ -187,8 +187,8 @@ fn tool_specs_are_complete_and_unique() {
     let specs = tool_specs();
     assert_eq!(
         specs.len(),
-        28,
-        "command count (25 + generate_toolpath + suggest_volume + set_dimension)"
+        29,
+        "command count (25 + generate_toolpath + suggest_volume + set_dimension + board_from_measurements)"
     );
     let mut names: Vec<_> = specs.iter().map(|s| s.name).collect();
     names.sort();
@@ -776,6 +776,48 @@ fn set_dimension_reaches_the_number_as_one_undo_step() {
         );
     }
     assert_eq!(d.board, before);
+}
+
+#[test]
+fn board_from_measurements_builds_an_unsaved_board() {
+    let (mut d, mut c) = session(0);
+    let r = ok(
+        &mut d,
+        &mut c,
+        "board_from_measurements",
+        json!({
+            "length": "6'4\"", "tail": "round",
+            "stations": [
+                {"position": "tail 0", "rocker": "2\""},
+                {"position": "tail 12\"", "width": "15\"", "thickness": "2 1/8\""},
+                {"position": "centre", "width": "20 1/2\"", "thickness": "2 3/4\"", "rocker": 0},
+                {"position": "nose 12\"", "width": "15 1/4\"", "thickness": "2 1/4\""},
+                {"position": "nose 0", "rocker": "5\""}
+            ]
+        }),
+    );
+    assert!((d.board.length() - 76.0 * 2.54).abs() < 1e-6);
+    assert!((d.board.width_at(d.board.length() / 2.0) - 20.5 * 2.54).abs() < 0.1);
+    assert!(r["fit_mm"]["width"].as_f64().unwrap() <= 1.0, "{r}");
+    assert!(d.path.is_none() && !d.can_undo());
+    // A dirty board is protected; bad tables say what is wrong.
+    ok(&mut d, &mut c, "flip_board", json!({}));
+    let e = execute(
+        &mut d,
+        &mut c,
+        "board_from_measurements",
+        &json!({"length": 180, "stations": []}),
+    )
+    .unwrap_err();
+    assert!(e.contains("unsaved"), "{e}");
+    let e = execute(
+        &mut d,
+        &mut c,
+        "board_from_measurements",
+        &json!({"discard_unsaved": true, "length": 180, "stations": [{"position": "centre", "width": "abc"}]}),
+    )
+    .unwrap_err();
+    assert!(e.contains("cannot read the width"), "{e}");
 }
 
 #[test]

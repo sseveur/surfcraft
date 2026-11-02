@@ -25,6 +25,7 @@ mod gui_tests_infra;
 mod gui_tests_numbers;
 mod i18n;
 mod logging;
+mod measure_ui;
 mod numbers_ui;
 mod panels;
 mod platform;

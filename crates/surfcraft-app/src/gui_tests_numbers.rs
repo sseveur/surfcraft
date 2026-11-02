@@ -144,3 +144,92 @@ fn design_by_numbers_edits_a_number_as_one_undo_step() {
             .is_some()
     );
 }
+
+#[test]
+fn board_from_measurements_fills_a_table_and_creates_a_board() {
+    let mut h = harness_cm();
+    click(&mut h, "File");
+    click(&mut h, "New from measurements…");
+    assert!(h.state().dialogs.measure.is_some());
+    let title = "Board from measurements";
+    // Create with an empty table explains what is missing.
+    click(&mut h, "Create");
+    assert!(
+        h.query_all_by_value("Enter the board length.")
+            .next()
+            .is_some()
+    );
+    let f = fields(&h, title);
+    type_into(&mut h, f[0], "190");
+    // Rows (4 fields each): tail 0, tail 12", tail 24", centre, nose 24", nose 12", nose 0.
+    let cell = |h: &H, row: usize, col: usize| fields(h, title)[1 + 4 * row + col];
+    for (row, col, text) in [
+        (0, 2, "6"),
+        (1, 1, "37"),
+        (1, 3, "5.2"),
+        (3, 1, "52"),
+        (3, 2, "0"),
+        (3, 3, "6.6"),
+        (5, 1, "38"),
+        (5, 3, "5.4"),
+        (6, 2, "13"),
+    ] {
+        let r = cell(&h, row, col);
+        type_into(&mut h, r, text);
+    }
+    snap(&mut h, "numbers-measurements");
+    click(&mut h, "Create");
+    settle(&mut h);
+    let app = h.state();
+    assert!(app.dialogs.measure.is_none(), "window closes");
+    let b = &app.doc.board;
+    assert!((b.length() - 190.0).abs() < 1e-6);
+    assert!(
+        (b.width_at(95.0) - 52.0).abs() < 0.1,
+        "{}",
+        b.width_at(95.0)
+    );
+    assert!((b.width_at(30.48) - 37.0).abs() < 0.1);
+    assert!((b.rocker_at(190.0 - 0.005) - 13.0).abs() < 0.1);
+    assert!((b.thickness_at(95.0) - 6.6).abs() < 0.1);
+    assert!(app.doc.path.is_none() && !app.doc.is_dirty());
+}
+
+#[test]
+fn measurements_csv_save_and_import() {
+    let mut h = harness_cm();
+    click(&mut h, "File");
+    click(&mut h, "New from measurements…");
+    let title = "Board from measurements";
+    let f = fields(&h, title);
+    type_into(&mut h, f[0], "6'");
+    let dir = temp_dir("numbers-csv");
+    let p = dir.join("table.csv");
+    let _ = std::fs::remove_file(&p);
+    h.state_mut()
+        .scripted_dialogs
+        .as_mut()
+        .unwrap()
+        .push_back(p.clone());
+    click(&mut h, "Save CSV…");
+    let text = std::fs::read_to_string(&p).unwrap();
+    assert!(
+        text.contains("length,6'") && text.contains("tail 12"),
+        "{text}"
+    );
+    std::fs::write(
+        &p,
+        "length,7'6\"\ntail,swallow\nposition,width\ncentre,21\"\n",
+    )
+    .unwrap();
+    h.state_mut()
+        .scripted_dialogs
+        .as_mut()
+        .unwrap()
+        .push_back(p.clone());
+    click(&mut h, "Import CSV…");
+    let st = h.state().dialogs.measure.as_ref().unwrap();
+    assert_eq!(st.table.length, "7'6\"");
+    assert_eq!(st.table.rows.len(), 1);
+    assert_eq!(st.table.rows[0].width, "21\"");
+}

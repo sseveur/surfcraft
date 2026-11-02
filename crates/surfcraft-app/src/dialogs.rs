@@ -25,6 +25,7 @@ pub struct Dialogs {
     pub compare: crate::compare_ui::CompareState,
     pub volume_advisor: bool,
     pub numbers: Option<crate::numbers_ui::NumbersState>,
+    pub measure: Option<crate::measure_ui::MeasureState>,
 }
 
 /// Scale `board` to the given overall size.
