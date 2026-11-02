@@ -25,6 +25,7 @@ pub struct Dialogs {
     pub shaping: crate::shaping_ui::ShapingState,
     pub compare: crate::compare_ui::CompareState,
     pub volume_advisor: bool,
+    pub blank: crate::blank_ui::BlankWindow,
 }
 
 /// Scale `board` to the given overall size.

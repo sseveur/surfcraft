@@ -813,6 +813,8 @@ pub struct Problem {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FitReport {
+    /// Length of the board that was placed (its middle is the tilt pivot).
+    pub board_length: f64,
     /// The placement used, with the tail offset and lift resolved to numbers.
     pub tail_offset: f64,
     pub tilt: f64,
@@ -837,6 +839,16 @@ impl FitReport {
             .min(self.bottom.min)
             .min(self.tail_spare)
             .min(self.nose_spare)
+    }
+
+    /// A point in the blank's frame (x from the blank's tail, height above its lowest bottom point) in the
+    /// board's frame (x from the board's tail, height on the board's rocker baseline): for drawing the blank
+    /// behind the board.
+    pub fn to_board(&self, p: DVec2) -> DVec2 {
+        let pivot = self.board_length / 2.0;
+        let (sin, cos) = self.tilt.to_radians().sin_cos();
+        let d = p - DVec2::new(pivot + self.tail_offset, self.lift);
+        DVec2::new(pivot + d.x * cos + d.y * sin, -d.x * sin + d.y * cos)
     }
 
     /// The view with the smallest clearance.
@@ -1010,6 +1022,7 @@ pub fn fit_samples(board: &BoardSamples, shape: &BlankShape, placement: &Placeme
     }
     let fits = problems.is_empty();
     FitReport {
+        board_length: board.length,
         tail_offset: shift,
         tilt: placement.tilt,
         lift,
@@ -1817,6 +1830,16 @@ mod tests {
             ..Placement::default()
         };
         let r = fit(&b, &blank, &tilted);
+        // The blank's frame maps back onto the board's: the board's tail bottom lands on itself.
+        let tail = DVec2::new(0.0, b.rocker_at(0.0));
+        let pivot = r.board_length / 2.0;
+        let (sin, cos) = 2.0f64.to_radians().sin_cos();
+        let d = tail - DVec2::new(pivot, 0.0);
+        let in_blank = DVec2::new(
+            pivot + r.tail_offset + d.x * cos - d.y * sin,
+            d.x * sin + d.y * cos + r.lift,
+        );
+        assert!((r.to_board(in_blank) - tail).length() < 1e-9);
         // Ends stay about where they were lengthwise; the fit gets worse than level.
         assert!((r.tail_spare - 3.0).abs() < 0.5 && (r.nose_spare - 3.0).abs() < 0.5);
         let level = fit(&b, &blank, &Placement::default());

@@ -47,6 +47,9 @@ The builds are not signed with paid certificates yet, so the first launch needs 
   with FCS I, FCS II, Futures or US box footprints, printed 1:1 on the outline template with a measurement table
   (dimensions and sources in `docs/fins.md`).
 - **Weight calculator**: foam, stringer, glass, laps, resin, hot coat.
+- **Fit in blank** (Board menu): checks the board fits a foam blank (US Blanks library with measured stations, or
+  your own blanks in any unit), with shift, tilt and Auto fit, clearances per view and the blank drawn behind the
+  board; see [docs/blanks.md](docs/blanks.md).
 - **Print**: outline (half or full), spin, profile and cross-section templates at true 1:1 scale, tiled and centred
   over A4/A3/Letter/Tabloid with registration marks and a 100 mm check bar; one-page spec sheet. PDF, SVG or DXF.
 - **Wooden boards**: sandwich (core profile, rail, skins), hollow wood (stringer, ribs, rail strip, skins, nose and
@@ -97,7 +100,7 @@ Claude Desktop (`claude_desktop_config.json`):
 
 Tools include `board_summary`, `sample_board`, `get_curve`, `set_knot`, `move_knot`, `add_knot`, `section_info`,
 `add_section`, `scale_board` (with target volume), `new_board`, `open_board`, `save_board`, `set_fins`,
-`estimate_weight`, `suggest_volume`, `export`, `generate_toolpath`, `apply_bottom_contour`, `set_rails`, `undo`/`redo`,
+`estimate_weight`, `suggest_volume`, `list_blanks`, `fit_blank`, `export`, `generate_toolpath`, `apply_bottom_contour`, `set_rails`, `undo`/`redo`,
 `launch_app`, `screenshot`, `set_view`.
 
 Security: the app only listens on 127.0.0.1, and only while control is enabled; every request needs a random token

@@ -126,6 +126,8 @@ pub struct Settings {
     pub detailed_logging: bool,
     /// Minutes between autosaves of unsaved changes; 0 = off.
     pub autosave_minutes: u32,
+    /// Your own foam blanks and whether the board's blank is drawn (Fit in blank).
+    pub blanks: crate::blank_ui::BlankPrefs,
 }
 
 impl Default for Settings {
@@ -145,6 +147,7 @@ impl Default for Settings {
             shaping: Default::default(),
             detailed_logging: false,
             autosave_minutes: 2,
+            blanks: Default::default(),
         }
     }
 }

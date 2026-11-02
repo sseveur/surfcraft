@@ -797,6 +797,7 @@ impl SurfCraftApp {
                 ui.checkbox(&mut v.original, tr("Original board"));
                 ui.checkbox(&mut v.center_of_mass, tr("Centre of mass"));
                 ui.checkbox(&mut v.background_image, tr("Background image"));
+                ui.checkbox(&mut self.set.blanks.show, tr("Foam blank"));
                 if let Some(bg) = self.ed.background.as_mut() {
                     ui.add(egui::Slider::new(&mut bg.opacity, 0.05..=1.0).text(tr("Image opacity")));
                 }
@@ -853,6 +854,13 @@ impl SurfCraftApp {
                     .clicked()
                 {
                     self.dialogs.volume_advisor = true;
+                }
+                if ui
+                    .button(tr("Fit in blank…"))
+                    .on_hover_text(tr("Check that the board fits inside a foam blank before you buy it"))
+                    .clicked()
+                {
+                    self.dialogs.blank.open = true;
                 }
                 if ui.button(tr("Guide points…")).clicked() {
                     self.dialogs.guides = true;
@@ -1250,6 +1258,7 @@ impl eframe::App for SurfCraftApp {
                 &self.set,
             );
         }
+        crate::blank_ui::window(&ctx, &mut self.dialogs.blank, &mut self.doc, &mut self.set);
         if self.dialogs.guides {
             let curve = self
                 .ed

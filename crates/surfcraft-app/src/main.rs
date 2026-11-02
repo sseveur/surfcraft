@@ -5,6 +5,7 @@ mod app_log;
 mod automation;
 mod autosave;
 mod autosave_ui;
+mod blank_ui;
 mod bugreport;
 mod bugreport_ui;
 mod cam_ui;
@@ -15,6 +16,8 @@ mod export_ui;
 mod fins_ui;
 #[cfg(test)]
 mod gui_tests;
+#[cfg(test)]
+mod gui_tests_blank;
 #[cfg(test)]
 mod gui_tests_cam;
 #[cfg(test)]
