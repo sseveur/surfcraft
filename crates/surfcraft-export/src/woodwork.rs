@@ -11,7 +11,7 @@ use std::rc::Rc;
 
 use surfcraft_core::{Board, DVec2, Station, surface};
 
-use crate::drawing::{Drawing, Item, Style};
+use crate::drawing::{Anchor, Drawing, Item, Style};
 use crate::templates::{
     HEADER, HEADER_SMALL, OVERRUN, board_name, finish, grid, grid_over_geometry, is_imperial,
     mirror_closed,
@@ -122,7 +122,35 @@ impl Default for ChamberedOptions {
 }
 
 /// The template called `name` in [`TEMPLATES`], built with default options, or `None` for an unknown name.
+///
+/// The woodwork pieces are drawn from one half of the board and mirrored. For an asymmetric board the template
+/// is drawn twice, stacked: once for the board with its left rail on both sides, labelled "Left rail", then
+/// for the right rail; each side of a piece is cut from its rail's drawing.
 pub fn by_name(board: &Board, name: &str, fmt: &dyn Fn(f64) -> String) -> Option<Drawing> {
+    if board.is_asymmetric() {
+        let mut out = Vec::new();
+        for rail in surfcraft_core::Rail::BOTH {
+            let mut d = by_name_symmetric(&board.symmetric_of(rail), name, fmt)?;
+            let label = match rail {
+                surfcraft_core::Rail::Left => "Left rail (rider's left, y > 0)",
+                surfcraft_core::Rail::Right => "Right rail (rider's right, y < 0)",
+            };
+            let size = 5.0;
+            d.height += 2.0 * size;
+            d.text(
+                DVec2::new(10.0, d.height - 1.5 * size),
+                size,
+                label,
+                Anchor::Left,
+            );
+            out.push(d);
+        }
+        return Some(stack(&out, 10.0));
+    }
+    by_name_symmetric(board, name, fmt)
+}
+
+fn by_name_symmetric(board: &Board, name: &str, fmt: &dyn Fn(f64) -> String) -> Option<Drawing> {
     let s = SandwichOptions::default();
     let h = HwsOptions::default();
     Some(match name {

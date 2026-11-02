@@ -79,3 +79,67 @@ fn partial_curve_files_round_trip() {
     assert_eq!(crs.position, board.sections[2].position);
     assert_eq!(shape(&crs.spline), shape(&board.sections[2].spline));
 }
+
+/// The shortboard made asymmetric: the left rail 2 cm wider at its middle knot, with a guide point.
+fn asym_shortboard() -> surfcraft_core::Board {
+    use surfcraft_core::{DVec2, Rail};
+    let mut b = brd::read(&fixture("shortboard.brd")).unwrap();
+    b.set_asymmetric(true, Rail::Right);
+    let left = b.outline_left.as_mut().unwrap();
+    let i = left.len() / 2;
+    let p = left.knots()[i].point();
+    left.knots_mut()[i].move_point_to(p + DVec2::new(0.0, 2.0));
+    b.outline_left_guides.push(DVec2::new(100.0, 25.0));
+    b.on_outline_changed();
+    b
+}
+
+#[test]
+fn asymmetric_outline_round_trips_in_p61() {
+    let b = asym_shortboard();
+    let text = brd::write(&b);
+    assert!(text.contains("\np61 : (\n"));
+    // After the deck block, before the sections.
+    let (p34, p61, p35) = (
+        text.find("p34 : (").unwrap(),
+        text.find("p61 : (").unwrap(),
+        text.find("p35 : (").unwrap(),
+    );
+    assert!(p34 < p61 && p61 < p35);
+    let again = brd::read(text.as_bytes()).unwrap();
+    assert_eq!(again, b);
+    assert_eq!(brd::write(&again), text);
+    // A symmetric board writes no p61.
+    let plain = brd::read(&fixture("shortboard.brd")).unwrap();
+    assert!(!brd::write(&plain).contains("p61"));
+}
+
+#[test]
+fn reader_without_p61_sees_the_right_rail() {
+    let b = asym_shortboard();
+    let text = brd::write(&b);
+    // What a reader that does not know p61 keeps: the file without the p61 block.
+    let mut kept = Vec::new();
+    let mut skipping = false;
+    for line in text.lines() {
+        if line.starts_with("p61") {
+            skipping = true;
+            continue;
+        }
+        if skipping && line.starts_with('p') {
+            skipping = false;
+        }
+        if !skipping {
+            kept.push(line);
+        }
+    }
+    let old = brd::read(kept.join("\n").as_bytes()).unwrap();
+    assert!(!old.is_asymmetric());
+    assert_eq!(old.outline, b.outline);
+    assert_eq!(old.deck, b.deck);
+    assert_eq!(old.sections, b.sections);
+    // The block's lines are skipped where they stand, as BoardCAD skips them after an unknown code: the file
+    // with p61 renamed to another unknown code reads as the same symmetric board.
+    let renamed = text.replace("p61 : (", "p98 : (");
+    assert_eq!(brd::read(renamed.as_bytes()).unwrap(), old);
+}

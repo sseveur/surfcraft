@@ -11,7 +11,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::fmt::Write as _;
 
 use surfcraft_core::surface::{BOTTOM, DECK};
-use surfcraft_core::{Board, CrossSection, DVec2, DVec3, Knot, Spline};
+use surfcraft_core::{Board, CrossSection, DVec2, DVec3, Knot, Rail, Spline};
 
 use crate::Error;
 use crate::brd::num;
@@ -869,18 +869,29 @@ fn surface_grids(b: &Board) -> [Vec<Vec<DVec3>>; 2] {
         let x = l * (1.0 - (std::f64::consts::PI * i as f64 / (ROWS - 1) as f64).cos()) / 2.0;
         let sd = b.station(x, DECK.0, DECK.1);
         let sb = b.station(x, BOTTOM.0, BOTTOM.1);
+        // The y < 0 (right rail) half of an asymmetric board has its own stations.
+        let (sd_r, sb_r) = if b.is_asymmetric() {
+            (
+                b.station_on(x, DECK.0, DECK.1, Rail::Right),
+                b.station_on(x, BOTTOM.0, BOTTOM.1, Rail::Right),
+            )
+        } else {
+            (sd.clone(), sb.clone())
+        };
         let finite = |p: DVec3| if p.is_finite() { p } else { DVec3::ZERO };
         // Columns j = 0 … COLS-1 run over t = -1 … 1; the side is the sign of t.
         let row = |f: &dyn Fn(f64) -> DVec3| -> Vec<DVec3> {
             (0..COLS).map(|j| finite(f(j as f64 / h - 1.0))).collect()
         };
         deck.push(row(&|t| {
-            let mut p = sd.point(t.abs());
+            let st = if t > 0.0 { &sd_r } else { &sd };
+            let mut p = st.point(t.abs());
             p.y *= -t.signum();
             mm(p)
         }));
         bottom.push(row(&|t| {
-            let mut p = sb.point(1.0 - t.abs());
+            let st = if t < 0.0 { &sb_r } else { &sb };
+            let mut p = st.point(1.0 - t.abs());
             p.y *= t.signum();
             mm(p)
         }));

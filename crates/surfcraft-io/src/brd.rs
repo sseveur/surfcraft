@@ -404,6 +404,17 @@ pub fn read_text(text: &str) -> Result<Board, Error> {
                 }
                 r.sections(&mut b.sections)?;
             }
+            // SurfCraft: the left rail's outline of an asymmetric board, in the p32 block format. One with
+            // fewer than two control points is dropped (the board stays symmetric).
+            61 if value == "(" => {
+                let (spline, guides, end) = r.curve()?;
+                if spline.len() >= 2 {
+                    (b.outline_left, b.outline_left_guides) = (Some(spline), guides);
+                }
+                if let End::Truncated = end {
+                    break;
+                }
+            }
             _ => match scalar_field(&mut b, code, value) {
                 Ok(()) => {}
                 // A value cut off by the end of the file is ignored.
@@ -596,6 +607,12 @@ pub fn write(b: &Board) -> String {
     ] {
         let _ = writeln!(o, "{code} : (");
         curve_body(&mut o, s, g);
+        o.push_str(")\n");
+    }
+    // Left outline of an asymmetric board (BoardCAD skips the unknown code and the `(cp` lines after it).
+    if let Some(left) = &b.outline_left {
+        o.push_str("p61 : (\n");
+        curve_body(&mut o, left, &b.outline_left_guides);
         o.push_str(")\n");
     }
     o.push_str("p35 : (\n");

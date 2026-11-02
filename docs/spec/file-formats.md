@@ -602,6 +602,30 @@ p50 is written from the setup:
 
 A board read without p60 shows the setup described by p50: a pair of side fins if a side mark is set, a centre fin if a centre mark is set, and no boxes.
 
+**p61: left outline** (asymmetric boards; written only when the board has one, after the p34 block and before
+p35):
+
+```
+p61 : (
+(cp [0.0,0.0,0.0,0.0,0.0,5.2] false false)
+...
+gps : (
+(gp [100.0,25.0])
+)
+)
+```
+
+* The block has exactly the p32 format: knot lines, an optional guide-point block, a closing `)`. Coordinates
+  are (x from the tail, half width) of the **rider's left** rail (y > 0 in the board frame, drawn above the
+  stringer in the Outline view); p32 then holds the **right** rail. Without p61 the p32 outline describes both
+  rails, as before.
+* A p61 block with fewer than two control points is ignored and the board reads as symmetric.
+* p01–p04 are written from the full board (p04: left + right half width at the middle).
+* Compatibility: the `p61 : (` line is an unknown code and the lines after it start with `(` or `g`, not `p`, so a
+  reader that does not know p61 (BoardCAD, older SurfCraft) skips the whole block without attaching it to
+  another field. Such a reader sees a symmetric board made of the right rail mirrored; saving the file from it
+  drops the left outline.
+
 ---
 
 ## 4. Legacy encrypted `.brd`

@@ -5,7 +5,7 @@
 //! centimetres; values are converted on the way in. Labels use the caller's length formatter, which takes cm.
 
 use surfcraft_core::units::{FOOT, INCH};
-use surfcraft_core::{Board, DVec2, Spline, fin, surface};
+use surfcraft_core::{Board, DVec2, Rail, Spline, fin, surface};
 
 use crate::drawing::{Anchor, Drawing, Item, Style};
 use crate::woodwork::stack;
@@ -240,31 +240,34 @@ fn draw_fins(d: &mut Drawing, board: &Board, map_x: &dyn Fn(f64) -> f64, style: 
 
 // ------------------------------------------------------------------------------------------ outline
 
-/// 1:1 plan-shape template (mm). `fmt` formats a length given in cm for labels.
+/// 1:1 plan-shape template (mm). `fmt` formats a length given in cm for labels. An asymmetric board is always
+/// drawn full: its left rail above the stringer and its right rail below, as in the Outline view.
 pub fn outline(board: &Board, opts: OutlineOptions, fmt: &dyn Fn(f64) -> String) -> Drawing {
     let mut d = Drawing::default();
     let l = board.length() * 10.0;
+    let asym = board.is_asymmetric();
+    let full = opts.full || asym;
     let map_x: Box<dyn Fn(f64) -> f64> = if opts.over_the_curve {
         Box::new(|x: f64| board.from_tail_over_bottom((x / 10.0).clamp(0.0, l / 10.0)) * 10.0)
     } else {
         Box::new(|x: f64| x)
     };
-    let half: Vec<DVec2> = if opts.over_the_curve {
-        // Every 3 mm against the length along the rocker, starting on the centreline at the tail.
-        let n = (l / 3.0).floor().max(0.0) as usize;
-        let mut pts = vec![DVec2::ZERO];
-        for j in 0..=n {
-            let x = j as f64 * 3.0;
-            pts.push(DVec2::new(
-                map_x(x),
-                board.outline.value_at(x / 10.0) * 10.0,
-            ));
+    let half_of = |outline: &Spline| -> Vec<DVec2> {
+        if opts.over_the_curve {
+            // Every 3 mm against the length along the rocker, starting on the centreline at the tail.
+            let n = (l / 3.0).floor().max(0.0) as usize;
+            let mut pts = vec![DVec2::ZERO];
+            for j in 0..=n {
+                let x = j as f64 * 3.0;
+                pts.push(DVec2::new(map_x(x), outline.value_at(x / 10.0) * 10.0));
+            }
+            pts.retain(|p| p.is_finite());
+            pts
+        } else {
+            spline_points(outline, 2.0)
         }
-        pts.retain(|p| p.is_finite());
-        pts
-    } else {
-        spline_points(&board.outline, 2.0)
     };
+    let half = half_of(board.outline_of(Rail::Left));
     let end = if opts.over_the_curve { map_x(l) } else { l };
     // Stringer reference line, 5 mm past each end.
     d.line(
@@ -273,16 +276,28 @@ pub fn outline(board: &Board, opts: OutlineOptions, fmt: &dyn Fn(f64) -> String)
         Style::GUIDE,
     );
     d.path(half.clone(), Style::CUT);
-    if opts.full {
+    if full {
+        let lower = if asym {
+            half_of(board.outline_of(Rail::Right))
+        } else {
+            half.clone()
+        };
         d.path(
-            half.iter().map(|p| DVec2::new(p.x, -p.y)).collect(),
+            lower.iter().map(|p| DVec2::new(p.x, -p.y)).collect(),
             Style::CUT,
         );
     }
     if opts.grid {
         grid_over_geometry(&mut d, is_imperial(fmt));
     }
-    if opts.guide_points {
+    if opts.guide_points && asym {
+        for rail in Rail::BOTH {
+            for g in board.outline_guides_of(rail) {
+                let y = rail.sign() * g.y * 10.0;
+                guide_cross(&mut d, DVec2::new(map_x(g.x * 10.0), y));
+            }
+        }
+    } else if opts.guide_points {
         for g in &board.outline_guides {
             guide_cross(&mut d, DVec2::new(map_x(g.x * 10.0), g.y * 10.0));
             if opts.full {
@@ -291,7 +306,7 @@ pub fn outline(board: &Board, opts: OutlineOptions, fmt: &dyn Fn(f64) -> String)
         }
     }
     if opts.fins {
-        draw_fins(&mut d, board, &*map_x, Style::GUIDE, !opts.full);
+        draw_fins(&mut d, board, &*map_x, Style::GUIDE, !full);
         // Measurement table under the drawing, for marking out and installing the boxes.
         if let Some(s) = &board.fin_setup
             && !s.is_empty()
@@ -309,7 +324,8 @@ pub fn outline(board: &Board, opts: OutlineOptions, fmt: &dyn Fn(f64) -> String)
 
 // ------------------------------------------------------------------------------------------ spin
 
-/// 1:1 spin template: tail half and turned-over nose half of the outline on one sheet.
+/// 1:1 spin template: tail half and turned-over nose half of the outline on one sheet. On an asymmetric board
+/// the left rail's template is drawn above the stringer line and the right rail's mirrored below it.
 pub fn spin(board: &Board, fmt: &dyn Fn(f64) -> String) -> Drawing {
     spin_with(board, true, false, fmt)
 }
@@ -322,9 +338,35 @@ pub fn spin_with(
     fmt: &dyn Fn(f64) -> String,
 ) -> Drawing {
     let mut d = Drawing::default();
+    spin_rail(&mut d, board, Rail::Left, over_the_curve);
+    if board.is_asymmetric() {
+        let mut lower = Drawing::default();
+        spin_rail(&mut lower, board, Rail::Right, over_the_curve);
+        for item in lower.items {
+            if let Item::Path { points, .. } = item {
+                d.path(
+                    points.iter().map(|p| DVec2::new(p.x, -p.y)).collect(),
+                    Style::CUT,
+                );
+            }
+        }
+    }
+    if draw_grid {
+        grid_over_geometry(&mut d, is_imperial(fmt));
+    }
+    finish(
+        d,
+        &[format!("Board file: {} Spin template", board_name(board))],
+        HEADER,
+    )
+}
+
+/// The spin template of one rail's outline: guide lines and the two cut curves.
+fn spin_rail(d: &mut Drawing, board: &Board, rail: Rail, over_the_curve: bool) {
     let l = board.length() * 10.0;
     let m = l / 2.0;
-    let o = |x: f64| board.outline.value_at(x / 10.0) * 10.0;
+    let outline = board.outline_of(rail);
+    let o = |x: f64| outline.value_at(x / 10.0) * 10.0;
     let h = o(m);
     let (tail, nose, meet) = if over_the_curve {
         let a = |x: f64| board.from_tail_over_bottom(x / 10.0) * 10.0;
@@ -371,14 +413,6 @@ pub fn spin_with(
         nose.into_iter().filter(|p| p.is_finite()).collect(),
         Style::CUT,
     );
-    if draw_grid {
-        grid_over_geometry(&mut d, is_imperial(fmt));
-    }
-    finish(
-        d,
-        &[format!("Board file: {} Spin template", board_name(board))],
-        HEADER,
-    )
 }
 
 // ------------------------------------------------------------------------------------------ profile
@@ -559,19 +593,26 @@ pub fn spec_sheet(board: &Board, volume: f64, page: DVec2, fmt: &dyn Fn(f64) -> 
         }
     }
 
-    // Plan view: full outline, fins, stringer and the three station lines.
-    let half_w = board.max_width() / 2.0;
+    // Plan view: full outline (the left rail above the stringer), fins, stringer and the three station lines.
+    let half_w = if board.is_asymmetric() {
+        board
+            .max_half_width(Rail::Left)
+            .0
+            .max(board.max_half_width(Rail::Right).0)
+    } else {
+        board.max_width() / 2.0
+    };
     y += line;
     let yc = y + half_w * 10.0 * s;
-    let outline_cm: Vec<DVec2> = spline_points(&board.outline, 5.0)
-        .into_iter()
-        .map(|p| p / 10.0)
-        .collect();
-    d.path(outline_cm.iter().map(|p| at(p.x, p.y, yc)).collect(), black);
-    d.path(
-        outline_cm.iter().map(|p| at(p.x, -p.y, yc)).collect(),
-        black,
-    );
+    let rail_cm = |rail: Rail| -> Vec<DVec2> {
+        spline_points(board.outline_of(rail), 5.0)
+            .into_iter()
+            .map(|p| p / 10.0)
+            .collect()
+    };
+    let (upper, lower) = (rail_cm(Rail::Left), rail_cm(Rail::Right));
+    d.path(upper.iter().map(|p| at(p.x, p.y, yc)).collect(), black);
+    d.path(lower.iter().map(|p| at(p.x, -p.y, yc)).collect(), black);
     {
         let mut fins = Drawing::default();
         draw_fins(&mut fins, board, &|x| x, black, false);
@@ -592,8 +633,11 @@ pub fn spec_sheet(board: &Board, volume: f64, page: DVec2, fmt: &dyn Fn(f64) -> 
     d.line(at(0.0, 0.0, yc), at(l_cm, 0.0, yc), grey);
     let stations = [ts, l_cm / 2.0, l_cm - ts];
     for &x in &stations {
-        let o = board.outline.value_at(x);
-        d.line(at(x, -o, yc), at(x, o, yc), grey);
+        let (ol, or) = (
+            board.half_width_at(x, Rail::Left),
+            board.half_width_at(x, Rail::Right),
+        );
+        d.line(at(x, -or, yc), at(x, ol, yc), grey);
     }
     y = yc + half_w * 10.0 * s + line + 5.0 * PT;
     for &x in &stations {
