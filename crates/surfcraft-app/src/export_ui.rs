@@ -117,11 +117,20 @@ impl Default for ExportState {
 pub fn drawing(board: &Board, what: What, paper: Paper, set: &Settings) -> Drawing {
     let fmt = |cm: f64| set.fmt(cm);
     match what {
-        What::Outline => templates::outline(board, templates::OutlineOptions::default(), &fmt),
+        // Boards with a fin setup get the fin boxes and their measurements on the outline template.
+        What::Outline => templates::outline(
+            board,
+            templates::OutlineOptions {
+                fins: board.fin_setup.is_some(),
+                ..Default::default()
+            },
+            &fmt,
+        ),
         What::OutlineFull => templates::outline(
             board,
             templates::OutlineOptions {
                 full: true,
+                fins: board.fin_setup.is_some(),
                 ..Default::default()
             },
             &fmt,

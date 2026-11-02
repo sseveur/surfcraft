@@ -1260,3 +1260,70 @@ fn remove_section_keeps_current_section_valid() {
 fn double_minus_is_rejected() {
     assert_eq!(LengthUnit::Centimetres.parse("--3"), None);
 }
+
+#[test]
+fn set_fins_places_presets_with_boxes() {
+    let (mut d, mut c) = session(0);
+    let r = ok(
+        &mut d,
+        &mut c,
+        "set_fins",
+        json!({"preset": "five", "box_system": "fcs2"}),
+    );
+    let fins = r["setup"]["fins"].as_array().unwrap();
+    assert_eq!(fins.len(), 5, "{r}");
+    assert!(fins.iter().all(|f| f["box_system"] == "fcs2"));
+    assert_eq!(r["setup"]["preset"], "five");
+    assert_eq!(r["setup"]["stored"], true);
+    // The legacy marks follow the setup.
+    assert_eq!(
+        r["fins"].as_array().unwrap()[0].as_f64().unwrap(),
+        d.board.fins[0]
+    );
+    assert!(d.board.fins[0] > 0.0);
+    // One undo step.
+    ok(&mut d, &mut c, "undo", json!({}));
+    assert_eq!(d.board.fin_setup, None);
+    ok(&mut d, &mut c, "redo", json!({}));
+    // Changing only the box system keeps the positions.
+    let before = d.board.fin_setup.clone().unwrap();
+    let r = ok(&mut d, &mut c, "set_fins", json!({"box_system": "Futures"}));
+    let after = d.board.fin_setup.clone().unwrap();
+    assert_eq!(r["setup"]["box_system"], "futures");
+    for (a, b) in before.fins.iter().zip(&after.fins) {
+        assert_eq!((a.x, a.y), (b.x, b.y));
+    }
+    // 2+1: US box in the middle.
+    let r = ok(
+        &mut d,
+        &mut c,
+        "set_fins",
+        json!({"preset": "2+1", "box_system": "fcs1"}),
+    );
+    let systems: Vec<&str> = r["setup"]["fins"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|f| f["box_system"].as_str().unwrap())
+        .collect();
+    assert_eq!(systems, ["fcs1", "fcs1", "usbox"]);
+    // The old arguments still work, and replace the setup by plain marks.
+    let r = ok(&mut d, &mut c, "set_fins", json!({"side_rear_x": 25}));
+    assert_eq!(r["fins"][0], 25.0);
+    assert_eq!(d.board.fin_setup, None);
+    assert_eq!(r["setup"]["stored"], false);
+    // A call without arguments changes nothing.
+    ok(&mut d, &mut c, "set_fins", json!({"preset": "thruster"}));
+    let s = d.board.fin_setup.clone();
+    ok(&mut d, &mut c, "set_fins", json!({}));
+    assert_eq!(d.board.fin_setup, s);
+    for bad in [
+        json!({"preset": "hexa"}),
+        json!({"box_system": "glue"}),
+        json!({"preset": 3}),
+        json!({"preset": "custom"}),
+        json!({"preset": "quad", "side_rear_x": 20}),
+    ] {
+        err(&mut d, &mut c, "set_fins", bad);
+    }
+}
