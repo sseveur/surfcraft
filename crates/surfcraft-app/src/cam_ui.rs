@@ -238,24 +238,29 @@ pub fn window(
             });
             // Hot-wire programs are 2D in the X/Z plane: one full-height view of the cut shape.
             let hotwire = matches!(job, Job::HotwireProfile | Job::HotwireOutline);
+            // The views take exactly the height left (labels and spacing counted): asking for more would make the
+            // window grow a little every frame.
+            let sp = ui.spacing().item_spacing.y;
             if hotwire {
-                let h = ui.available_height() - 20.0;
                 ui.label(if *job == Job::HotwireOutline {
                     tr("Plan (from above)")
                 } else {
                     tr("Side")
                 });
+                let h = ui.available_height().floor().max(20.0);
                 ui.allocate_ui(egui::vec2(ui.available_width(), h), |ui| {
                     preview(ui, &mut st.side_view, program, false, bg)
                 });
             } else {
-                let h = (ui.available_height() - 8.0) / 2.0;
-                ui.label(tr("Plan (from above)"));
-                ui.allocate_ui(egui::vec2(ui.available_width(), h - 14.0), |ui| {
+                let label = ui.label(tr("Plan (from above)")).rect.height();
+                let h = ((ui.available_height() - label - 2.0 * sp) / 2.0)
+                    .floor()
+                    .max(20.0);
+                ui.allocate_ui(egui::vec2(ui.available_width(), h), |ui| {
                     preview(ui, &mut st.plan_view, program, true, bg)
                 });
                 ui.label(tr("Side"));
-                ui.allocate_ui(egui::vec2(ui.available_width(), h - 14.0), |ui| {
+                ui.allocate_ui(egui::vec2(ui.available_width(), h), |ui| {
                     preview(ui, &mut st.side_view, program, false, bg)
                 });
             }

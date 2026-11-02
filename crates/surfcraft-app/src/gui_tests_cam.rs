@@ -384,3 +384,33 @@ fn cam_bug_corner_radius_not_reclamped() {
         b.corner_radius
     );
 }
+
+/// The window keeps its size while it shows a program (regression: the preview asked for a little more height
+/// than the window had, so the window grew every frame until it filled the screen and covered the menu bar).
+#[test]
+fn cam_window_does_not_grow_with_the_preview() {
+    use egui_kittest::kittest::NodeT as _;
+    let mut h = harness();
+    open_machine(&mut h);
+    let window = |h: &H| {
+        h.get_all_by_role(Role::Window)
+            .find(|n| n.accesskit_node().label().as_deref() == Some("Machine (CAM)"))
+            .expect("machine window")
+            .rect()
+    };
+    for (button, job) in [
+        ("Generate deck", Job::Deck),
+        ("Generate hot-wire profile", Job::HotwireProfile),
+    ] {
+        generate(&mut h, button);
+        assert_eq!(h.state().dialogs.cam_state.program.as_ref().unwrap().0, job);
+        h.run_steps(2);
+        let before = window(&h);
+        h.run_steps(30);
+        let after = window(&h);
+        assert!(
+            (after.height() - before.height()).abs() < 1.0 && after.min.y >= before.min.y - 0.5,
+            "{button}: window grew from {before:?} to {after:?}"
+        );
+    }
+}
