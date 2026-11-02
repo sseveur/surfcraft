@@ -12,6 +12,8 @@ pub struct Results {
     pub specs: Specs,
     pub center_of_mass: f64,
     pub mesh: Arc<Mesh>,
+    /// Fins under the bottom, drawn in the 3D view when View > Fins is on.
+    pub fins: Arc<Mesh>,
 }
 
 #[derive(Default)]
@@ -48,11 +50,13 @@ impl Worker {
             let specs = board.specs();
             let center_of_mass = board.center_of_mass();
             let mesh = Arc::new(Mesh::of_board(&board, MeshDetail::PREVIEW));
+            let fins = Arc::new(board.fin_mesh());
             *latest.lock().unwrap() = Some(Results {
                 revision,
                 specs,
                 center_of_mass,
                 mesh,
+                fins,
             });
             busy.store(false, Ordering::Release);
             ctx.request_repaint();

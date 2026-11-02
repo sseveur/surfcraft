@@ -842,11 +842,122 @@ impl Board {
         self.fins = setup.to_legacy();
         self.fin_setup = Some(setup);
     }
+
+    /// Triangle mesh of the fins hanging under the bottom, for display (empty without fins). Each fin has a
+    /// generic raked template (tip [`FIN_RAKE`] × base behind the trailing edge), a symmetric foil
+    /// [`FIN_THICKNESS`] × base thick at the root, and is tilted out towards its rail by its cant and turned by
+    /// its toe. The root is sunk slightly into the board so no gap shows on a curved bottom.
+    pub fn fin_mesh(&self) -> crate::Mesh {
+        let mut mesh = crate::Mesh::default();
+        for fin in &self.fin_setup().fins {
+            add_fin(self, fin, &mut mesh);
+        }
+        mesh.compute_normals();
+        mesh
+    }
+}
+
+/// How far the fin tip sits behind the trailing edge of the base, as a fraction of the base length.
+pub const FIN_RAKE: f64 = 0.3;
+/// Root thickness of the fin foil, as a fraction of the base length (about 8 mm on a 4.4" base).
+pub const FIN_THICKNESS: f64 = 0.072;
+/// Depth the fin root is sunk into the board, cm.
+const FIN_EMBED: f64 = 0.3;
+
+fn add_fin(board: &Board, fin: &Fin, mesh: &mut crate::Mesh) {
+    use glam::DVec3;
+    const SPAN: usize = 16;
+    const CHORD: usize = 12;
+    let (base, depth) = (fin.base, fin.depth);
+    if !(base > 0.0 && depth > 0.0 && base.is_finite() && depth.is_finite()) {
+        return;
+    }
+    let d = fin.dir();
+    let along = DVec3::new(d.x, d.y, 0.0);
+    // Out towards the fin's own rail; a centre fin has no cant.
+    let out = DVec2::new(-d.y, d.x) * fin.sign();
+    let c = fin.cant * DEG;
+    let down = DVec3::new(out.x * c.sin(), out.y * c.sin(), -c.cos());
+    let side = along.cross(down).normalize_or_zero();
+    let rake = FIN_RAKE * base;
+    let first = mesh.positions.len() as u32;
+    let ring = 2 * CHORD;
+    for i in 0..=SPAN {
+        let s = i as f64 / SPAN as f64;
+        // Trailing edge curves back to the tip; the leading edge sweeps from the front of the base to the tip.
+        let trailing = -rake * s * s;
+        let leading = base * (1.0 - s.powf(0.8)) - rake * s;
+        let half = FIN_THICKNESS * base * (1.0 - 0.85 * s) / 2.0;
+        let point = |w: f64, face: f64| {
+            let u = trailing + (leading - trailing) * w;
+            let plan = fin.rear() + d * u;
+            let root = board.bottom_at_xy(plan.x, plan.y) + FIN_EMBED;
+            let foil = 2.0 * (w * (1.0 - w)).max(0.0).sqrt();
+            DVec3::new(plan.x, plan.y, root) + down * (depth * s) + side * (face * half * foil)
+        };
+        for k in 0..CHORD {
+            mesh.positions
+                .push(point(k as f64 / (CHORD - 1) as f64, 1.0));
+        }
+        for k in 0..CHORD {
+            mesh.positions
+                .push(point(1.0 - k as f64 / (CHORD - 1) as f64, -1.0));
+        }
+    }
+    for i in 0..SPAN as u32 {
+        let (a, b) = (first + i * ring as u32, first + (i + 1) * ring as u32);
+        for k in 0..ring as u32 {
+            let k1 = (k + 1) % ring as u32;
+            mesh.triangles.push([a + k, a + k1, b + k1]);
+            mesh.triangles.push([a + k, b + k1, b + k]);
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fin_mesh_hangs_under_the_bottom_at_each_fin() {
+        let mut b = crate::mesh::tests::toy_board();
+        let setup = FinSetup::preset(Preset::Five, BoxSystem::FcsII, &b);
+        b.fin_setup = None;
+        b.fins = [0.0; 9];
+        assert!(b.fin_mesh().triangles.is_empty());
+        b.set_fin_setup(setup.clone());
+        let m = b.fin_mesh();
+        assert!(!m.triangles.is_empty());
+        assert_eq!(m.normals.len(), m.positions.len());
+        assert!(m.positions.iter().all(|p| p.is_finite()));
+        for fin in &setup.fins {
+            // Some vertex reaches the fin's depth below the bottom, near the fin.
+            let bottom = b.bottom_at_xy(fin.middle().x, fin.middle().y);
+            let lowest = m
+                .positions
+                .iter()
+                .filter(|p| DVec2::new(p.x, p.y).distance(fin.middle()) < fin.base + fin.depth)
+                .map(|p| p.z)
+                .fold(f64::MAX, f64::min);
+            assert!(
+                lowest < bottom - 0.8 * fin.depth,
+                "{fin:?}: {lowest} vs {bottom}"
+            );
+        }
+        // Side fins cant out towards their own rail.
+        let left = setup
+            .fins
+            .iter()
+            .find(|f| f.y > 0.0 && f.cant > 0.0)
+            .unwrap();
+        let tip = m
+            .positions
+            .iter()
+            .filter(|p| DVec2::new(p.x, p.y).distance(left.middle()) < left.base)
+            .min_by(|a, b| a.z.total_cmp(&b.z))
+            .unwrap();
+        assert!(tip.y > left.middle().y, "tip {tip:?} of {left:?}");
+    }
 
     fn extent(poly: &[DVec2], dir: DVec2) -> f64 {
         let v: Vec<f64> = poly.iter().map(|p| p.dot(dir)).collect();

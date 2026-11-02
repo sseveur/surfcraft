@@ -1135,11 +1135,16 @@ impl SurfCraftApp {
             egui::Color32::from_rgb(196, 204, 214)
         };
         let mesh = self.results.as_ref().map(|r| r.mesh.clone());
+        let fins = self
+            .results
+            .as_ref()
+            .filter(|_| self.set.view.fins)
+            .map(|r| r.fins.clone());
         // GPU renderer unless the user asked for wireframe (CPU preview) or wgpu is unavailable.
         let rs = rs.filter(|_| !self.orbit.wireframe);
         let viewer = &mut self.viewer;
         let mut view3d = |ui: &mut egui::Ui, orbit: &mut Orbit| {
-            if !viewer.show(ui, rs, mesh.as_ref(), orbit, pal.bg) {
+            if !viewer.show(ui, rs, mesh.as_ref(), fins.as_ref(), orbit, pal.bg) {
                 preview3d::show(ui, mesh.as_deref(), orbit, pal.bg, base, busy);
             }
         };

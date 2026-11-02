@@ -20,6 +20,8 @@ const DEPTH: wgpu::TextureFormat = wgpu::TextureFormat::Depth32Float;
 struct Vertex {
     pos: [f32; 3],
     normal: [f32; 3],
+    /// 0 board, 1 fin.
+    kind: f32,
 }
 
 #[repr(C)]
@@ -48,6 +50,7 @@ struct Gpu {
     indices: Option<wgpu::Buffer>,
     index_count: u32,
     mesh: Option<Arc<Mesh>>,
+    fins: Option<Arc<Mesh>>,
     /// Bounding box of the uploaded mesh.
     bounds: (Vec3, Vec3),
     targets: Option<Targets>,
@@ -106,7 +109,7 @@ impl Gpu {
                 buffers: &[Some(wgpu::VertexBufferLayout {
                     array_stride: std::mem::size_of::<Vertex>() as u64,
                     step_mode: wgpu::VertexStepMode::Vertex,
-                    attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3],
+                    attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3, 2 => Float32],
                 })],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
@@ -148,32 +151,48 @@ impl Gpu {
             indices: None,
             index_count: 0,
             mesh: None,
+            fins: None,
             bounds: (Vec3::ZERO, Vec3::ONE),
             targets: None,
         }
     }
 
-    fn upload(&mut self, device: &wgpu::Device, mesh: &Arc<Mesh>) {
-        if self.mesh.as_ref().is_some_and(|m| Arc::ptr_eq(m, mesh)) {
+    fn upload(&mut self, device: &wgpu::Device, mesh: &Arc<Mesh>, fins: Option<&Arc<Mesh>>) {
+        let same = |a: &Option<Arc<Mesh>>, b: Option<&Arc<Mesh>>| match (a, b) {
+            (Some(a), Some(b)) => Arc::ptr_eq(a, b),
+            (None, None) => true,
+            _ => false,
+        };
+        if same(&self.mesh, Some(mesh)) && same(&self.fins, fins) {
             return;
         }
-        let verts: Vec<Vertex> = mesh
-            .positions
-            .iter()
-            .zip(&mesh.normals)
-            .map(|(p, n)| Vertex {
-                pos: [p.x as f32, p.y as f32, p.z as f32],
-                normal: [n.x as f32, n.y as f32, n.z as f32],
-            })
-            .collect();
-        let idx: Vec<u32> = mesh.triangles.iter().flatten().copied().collect();
+        let vertices = |m: &Mesh, kind: f32| -> Vec<Vertex> {
+            m.positions
+                .iter()
+                .zip(&m.normals)
+                .map(|(p, n)| Vertex {
+                    pos: [p.x as f32, p.y as f32, p.z as f32],
+                    normal: [n.x as f32, n.y as f32, n.z as f32],
+                    kind,
+                })
+                .collect()
+        };
+        let mut verts = vertices(mesh, 0.0);
+        let mut idx: Vec<u32> = mesh.triangles.iter().flatten().copied().collect();
+        // The camera frames the board alone, so showing or hiding fins doesn't move the view.
         let (mut lo, mut hi) = (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN));
         for v in &verts {
             let p = Vec3::from(v.pos);
             lo = lo.min(p);
             hi = hi.max(p);
         }
+        if let Some(f) = fins.filter(|f| !f.triangles.is_empty()) {
+            let offset = verts.len() as u32;
+            verts.extend(vertices(f, 1.0));
+            idx.extend(f.triangles.iter().flatten().map(|i| i + offset));
+        }
         self.mesh = Some(mesh.clone());
+        self.fins = fins.cloned();
         if idx.is_empty() || verts.is_empty() {
             // Degenerate board: nothing to draw (and wgpu rejects empty buffers).
             self.vertices = None;
@@ -346,6 +365,7 @@ impl Viewer3d {
         ui: &mut egui::Ui,
         rs: Option<&egui_wgpu::RenderState>,
         mesh: Option<&Arc<Mesh>>,
+        fins: Option<&Arc<Mesh>>,
         orbit: &mut Orbit,
         bg: egui::Color32,
     ) -> bool {
@@ -376,7 +396,7 @@ impl Viewer3d {
         ];
         let gpu = self.gpu.get_or_insert_with(|| Gpu::new(&rs.device));
         if let Some(m) = mesh {
-            gpu.upload(&rs.device, m);
+            gpu.upload(&rs.device, m, fins);
         }
         let id = gpu.ensure_targets(rs, size);
 
