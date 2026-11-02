@@ -83,7 +83,10 @@ pub fn rider_form(ui: &mut egui::Ui, set: &Settings) -> Option<VolumeAdvice> {
                     .range(if imperial { 22.0..=550.0 } else { 10.0..=250.0 })
                     .speed(0.5)
                     .max_decimals(1)
-                    .suffix(unit),
+                    .suffix(unit)
+                    // Apply a typed weight on Enter only: applied per keystroke, the first digit is clamped to
+                    // the minimum and (in pounds, via kg) the text resets around the caret.
+                    .update_while_editing(false),
             );
             if w != shown {
                 r.weight_kg = if imperial { w / POUNDS_PER_KG } else { w };
@@ -322,5 +325,66 @@ mod tests {
         assert!(!h.state().doc.is_dirty(), "one undo step");
         settle(&mut h);
         snap(&mut h, "volume-advisor-window");
+    }
+
+    /// Click the weight with the mouse and type a new one, a key per frame like a person: the typed number
+    /// replaces the old one. (Regression: in pounds, the first digit was clamped to the 22 lb minimum while
+    /// typing and the field text reset around the caret, so "176" became 550 lb.)
+    #[test]
+    fn typing_a_weight_replaces_it() {
+        for (unit, typed, expect_kg) in [
+            (
+                crate::settings::Unit::FeetInchesFraction,
+                "176",
+                176.0 / POUNDS_PER_KG,
+            ),
+            (crate::settings::Unit::Centimetres, "80", 80.0),
+        ] {
+            let mut h = harness();
+            h.state_mut().set.unit = unit;
+            click(&mut h, "Board");
+            click_prefix(&mut h, "Volume advisor");
+            let y = h
+                .get_all_by_label("Rider weight")
+                .last()
+                .unwrap()
+                .rect()
+                .center()
+                .y;
+            let pos = h
+                .get_all_by_role(Role::SpinButton)
+                .find(|n| (n.rect().center().y - y).abs() < 8.0)
+                .expect("weight field")
+                .rect()
+                .center();
+            h.event(egui::Event::PointerMoved(pos));
+            h.run_steps(1);
+            for pressed in [true, false] {
+                h.event(egui::Event::PointerButton {
+                    pos,
+                    button: egui::PointerButton::Primary,
+                    pressed,
+                    modifiers: egui::Modifiers::NONE,
+                });
+                h.step();
+            }
+            h.run_steps(2);
+            for c in typed.chars() {
+                h.event(egui::Event::Text(c.to_string()));
+                h.step();
+            }
+            let shown: Vec<String> = h
+                .get_all_by_role(Role::SpinButton)
+                .filter_map(|n| n.value())
+                .collect();
+            assert!(
+                shown.iter().any(|s| s == typed),
+                "{unit:?}: field shows {shown:?}"
+            );
+            h.key_press(egui::Key::Enter);
+            h.run_steps(2);
+            let kg = rider(&h).weight_kg;
+            assert!((kg - expect_kg).abs() < 1e-6, "{unit:?}: {kg} kg");
+        }
     }
 }
