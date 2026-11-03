@@ -602,6 +602,31 @@ p50 is written from the setup:
 
 A board read without p60 shows the setup described by p50: a pair of side fins if a side mark is set, a centre fin if a centre mark is set, and no boxes.
 
+**p64: fin shapes** (one line, written right after p60, whenever p60 is written): the planform and foil of each
+fin, used for the 3D model and its export.
+
+```
+p64 : 1[; <rake> <tip> <tip_round> <fullness> <thickness> <inside>]...
+```
+
+* `1` is the format version, then one group per fin, in the order of p60.
+* All values are fractions of the fin's base length except `tip_round`, `fullness` and `inside`:
+  * `rake`: how far the rear of the tip sits behind the rear of the base.
+  * `tip`: tip width, front to back (0 = pointed).
+  * `tip_round`: 0 = square-cut tip, 1 = fully round.
+  * `fullness`: exponent of the chord's taper from the base to the tip (leading edge: 1 = straight, about 2 = typical, 4 or more = full).
+  * `thickness`: foil thickness at the root.
+  * `inside`: share of the thickness on the face towards the stringer (0.5 symmetric, 0.2 = 80/20, 0 = flat
+    inside); ignored for fins on the stringer.
+* A reader ignores a p64 it cannot read or whose group count differs from p60's fins; the fins then have the default
+  shape. Readers that do not know p64 (BoardCAD, SurfCraft 4.0.0-alpha.2) ignore the line.
+
+Example (a thruster with upright side fins and the default centre fin):
+
+```
+p64 : 1; 0.16 0.32 0.8 2.6 0.072 0.5; 0.16 0.32 0.8 2.6 0.072 0.5; 0.32 0.12 1 2.2 0.072 0.5
+```
+
 **p61: left outline** (asymmetric boards; written only when the board has one, after the p34 block and before
 p35):
 

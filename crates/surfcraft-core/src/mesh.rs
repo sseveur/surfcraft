@@ -129,6 +129,15 @@ impl Mesh {
         mesh
     }
 
+    /// Add the triangles of `other` (as separate shells) to this mesh.
+    pub fn append(&mut self, other: &Mesh) {
+        let offset = self.positions.len() as u32;
+        self.positions.extend_from_slice(&other.positions);
+        self.normals.extend_from_slice(&other.normals);
+        self.triangles
+            .extend(other.triangles.iter().map(|t| t.map(|i| i + offset)));
+    }
+
     /// Area-weighted vertex normals.
     pub fn compute_normals(&mut self) {
         let mut normals = vec![DVec3::ZERO; self.positions.len()];

@@ -1852,6 +1852,90 @@ fn fins_dialog_applies_a_five_fin_fcs2_setup() {
 }
 
 #[test]
+fn fin_shape_editor_and_fins_in_the_3d_export() {
+    use surfcraft_core::fins::FinShape;
+    let mut h = harness();
+    menu(&mut h, "Board", "Fins…");
+    step(&mut h);
+    click(&mut h, "Setup");
+    click(&mut h, "Thruster");
+    click(&mut h, "Apply preset");
+    step(&mut h);
+    assert!(has_label(&h, "Fin shape (3D model and export)"));
+    // A square-cut template on the left fin goes to its mirror partner too; the centre fin keeps its shape.
+    click(&mut h, "Template");
+    click(&mut h, "Square tip");
+    step(&mut h);
+    let s = h.state().doc.board.fin_setup.clone().unwrap();
+    let square = FinShape::TEMPLATES
+        .iter()
+        .find(|(n, _)| *n == "Square tip")
+        .unwrap()
+        .1;
+    let sides: Vec<_> = s.fins.iter().filter(|f| f.y != 0.0).collect();
+    assert_eq!(sides.len(), 2);
+    assert!(sides.iter().all(|f| f.shape == square), "{s:?}");
+    assert!(
+        s.fins
+            .iter()
+            .any(|f| f.y == 0.0 && f.shape == FinShape::DEFAULT)
+    );
+    // Flat-inside foil.
+    // The foil box has no label of its own (the grid row has): find it by the text it shows.
+    let foil = h
+        .query_all_by_value("50/50 (symmetric)")
+        .map(|n| n.rect())
+        .next()
+        .expect("foil box");
+    click_at(&mut h, foil.center(), Modifiers::NONE);
+    click(&mut h, "Flat inside");
+    step(&mut h);
+    let s = h.state().doc.board.fin_setup.clone().unwrap();
+    assert!(
+        s.fins
+            .iter()
+            .filter(|f| f.y != 0.0)
+            .all(|f| f.shape.inside == 0.0)
+    );
+    // Re-applying a preset keeps the shapes of fins in the same role.
+    click(&mut h, "Apply preset");
+    step(&mut h);
+    let again = h.state().doc.board.fin_setup.clone().unwrap();
+    assert_eq!(
+        again.fins.iter().map(|f| f.shape).collect::<Vec<_>>(),
+        s.fins.iter().map(|f| f.shape).collect::<Vec<_>>()
+    );
+    snap(&mut h, "qa-fins-shape");
+
+
+    // 3D export: board only, board and fins, fins only.
+    menu(&mut h, "File", "Print & export…");
+    click(&mut h, What::Model.label());
+    click(&mut h, "STL (binary, mm)");
+    let mut counts = Vec::new();
+    for (label, file) in [
+        ("Board only", "board.stl"),
+        ("Board and fins", "board-fins.stl"),
+        ("Fins only", "fins.stl"),
+    ] {
+        click(&mut h, label);
+        let out = fresh("export-fins", file);
+        script(&mut h, &out);
+        click(&mut h, "Export…");
+        let bytes = std::fs::read(&out).unwrap();
+        counts.push(
+            surfcraft_export::mesh_formats::stl_triangles(&bytes)
+                .unwrap()
+                .len(),
+        );
+    }
+    let fins = h.state().doc.board.fin_mesh().triangles.len();
+    assert_eq!(counts[2], fins);
+    assert_eq!(counts[1], counts[0] + fins);
+    snap(&mut h, "qa-export-fins");
+}
+
+#[test]
 fn weight_calculator_reacts_to_layup_and_units() {
     let mut h = harness();
     menu(&mut h, "Board", "Weight calculator…");

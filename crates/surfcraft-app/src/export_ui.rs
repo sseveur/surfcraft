@@ -106,6 +106,26 @@ impl Format {
     }
 }
 
+/// What a 3D model export holds when the board has fins.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FinExport {
+    Without,
+    WithBoard,
+    Only,
+}
+
+impl FinExport {
+    pub const ALL: [FinExport; 3] = [FinExport::Without, FinExport::WithBoard, FinExport::Only];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            FinExport::Without => tr("Board only"),
+            FinExport::WithBoard => tr("Board and fins"),
+            FinExport::Only => tr("Fins only"),
+        }
+    }
+}
+
 pub struct ExportState {
     pub what: What,
     pub format: Format,
@@ -114,6 +134,8 @@ pub struct ExportState {
     pub fine_mesh: bool,
     /// Model scale denominator: 1 = full size, 10 = a 1:10 scale model.
     pub scale_ratio: f64,
+    /// Fins in a 3D model export (when the board has any).
+    pub fins: FinExport,
 }
 
 impl Default for ExportState {
@@ -125,6 +147,7 @@ impl Default for ExportState {
             overlap_mm: 10.0,
             fine_mesh: true,
             scale_ratio: 1.0,
+            fins: FinExport::WithBoard,
         }
     }
 }
@@ -174,7 +197,7 @@ pub fn render(board: &Board, st: &ExportState, set: &Settings, title: &str) -> V
             } else {
                 MeshDetail::default()
             };
-            let mesh = Mesh::of_board(board, detail);
+            let mesh = model_mesh(board, detail, fins_in_model(board, st));
             let scale = 1.0 / st.scale_ratio.max(1e-3);
             match st.format {
                 Format::Stl => mesh_formats::stl(&mesh_formats::scaled(&mesh, scale), title),
@@ -202,6 +225,28 @@ pub fn render(board: &Board, st: &ExportState, set: &Settings, title: &str) -> V
         }
         Format::Svg => svg::write(&drawing(board, st.what, st.paper, set)).into_bytes(),
         Format::Dxf => dxf::write(&drawing(board, st.what, st.paper, set)).into_bytes(),
+    }
+}
+
+/// What the 3D model export holds for this board: fins only when it has any.
+fn fins_in_model(board: &Board, st: &ExportState) -> FinExport {
+    if board.fin_setup().is_empty() {
+        FinExport::Without
+    } else {
+        st.fins
+    }
+}
+
+/// The board mesh, with its fins as separate closed shells sunk into the bottom, or the fins alone.
+pub fn model_mesh(board: &Board, detail: MeshDetail, fins: FinExport) -> Mesh {
+    match fins {
+        FinExport::Without => Mesh::of_board(board, detail),
+        FinExport::WithBoard => {
+            let mut mesh = Mesh::of_board(board, detail);
+            mesh.append(&board.fin_mesh());
+            mesh
+        }
+        FinExport::Only => board.fin_mesh(),
     }
 }
 
@@ -278,6 +323,16 @@ pub fn window(
             if st.what == What::Model {
                 ui.checkbox(&mut st.fine_mesh, tr("High resolution mesh"));
                 scale_row(ui, &mut st.scale_ratio);
+                if !board.fin_setup().is_empty() {
+                    ui.horizontal(|ui| {
+                        ui.label(tr("Fins")).on_hover_text(tr(
+                            "Each fin is a separate closed shell, sunk 3 mm into the bottom. Slicers for 3D printing join them to the board. For a flow simulation, join them first (a boolean union in your CAD or mesh tool) if your tool needs one solid.",
+                        ));
+                        for f in FinExport::ALL {
+                            ui.radio_value(&mut st.fins, f, f.label());
+                        }
+                    });
+                }
             }
             ui.separator();
             if ui.button(tr("Export…")).clicked() {
@@ -286,7 +341,12 @@ pub fn window(
                 } else {
                     String::new()
                 };
-                let name = format!("{title}-{}{scale}.{}", st.what.slug(), st.format.ext());
+                let what = if st.what == What::Model && fins_in_model(board, st) == FinExport::Only {
+                    "fins"
+                } else {
+                    st.what.slug()
+                };
+                let name = format!("{title}-{what}{scale}.{}", st.format.ext());
                 result = Some((name, render(board, st, set, title)));
             }
         });

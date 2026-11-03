@@ -3,7 +3,7 @@
 mod common;
 
 use common::{BOARDS, FIXTURES, fixture_board};
-use surfcraft_core::fins::{BoxSystem, FinSetup, Preset, Side};
+use surfcraft_core::fins::{BoxSystem, FinSetup, FinShape, Preset, Side};
 use surfcraft_core::units::INCH;
 use surfcraft_io::brd;
 use surfcraft_io::templates::TEMPLATES;
@@ -130,12 +130,41 @@ fn p60_round_trips_and_keeps_p50_in_step() {
 }
 
 #[test]
+fn fin_shapes_round_trip_in_p64() {
+    let mut b = fixture_board("shortboard");
+    let mut s = FinSetup::preset(Preset::Thruster, BoxSystem::FcsII, &b);
+    s.fins[0].shape = FinShape::TEMPLATES[1].1;
+    s.fins[1].shape = FinShape::TEMPLATES[1].1;
+    s.fins[2].shape.inside = 0.0;
+    s.fins[2].shape.fullness = 3.25;
+    b.set_fin_setup(s.clone());
+    let text = brd::write(&b);
+    assert_eq!(text.matches("\np64 : ").count(), 1);
+    let back = brd::read(text.as_bytes()).unwrap();
+    assert_eq!(back.fin_setup.as_ref(), Some(&s));
+    // A reader that ignores p64 (SurfCraft 4.0.0-alpha.2) gets the same fins with the default shape.
+    let without: String = text
+        .lines()
+        .filter(|l| !l.starts_with("p64 "))
+        .map(|l| format!("{l}\n"))
+        .collect();
+    let old = brd::read(without.as_bytes()).unwrap().fin_setup.unwrap();
+    assert_eq!(old.fins.len(), 3);
+    assert!(old.fins.iter().all(|f| f.shape == FinShape::DEFAULT));
+    // A p64 that does not match the fins is ignored.
+    let bad = text.replace(&s.encode_shapes(), "1; 0.1 0.1 0.1 1 0.05 0.5");
+    let back = brd::read(bad.as_bytes()).unwrap().fin_setup.unwrap();
+    assert!(back.fins.iter().all(|f| f.shape == FinShape::DEFAULT));
+}
+
+#[test]
 fn old_files_load_and_save_unchanged() {
     for name in BOARDS {
         let bytes = std::fs::read(format!("{FIXTURES}/{name}.brd")).unwrap();
         let b = brd::read(&bytes).unwrap();
         assert_eq!(b.fin_setup, None, "{name}");
         assert!(!brd::write(&b).contains("p60"), "{name}");
+        assert!(!brd::write(&b).contains("p64"), "{name}");
     }
     // Legacy marks only: the setup is derived from them, nothing new is written.
     let mut b = fixture_board("shortboard");
