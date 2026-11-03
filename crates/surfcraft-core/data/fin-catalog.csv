@@ -1,0 +1,708 @@
+# Fin specs as published by FCS, Futures and Firewire on their own product pages (retrieved 2026-11-03).
+# Inches and square inches. Empty = not published. Trademarks belong to their owners.
+brand,model,size,system,setup,role,base_in,depth_in,area_sqin,sweep_deg,cant_deg,foil,source_url
+FCS,Accelerator,M,fcs2,thruster,all,4.39,4.58,15.28,33.7,,Flat,https://www.surffcs.com/products/fcs-ii-accelerator-pc-tri-fins
+FCS,Accelerator,L,fcs2,thruster,all,4.50,4.70,16.06,33.7,,Flat,https://www.surffcs.com/products/fcs-ii-accelerator-pc-tri-fins
+FCS,Al Merrick,XS,fcs2,thruster,all,4.26,4.26,13.02,35.5,,Flat,https://www.surffcs.com/products/fcs-ii-al-merrick-tri-fins
+FCS,Al Merrick,S,fcs2,thruster,all,4.37,4.37,13.71,35.5,,Flat,https://www.surffcs.com/products/fcs-ii-al-merrick-tri-fins
+FCS,Al Merrick,M,fcs2,thruster,side,4.57,4.53,14.89,36.6,,Flat,https://www.surffcs.com/products/fcs-ii-al-merrick-tri-fins
+FCS,Al Merrick,M,fcs2,thruster,centre,4.33,4.41,13.72,35.0,,50/50,https://www.surffcs.com/products/fcs-ii-al-merrick-tri-fins
+FCS,Al Merrick,L,fcs2,thruster,side,4.61,4.69,15.63,36.3,,Flat,https://www.surffcs.com/products/fcs-ii-al-merrick-tri-fins
+FCS,Al Merrick,L,fcs2,thruster,centre,4.47,4.45,14.68,38.6,,50/50,https://www.surffcs.com/products/fcs-ii-al-merrick-tri-fins
+FCS,Al Merrick,XL,fcs2,thruster,side,4.80,4.85,16.50,36.3,,Flat,https://www.surffcs.com/products/fcs-ii-al-merrick-tri-fins
+FCS,Al Merrick,XL,fcs2,thruster,centre,4.70,4.61,16.05,38.6,,50/50,https://www.surffcs.com/products/fcs-ii-al-merrick-tri-fins
+FCS,Al Merrick,M,fcs2,five,side,4.57,4.53,14.89,36.6,,Flat,https://www.surffcs.com/products/fcs-ii-al-merrick-pc-aircore-tri-quad-fins
+FCS,Al Merrick,M,fcs2,five,centre,4.33,4.41,13.72,35.0,,Flat,https://www.surffcs.com/products/fcs-ii-al-merrick-pc-aircore-tri-quad-fins
+FCS,Al Merrick,M,fcs2,five,rear,3.83,3.99,11.08,32.4,,80/20,https://www.surffcs.com/products/fcs-ii-al-merrick-pc-aircore-tri-quad-fins
+FCS,Al Merrick,L,fcs2,five,side,4.61,4.69,15.63,36.3,,Flat,https://www.surffcs.com/products/fcs-ii-al-merrick-pc-aircore-tri-quad-fins
+FCS,Al Merrick,L,fcs2,five,centre,4.47,4.45,14.68,38.6,,50/50,https://www.surffcs.com/products/fcs-ii-al-merrick-pc-aircore-tri-quad-fins
+FCS,Al Merrick,L,fcs2,five,rear,4.09,4.26,12.63,32.4,,80/20,https://www.surffcs.com/products/fcs-ii-al-merrick-pc-aircore-tri-quad-fins
+FCS,Al Merrick,M,fcs2,quad,rear,4.10,4.26,12.64,32.4,,Flat,https://www.surffcs.com/products/fcs-ii-al-merrick-quad-rear-fin-set
+FCS,Al Merrick,L,fcs2,quad,rear,4.10,4.26,12.64,32.4,,Flat,https://www.surffcs.com/products/fcs-ii-al-merrick-quad-rear-fin-set
+FCS,CI Upright,M,fcs2,thruster,side,4.39,4.59,15.04,30.3,,Flat,https://www.surffcs.com/products/fcs-ii-ci-upright-tri-fin-set-new-copy
+FCS,CI Upright,M,fcs2,thruster,centre,4.39,4.59,15.04,30.3,,Flat,https://www.surffcs.com/products/fcs-ii-ci-upright-tri-fin-set-new-copy
+FCS,CI Upright,L,fcs2,thruster,side,4.50,4.70,15.79,30.3,,Flat,https://www.surffcs.com/products/fcs-ii-ci-upright-tri-fin-set-new-copy
+FCS,CI Upright,L,fcs2,thruster,centre,4.50,4.7,15.79,30.3,,Flat,https://www.surffcs.com/products/fcs-ii-ci-upright-tri-fin-set-new-copy
+FCS,CI Upright,M,fcs2,quad,rear,4.04,4.17,11.70,33.3,,Flat,https://www.surffcs.com/products/fcs-ii-ci-upright-quad-rear-fin-set
+FCS,CI Upright,L,fcs2,quad,rear,4.14,4.27,12.29,33.3,,Flat,https://www.surffcs.com/products/fcs-ii-ci-upright-quad-rear-fin-set
+FCS,Channel Islands Solution,M,fcs2,thruster,side,4.39,4.59,15.04,30.3,,Flat,https://www.surffcs.com/products/fcs-ii-channel-islands-solution-pc-tri-fins
+FCS,Channel Islands Solution,M,fcs2,thruster,centre,4.39,4.59,15.04,30.3,,50/50,https://www.surffcs.com/products/fcs-ii-channel-islands-solution-pc-tri-fins
+FCS,Channel Islands Solution,L,fcs2,thruster,side,4.50,4.70,15.79,30.3,,Flat,https://www.surffcs.com/products/fcs-ii-channel-islands-solution-pc-tri-fins
+FCS,Channel Islands Solution,L,fcs2,thruster,centre,4.50,4.7,15.79,30.3,,50/50,https://www.surffcs.com/products/fcs-ii-channel-islands-solution-pc-tri-fins
+FCS,Channel Islands Solution,M,fcs2,quad,rear,4.04,4.17,11.70,33.3,,80/20,https://www.surffcs.com/products/fcs-ii-channel-islands-solution-pc-quad-rear-fin-set
+FCS,Channel Islands Solution,L,fcs2,quad,rear,4.14,4.27,12.29,33.3,,80/20,https://www.surffcs.com/products/fcs-ii-channel-islands-solution-pc-quad-rear-fin-set
+FCS,CI x Dane Reynolds DD2,M,fcs2,thruster,side,4.57,4.53,14.89,36.6,,Flat,https://www.surffcs.com/products/fcs-ii-ci-x-dan-reynolds-dd2-tri-fin-set
+FCS,CI x Dane Reynolds DD2,M,fcs2,thruster,centre,4.20,4.48,13.38,30.3,,50/50,https://www.surffcs.com/products/fcs-ii-ci-x-dan-reynolds-dd2-tri-fin-set
+FCS,CI x Dane Reynolds DD2,L,fcs2,thruster,side,4.61,4.69,15.63,36.3,,Flat,https://www.surffcs.com/products/fcs-ii-ci-x-dan-reynolds-dd2-tri-fin-set
+FCS,CI x Dane Reynolds DD2,L,fcs2,thruster,centre,4.40,4.69,14.70,30.3,,50/50,https://www.surffcs.com/products/fcs-ii-ci-x-dan-reynolds-dd2-tri-fin-set
+FCS,Carissa Moore,S,fcs2,thruster,side,4.27,4.3,13.55,33.8,,Flat,https://www.surffcs.com/products/fcs-ii-carissa-moore-signature-tri-fin-set
+FCS,Carissa Moore,S,fcs2,thruster,centre,4.23,4.26,13.27,33.8,,50/50,https://www.surffcs.com/products/fcs-ii-carissa-moore-signature-tri-fin-set
+FCS,Carissa Moore,M,fcs2,thruster,side,4.42,4.45,14.49,33.8,,Flat,https://www.surffcs.com/products/fcs-ii-carissa-moore-signature-tri-fin-set
+FCS,Carissa Moore,M,fcs2,thruster,centre,4.37,4.4,14.19,33.8,,50/50,https://www.surffcs.com/products/fcs-ii-carissa-moore-signature-tri-fin-set
+FCS,Carissa Moore,L,fcs2,thruster,side,4.56,4.6,15.5,33.8,,Flat,https://www.surffcs.com/products/fcs-ii-carissa-moore-signature-tri-fin-set
+FCS,Carissa Moore,L,fcs2,thruster,centre,4.51,4.55,15.18,33.8,,50/50,https://www.surffcs.com/products/fcs-ii-carissa-moore-signature-tri-fin-set
+FCS,Carver,M,fcs2,thruster,all,4.47,4.54,14.96,37,,Flat,https://www.surffcs.com/products/fcs-ii-carver-performance-core-tri-fin-set
+FCS,Carver,L,fcs2,thruster,all,4.58,4.66,15.73,37,,Flat,https://www.surffcs.com/products/fcs-ii-carver-performance-core-tri-fin-set
+FCS,Carver,XL,fcs2,thruster,all,4.69,4.77,16.51,37,,Flat,https://www.surffcs.com/products/fcs-ii-carver-performance-core-tri-fin-set
+FCS,Carver,S,fcs2,quad,rear,3.86,3.93,11.07,33.2,,50/50,https://www.surffcs.com/products/fcs-ii-carver-neo-glass-eco-quad-rear-fin-set
+FCS,Carver,M,fcs2,quad,rear,4.14,4.21,12.63,33.2,,50/50,https://www.surffcs.com/products/fcs-ii-carver-neo-glass-eco-quad-rear-fin-set
+FCS,Christenson,M,fcs2,five,side,4.39,4.58,15.28,33.7,,Flat,https://www.surffcs.com/products/fcs-ii-christenson-tri-quad-fin-set
+FCS,Christenson,M,fcs2,five,rear,3.83,3.99,11.08,32.4,,80/20,https://www.surffcs.com/products/fcs-ii-christenson-tri-quad-fin-set
+FCS,Christenson,L,fcs2,five,side,4.50,4.7,16.06,33.7,,Flat,https://www.surffcs.com/products/fcs-ii-christenson-tri-quad-fin-set
+FCS,Christenson,L,fcs2,five,rear,4.09,4.26,12.63,32.4,,80/20,https://www.surffcs.com/products/fcs-ii-christenson-tri-quad-fin-set
+FCS,Christenson,M,fcs2,quad,rear,3.83,3.99,11.08,32.4,,80/20,https://www.surffcs.com/products/fcs-ii-christenson-quad-rear-fin-set
+FCS,Christenson,L,fcs2,quad,rear,4.09,4.26,12.63,32.4,,80/20,https://www.surffcs.com/products/fcs-ii-christenson-quad-rear-fin-set
+FCS,Crosby Colapinto,S,fcs2,thruster,side,4.37,4.40,14.30,34.0,,Flat,https://www.surffcs.com/products/fcs-ii-crosby-colapinto-tri-fin-set
+FCS,Crosby Colapinto,S,fcs2,thruster,centre,4.37,4.40,14.30,34.0,,50/50,https://www.surffcs.com/products/fcs-ii-crosby-colapinto-tri-fin-set
+FCS,Crosby Colapinto,M,fcs2,thruster,side,4.49,4.52,15.08,34.0,,Flat,https://www.surffcs.com/products/fcs-ii-crosby-colapinto-tri-fin-set
+FCS,Crosby Colapinto,M,fcs2,thruster,centre,4.49,4.52,15.08,34.0,,50/50,https://www.surffcs.com/products/fcs-ii-crosby-colapinto-tri-fin-set
+FCS,Crosby Colapinto,L,fcs2,thruster,side,4.60,4.64,15.85,34.0,,Flat,https://www.surffcs.com/products/fcs-ii-crosby-colapinto-tri-fin-set
+FCS,Crosby Colapinto,L,fcs2,thruster,centre,4.60,4.64,15.85,34.0,,50/50,https://www.surffcs.com/products/fcs-ii-crosby-colapinto-tri-fin-set
+FCS,DHD,M,fcs2,thruster,centre,4.30,4.46,14.25,34.5,,50/50,https://www.surffcs.com/products/fcs-ii-dhd-pc-tri-fins
+FCS,DHD,M,fcs2,thruster,side,4.41,4.57,15.49,35.4,,80/20,https://www.surffcs.com/products/fcs-ii-dhd-pc-tri-fins
+FCS,DHD,L,fcs2,thruster,centre,4.40,4.56,14.88,34.5,,50/50,https://www.surffcs.com/products/fcs-ii-dhd-pc-tri-fins
+FCS,DHD,L,fcs2,thruster,side,4.52,4.66,16.12,35.4,,80/20,https://www.surffcs.com/products/fcs-ii-dhd-pc-tri-fins
+FCS,Filipe Toledo,M,fcs2,thruster,all,4.41,4.54,14.93,34.8,,Flat/Bev,https://www.surffcs.com/products/fcs-ii-filipe-toledo-tri-fins
+FCS,Filipe Toledo,L,fcs2,thruster,all,4.52,4.66,15.71,34.8,,Flat/Bev,https://www.surffcs.com/products/fcs-ii-filipe-toledo-tri-fins
+FCS,Gabriel Medina,M,fcs2,thruster,side,4.37,4.55,14.81,33.7,,IFT,https://www.surffcs.com/products/gabriel-medina-tri-fin-set-2027
+FCS,Gabriel Medina,M,fcs2,thruster,centre,4.25,4.43,14.03,33.7,,50/50,https://www.surffcs.com/products/gabriel-medina-tri-fin-set-2027
+FCS,Gabriel Medina,L,fcs2,thruster,side,4.48,4.67,15.58,33.7,,IFT,https://www.surffcs.com/products/gabriel-medina-tri-fin-set-2027
+FCS,Gabriel Medina,L,fcs2,thruster,centre,4.37,4.55,14.81,33.7,,50/50,https://www.surffcs.com/products/gabriel-medina-tri-fin-set-2027
+FCS,Gabriel Medina,XL,fcs2,thruster,side,4.59,4.78,16.36,33.7,,IFT,https://www.surffcs.com/products/gabriel-medina-tri-fin-set-2027
+FCS,Gabriel Medina,XL,fcs2,thruster,centre,4.48,4.67,15.58,33.7,,50/50,https://www.surffcs.com/products/gabriel-medina-tri-fin-set-2027
+FCS,Gerry Lopez,M,fcs2,thruster,all,4.21,4.21,14.84,31.1,,Flat,https://www.surffcs.com/products/fcs-ii-gerry-lopez-tri-fins
+FCS,H4,S,fcs2,thruster,side,4.36,4.34,14.29,38.3,,Flat,https://www.surffcs.com/products/fcs-ii-h4-fin
+FCS,H4,S,fcs2,thruster,centre,4.29,4.49,13.82,37.2,,50/50,https://www.surffcs.com/products/fcs-ii-h4-fin
+FCS,H4,M,fcs2,thruster,side,4.48,4.45,15.07,38.3,,Flat,https://www.surffcs.com/products/fcs-ii-h4-fin
+FCS,H4,M,fcs2,thruster,centre,4.40,4.61,14.58,37.2,,50/50,https://www.surffcs.com/products/fcs-ii-h4-fin
+FCS,H4,L,fcs2,thruster,side,4.59,4.57,15.84,38.3,,Flat,https://www.surffcs.com/products/fcs-ii-h4-fin
+FCS,H4,L,fcs2,thruster,centre,4.52,4.73,15.33,37.2,,50/50,https://www.surffcs.com/products/fcs-ii-h4-fin
+FCS,H4,M,fcs2,quad,rear,4.09,4.24,12.62,31.4,,IFT - 80/20,https://www.surffcs.com/products/fcs-ii-h4-quad-rear-fins
+FCS,Hayden Shapes,M,fcs2,thruster,all,4.50,4.59,14.97,31.8,,Cambered,https://www.surffcs.com/products/fcs-ii-hayden-shapes-tri-fin-set
+FCS,Hayden Shapes,L,fcs2,thruster,all,4.61,4.70,15.74,31.8,,Cambered,https://www.surffcs.com/products/fcs-ii-hayden-shapes-tri-fin-set
+FCS,Hayden Shapes,M,fcs2,quad,rear,4.09,4.26,12.63,32.4,,Cambered,https://www.surffcs.com/products/fcs-ii-haydenshapes-quad-rear-fin-set
+FCS,Hayden Shapes,L,fcs2,quad,rear,4.09,4.26,12.63,32.4,,Cambered,https://www.surffcs.com/products/fcs-ii-haydenshapes-quad-rear-fin-set
+FCS,JS,M,fcs2,thruster,all,4.53,4.53,15.08,36.2,,Flat,https://www.surffcs.com/products/fcs-ii-js-tri-fins-1
+FCS,JS,L,fcs2,thruster,all,4.57,4.61,15.81,36.2,,Flat,https://www.surffcs.com/products/fcs-ii-js-tri-fins-1
+FCS,Jeremy Flores,L,fcs2,thruster,side,4.56,4.60,15.49,33.8,,Flat,https://www.surffcs.com/products/fcs-ii-jeremy-flores-tri-fins
+FCS,Jeremy Flores,L,fcs2,thruster,centre,4.51,4.53,15.18,33.8,,50/50,https://www.surffcs.com/products/fcs-ii-jeremy-flores-tri-fins
+FCS,Julian Wilson,Grom,fcs2,thruster,all,4.10,4.19,12.81,35.8,,Flat/Bev,https://www.surffcs.com/products/fcs-ii-julian-wilson-tri-fin-set
+FCS,Julian Wilson,M,fcs2,thruster,all,4.46,4.56,15.13,35.8,,Flat/Bev,https://www.surffcs.com/products/fcs-ii-julian-wilson-tri-fin-set
+FCS,Julian Wilson,L,fcs2,thruster,all,4.57,4.67,15.91,35.8,,Flat/Bev,https://www.surffcs.com/products/fcs-ii-julian-wilson-tri-fin-set
+FCS,Mason Ho,S,fcs2,thruster,side,4.25,4.40,14.06,34.9,,Flat/Bev,https://www.surffcs.com/products/fcs-ii-mason-ho-signature-fin
+FCS,Mason Ho,S,fcs2,thruster,centre,4.25,4.40,14.06,34.9,,50/50,https://www.surffcs.com/products/fcs-ii-mason-ho-signature-fin
+FCS,Mason Ho,M,fcs2,thruster,side,4.37,4.53,14.88,34.9,,Flat/Bev,https://www.surffcs.com/products/fcs-ii-mason-ho-signature-fin
+FCS,Mason Ho,M,fcs2,thruster,centre,4.37,4.53,14.88,34.9,,50/50,https://www.surffcs.com/products/fcs-ii-mason-ho-signature-fin
+FCS,Mason Ho,L,fcs2,thruster,side,4.49,4.65,15.70,34.9,,Flat/Bev,https://www.surffcs.com/products/fcs-ii-mason-ho-signature-fin
+FCS,Mason Ho,L,fcs2,thruster,centre,4.49,4.65,15.70,34.9,,50/50,https://www.surffcs.com/products/fcs-ii-mason-ho-signature-fin
+FCS,Matt Biolos,S,fcs2,thruster,side,4.32,4.39,13.87,36.6,,Flat,https://www.surffcs.com/products/fcs-ii-matt-biolos-tri-fin-set-new
+FCS,Matt Biolos,S,fcs2,thruster,centre,4.32,4.39,13.87,36.6,,50/50,https://www.surffcs.com/products/fcs-ii-matt-biolos-tri-fin-set-new
+FCS,Matt Biolos,M,fcs2,thruster,side,4.50,4.57,15.05,36.6,,Flat,https://www.surffcs.com/products/fcs-ii-matt-biolos-tri-fin-set-new
+FCS,Matt Biolos,M,fcs2,thruster,centre,4.50,4.57,15.05,36.6,,50/50,https://www.surffcs.com/products/fcs-ii-matt-biolos-tri-fin-set-new
+FCS,Matt Biolos,L,fcs2,thruster,side,4.69,4.76,16.32,36.6,,Flat,https://www.surffcs.com/products/fcs-ii-matt-biolos-tri-fin-set-new
+FCS,Matt Biolos,L,fcs2,thruster,centre,4.69,4.76,16.32,36.6,,50/50,https://www.surffcs.com/products/fcs-ii-matt-biolos-tri-fin-set-new
+FCS,Matt Biolos,M,fcs2,five,side,4.32,4.39,13.87,36.6,,Flat,https://www.surffcs.com/products/fcs-ii-matt-biolos-tri-quad-fin-set-new
+FCS,Matt Biolos,M,fcs2,five,centre,4.32,4.39,13.87,36.6,,50/50,https://www.surffcs.com/products/fcs-ii-matt-biolos-tri-quad-fin-set-new
+FCS,Matt Biolos,M,fcs2,five,rear,4.02,4.16,11.54,33.3,,80/20,https://www.surffcs.com/products/fcs-ii-matt-biolos-tri-quad-fin-set-new
+FCS,Matt Biolos,L,fcs2,five,side,4.69,4.76,16.32,36.6,,Flat,https://www.surffcs.com/products/fcs-ii-matt-biolos-tri-quad-fin-set-new
+FCS,Matt Biolos,L,fcs2,five,centre,4.69,4.76,16.32,36.6,,50/50,https://www.surffcs.com/products/fcs-ii-matt-biolos-tri-quad-fin-set-new
+FCS,Matt Biolos,L,fcs2,five,rear,4.02,4.16,11.54,33.3,,80/20,https://www.surffcs.com/products/fcs-ii-matt-biolos-tri-quad-fin-set-new
+FCS,Matt Biolos,M,fcs2,quad,rear,4.02,4.16,11.54,33.3,,80/20,https://www.surffcs.com/products/fcs-ii-matt-biolos-quad-rear-fin-set
+FCS,Matt Biolos,L,fcs2,quad,rear,4.02,4.16,11.54,33.3,,80/20,https://www.surffcs.com/products/fcs-ii-matt-biolos-quad-rear-fin-set
+FCS,Mayhem,S,fcs2,thruster,all,4.19,4.46,13.71,32.0,,Flat,https://www.surffcs.com/products/fcs-ii-matt-biolos-tri-fins
+FCS,Mayhem,M,fcs2,thruster,all,4.30,4.59,14.49,31.7,,Flat,https://www.surffcs.com/products/fcs-ii-matt-biolos-tri-fins
+FCS,Mayhem,L,fcs2,thruster,all,4.41,4.74,15.26,32.9,,Flat,https://www.surffcs.com/products/fcs-ii-matt-biolos-tri-fins
+FCS,Mayhem Driver,S,fcs2,thruster,side,4.32,4.39,13.81,36.6,,Flat,https://www.surffcs.com/products/mayhem-driver-tri-fin-set
+FCS,Mayhem Driver,S,fcs2,thruster,centre,4.32,4.39,13.81,36.6,,50/50,https://www.surffcs.com/products/mayhem-driver-tri-fin-set
+FCS,Mayhem Driver,M,fcs2,thruster,side,4.50,4.57,14.98,36.6,,Flat,https://www.surffcs.com/products/mayhem-driver-tri-fin-set
+FCS,Mayhem Driver,M,fcs2,thruster,centre,4.50,4.57,14.98,36.6,,50/50,https://www.surffcs.com/products/mayhem-driver-tri-fin-set
+FCS,Mayhem Driver,L,fcs2,thruster,side,4.69,4.76,16.25,36.6,,Flat,https://www.surffcs.com/products/mayhem-driver-tri-fin-set
+FCS,Mayhem Driver,L,fcs2,thruster,centre,4.69,4.76,16.25,36.6,,50/50,https://www.surffcs.com/products/mayhem-driver-tri-fin-set
+FCS,Mayhem Driver,M,fcs2,quad,rear,4.02,4.16,11.53,33.3,,80/20,https://www.surffcs.com/products/mayhem-driver-quad-rear-fin-set
+FCS,Mayhem Driver,L,fcs2,quad,rear,4.02,4.16,11.53,33.3,,80/20,https://www.surffcs.com/products/mayhem-driver-quad-rear-fin-set
+FCS,Mayhem Pivot,S,fcs2,thruster,side,4.19,4.46,13.71,32.0,,Flat,https://www.surffcs.com/products/mayhem-pivot-tri-fin-set
+FCS,Mayhem Pivot,S,fcs2,thruster,centre,4.19,4.46,13.71,32.0,,Flat,https://www.surffcs.com/products/mayhem-pivot-tri-fin-set
+FCS,Mayhem Pivot,M,fcs2,thruster,side,4.30,4.59,14.49,31.7,,50/50,https://www.surffcs.com/products/mayhem-pivot-tri-fin-set
+FCS,Mayhem Pivot,M,fcs2,thruster,centre,4.30,4.59,14.49,31.7,,Flat,https://www.surffcs.com/products/mayhem-pivot-tri-fin-set
+FCS,Mayhem Pivot,L,fcs2,thruster,side,4.41,4.74,15.26,32.9,,50/50,https://www.surffcs.com/products/mayhem-pivot-tri-fin-set
+FCS,Mayhem Pivot,L,fcs2,thruster,centre,4.41,4.74,15.26,32.9,,Flat,https://www.surffcs.com/products/mayhem-pivot-tri-fin-set
+FCS,Mayhem Pivot,M,fcs2,quad,rear,4.10,4.26,12.64,32.4,,80/20,https://www.surffcs.com/products/mayhem-pivot-quad-rear-set
+FCS,Mayhem Pivot,L,fcs2,quad,rear,4.10,4.26,12.64,32.4,,80/20,https://www.surffcs.com/products/mayhem-pivot-quad-rear-set
+FCS,Mick Fanning,Grom,fcs2,thruster,all,4.04,4.20,12.73,35.8,,Flat/Bev,https://www.surffcs.com/products/fcs-ii-mick-fanning-tri-fins
+FCS,Mick Fanning,M,fcs2,thruster,all,4.33,4.48,14.52,36.0,,Flat/Bev,https://www.surffcs.com/products/fcs-ii-mick-fanning-tri-fins
+FCS,Mick Fanning,L,fcs2,thruster,all,4.49,4.67,15.70,36.0,,Flat/Bev,https://www.surffcs.com/products/fcs-ii-mick-fanning-tri-fins
+FCS,Nathan Florence Big Wave,L,fcs2,thruster,side,4.34,4.58,15.25,32.1,,80/20,https://www.surffcs.com/products/fcs-ii-nathan-florence-big-wave-tri-fins
+FCS,Nathan Florence Big Wave,L,fcs2,thruster,centre,4.42,4.55,15.28,33.8,,50/50,https://www.surffcs.com/products/fcs-ii-nathan-florence-big-wave-tri-fins
+FCS,Nathan Florence Big Wave,L,fcs2,quad,side,3.98,4.40,12.64,28.9,,70/30,https://www.surffcs.com/products/fcs-ii-nathan-florence-big-wave-quad-fins
+FCS,Nathan Florence Big Wave,L,fcs2,quad,rear,3.98,4.40,12.64,28.9,,50/50,https://www.surffcs.com/products/fcs-ii-nathan-florence-big-wave-quad-fins
+FCS,Nathan Florence,S,fcs2,thruster,side,4.28,4.47,14.51,33.7,,Flat,https://www.surffcs.com/products/nathan-florence-tri-fin-set
+FCS,Nathan Florence,S,fcs2,thruster,centre,4.28,4.47,14.51,33.7,,50/50,https://www.surffcs.com/products/nathan-florence-tri-fin-set
+FCS,Nathan Florence,M,fcs2,thruster,side,4.39,4.58,15.28,33.7,,Flat,https://www.surffcs.com/products/nathan-florence-tri-fin-set
+FCS,Nathan Florence,M,fcs2,thruster,centre,4.39,4.58,15.28,33.7,,50/50,https://www.surffcs.com/products/nathan-florence-tri-fin-set
+FCS,Nathan Florence,L,fcs2,thruster,side,4.50,4.70,16.06,33.7,,Flat,https://www.surffcs.com/products/nathan-florence-tri-fin-set
+FCS,Nathan Florence,L,fcs2,thruster,centre,4.50,4.70,16.06,33.7,,50/50,https://www.surffcs.com/products/nathan-florence-tri-fin-set
+FCS,Kolohe Andino,Grom,fcs2,thruster,all,4.15,4.18,12.52,34.9,,Flat,https://www.surffcs.com/products/fcs-ii-kolohe-andino-tri-fins
+FCS,Kolohe Andino,S,fcs2,thruster,all,4.37,4.41,13.85,35.1,,Flat,https://www.surffcs.com/products/fcs-ii-kolohe-andino-tri-fins
+FCS,Kolohe Andino,M,fcs2,thruster,all,4.53,4.53,14.73,35.1,,Flat,https://www.surffcs.com/products/fcs-ii-kolohe-andino-tri-fins
+FCS,Kolohe Andino,L,fcs2,thruster,all,4.67,4.70,15.84,35.1,,Flat,https://www.surffcs.com/products/fcs-ii-kolohe-andino-tri-fins
+FCS,Performer,XS,fcs2,thruster,all,4.13,4.3,13.26,33.7,,IFT,https://www.surffcs.com/products/fcs-ii-performer-performance-core-tri-fin-set
+FCS,Performer,S,fcs2,thruster,all,4.25,4.43,14.03,33.7,,IFT,https://www.surffcs.com/products/fcs-ii-performer-performance-core-tri-fin-set
+FCS,Performer,M,fcs2,thruster,all,4.37,4.55,14.81,33.7,,IFT,https://www.surffcs.com/products/fcs-ii-performer-performance-core-tri-fin-set
+FCS,Performer,L,fcs2,thruster,all,4.48,4.67,15.58,33.7,,IFT,https://www.surffcs.com/products/fcs-ii-performer-performance-core-tri-fin-set
+FCS,Performer,XL,fcs2,thruster,all,4.59,4.78,16.36,33.7,,IFT,https://www.surffcs.com/products/fcs-ii-performer-performance-core-tri-fin-set
+FCS,Performer,S,fcs2,quad,rear,3.83,3.99,11.08,32.4,,80/20,https://www.surffcs.com/products/fcs-ii-performer-performance-core-quad-rear-set
+FCS,Performer,M,fcs2,quad,rear,4.09,4.26,12.63,32.4,,80/20,https://www.surffcs.com/products/fcs-ii-performer-performance-core-quad-rear-set
+FCS,Performer,L,fcs2,quad,rear,4.33,4.51,14.18,32.4,,80/20,https://www.surffcs.com/products/fcs-ii-performer-performance-core-quad-rear-set
+FCS,Pyzel,M,fcs2,thruster,all,4.53,4.61,15.21,33.4,,Flat,https://www.surffcs.com/products/fcs-ii-pyzel-tri-fin-set
+FCS,Pyzel,L,fcs2,thruster,all,4.65,4.73,16.04,33.5,,Flat,https://www.surffcs.com/products/fcs-ii-pyzel-tri-fin-set
+FCS,Pyzel,M,fcs2,quad,rear,3.83,3.99,11.08,32.4,,80/20,https://www.surffcs.com/products/fcs-ii-pyzel-quad-rear-fin-set
+FCS,Pyzel,L,fcs2,quad,rear,4.09,4.26,12.63,32.4,,80/20,https://www.surffcs.com/products/fcs-ii-pyzel-quad-rear-fin-set
+FCS,Reactor,S,fcs2,thruster,side,4.22,4.41,14.45,32.0,,Flat,https://www.surffcs.com/products/fcs-ii-reactor-pc-tri-fins-1
+FCS,Reactor,S,fcs2,thruster,centre,4.17,4.3,13.44,31.0,,50/50,https://www.surffcs.com/products/fcs-ii-reactor-pc-tri-fins-1
+FCS,Reactor,M,fcs2,thruster,side,4.33,4.53,15.23,32.0,,Flat,https://www.surffcs.com/products/fcs-ii-reactor-pc-tri-fins-1
+FCS,Reactor,M,fcs2,thruster,centre,4.28,4.41,14.22,31.0,,50/50,https://www.surffcs.com/products/fcs-ii-reactor-pc-tri-fins-1
+FCS,Reactor,L,fcs2,thruster,side,4.44,4.65,16.00,32.0,,Flat,https://www.surffcs.com/products/fcs-ii-reactor-pc-tri-fins-1
+FCS,Reactor,L,fcs2,thruster,centre,4.39,4.52,14.99,31.0,,50/50,https://www.surffcs.com/products/fcs-ii-reactor-pc-tri-fins-1
+FCS,Reactor,M,fcs2,quad,rear,4.04,4.40,12.63,28.5,,80/20,https://www.surffcs.com/products/fcs-ii-reactor-pc-quad-rear-fins
+FCS,Sally Fitzgibbons,M,fcs2,thruster,side,4.40,4.55,15.17,33.0,,Flat,https://www.surffcs.com/products/fcs-ii-sally-fitzgibbons-tri-fins
+FCS,Sally Fitzgibbons,M,fcs2,thruster,centre,4.29,4.50,14.06,31.0,,50/50,https://www.surffcs.com/products/fcs-ii-sally-fitzgibbons-tri-fins
+FCS,Sharp Eye,M,fcs2,thruster,all,4.48,4.55,15.13,34.8,,Flat/Bev,https://www.surffcs.com/products/fcs-ii-sharp-eye-tri-fin-set
+FCS,Sharp Eye,L,fcs2,thruster,all,4.59,4.66,15.91,34.8,,Flat/Bev,https://www.surffcs.com/products/fcs-ii-sharp-eye-tri-fin-set
+FCS,Sharp Eye,M,fcs2,quad,rear,3.55,3.70,9.53,32.4,,80/20,https://www.surffcs.com/products/fcs-ii-sharp-eye-quad-rear-fin-set
+FCS,Sharp Eye,L,fcs2,quad,rear,3.83,3.99,11.08,32.4,,80/20,https://www.surffcs.com/products/fcs-ii-sharp-eye-quad-rear-fin-set
+FCS,Yago Dora,M,fcs2,thruster,side,4.47,4.54,14.96,37,,Flat,https://www.surffcs.com/products/fcs-ii-yago-dora-tri-fin-set
+FCS,Yago Dora,M,fcs2,thruster,centre,4.35,4.43,14.18,37,,50/50,https://www.surffcs.com/products/fcs-ii-yago-dora-tri-fin-set
+FCS,Yago Dora,L,fcs2,thruster,side,4.58,4.66,15.73,37,,Flat,https://www.surffcs.com/products/fcs-ii-yago-dora-tri-fin-set
+FCS,Yago Dora,L,fcs2,thruster,centre,4.47,4.54,14.96,37,,50/50,https://www.surffcs.com/products/fcs-ii-yago-dora-tri-fin-set
+FCS,Harley Ingleby HIBT,L,fcs2,five,side,4.45,4.70,16.03,32.0,,Flat,https://www.surffcs.com/products/fcs-ii-harley-ingleby-hibt-quad-set
+FCS,Harley Ingleby HIBT,L,fcs2,five,centre,4.40,4.54,14.80,32.4,,50/50,https://www.surffcs.com/products/fcs-ii-harley-ingleby-hibt-quad-set
+FCS,Harley Ingleby HIBT,L,fcs2,five,rear,4.33,4.51,14.18,32.4,,80/20,https://www.surffcs.com/products/fcs-ii-harley-ingleby-hibt-quad-set
+FCS,Harley Mid,L,fcs2,thruster,side,4.45,4.70,16.03,32.0,,Flat,https://www.surffcs.com/products/fcs-ii-harley-mid-tri-fin-set
+FCS,Harley Mid,L,fcs2,thruster,centre,4.40,4.54,14.80,32.4,,50/50,https://www.surffcs.com/products/fcs-ii-harley-mid-tri-fin-set
+FCS,Harley,XL,fcs2,quad,side,4.61,4.99,16.93,34,,Flat,https://www.surffcs.com/products/fcs-ii-harley-quad-fins
+FCS,Harley,XL,fcs2,quad,rear,4.25,4.43,14.03,33.7,,IFT,https://www.surffcs.com/products/fcs-ii-harley-quad-fins
+FCS,Aipa Twin + Stabiliser,S-M,fcs2,twin_trailer,side,4.87,5.43,19.24,33.6,,50/50,https://www.surffcs.com/products/fcs-ii-aipa-twin-stabiliser-fin
+FCS,Aipa Twin + Stabiliser,S-M,fcs2,twin_trailer,centre,3.33,3.13,7.91,34.6,,50/50,https://www.surffcs.com/products/fcs-ii-aipa-twin-stabiliser-fin
+FCS,Al Merrick Twin + Stabiliser,M-L,fcs2,twin_trailer,side,5.07,5.61,20.37,32.1,,Flat,https://www.surffcs.com/products/fcs-ii-al-merrick-twin-stabiliser-fin-set
+FCS,Al Merrick Twin + Stabiliser,M-L,fcs2,twin_trailer,centre,3.22,3.73,8.89,35,,50/50,https://www.surffcs.com/products/fcs-ii-al-merrick-twin-stabiliser-fin-set
+FCS,Album Twin + 1,M-L,fcs2,twin_trailer,side,5.17,5.44,20.62,32.8,,Flat,https://www.surffcs.com/products/fcs-ii-album-twin-1-fin-set
+FCS,Album Twin + 1,M-L,fcs2,twin_trailer,centre,3.29,3.51,8.93,29.3,,50/50,https://www.surffcs.com/products/fcs-ii-album-twin-1-fin-set
+FCS,Album Laminar Twin,S-M,fcs2,twin,all,5.67,5.51,21.37,38.5,,IFT,https://www.surffcs.com/products/fcs-ii-album-laminar-twin
+FCS,Britt Merrick Twin,L-XL,fcs2,twin,all,5.66,5.41,23.24,35.2,,Flat,https://www.surffcs.com/products/fcs-ii-britt-merrick-twin-fin
+FCS,Christenson Twin + 1,M-L,fcs2,twin_trailer,side,5.14,5.22,19.75,36.7,,Flat,https://www.surffcs.com/products/fcs-ii-christenson-twin-1-fin-set
+FCS,Christenson Twin + 1,M-L,fcs2,twin_trailer,centre,3.67,3.35,8.68,,,50/50,https://www.surffcs.com/products/fcs-ii-christenson-twin-1-fin-set
+FCS,Christenson Twin + 1,L-XL,fcs2,twin_trailer,side,5.37,5.47,21.70,,,Flat,https://www.surffcs.com/products/fcs-ii-christenson-twin-1-fin-set
+FCS,Christenson Twin + 1,L-XL,fcs2,twin_trailer,centre,3.84,3.51,9.53,,,50/50,https://www.surffcs.com/products/fcs-ii-christenson-twin-1-fin-set
+FCS,Harley Ingleby HIBT Twin,S-M,fcs2,twin,all,5.00,5.10,19.45,32.7,,Flat,https://www.surffcs.com/products/fcs-ii-harley-ingleby-hibt-twin-set
+FCS,Harley Ingleby HIBT Twin,L-XL,fcs2,twin,all,5.26,5.35,21.44,32.7,,Flat,https://www.surffcs.com/products/fcs-ii-harley-ingleby-hibt-twin-set
+FCS,Mark Richards Freeride Twin,L-XL,fcs2,twin,all,5.08,6.09,22.84,28.4,,Flat,https://www.surffcs.com/products/fcs-ii-mark-richards-freeride-twin-fins
+FCS,Mark Richards Twin + Stabiliser,M-L,fcs2,twin_trailer,side,5.06,5.56,21.06,32.1,,Flat,https://www.surffcs.com/products/fcs-ii-mark-richards-twin-stabiliser-fins
+FCS,Mark Richards Twin + Stabiliser,M-L,fcs2,twin_trailer,centre,3.31,3.34,8.23,29.1,,50/50,https://www.surffcs.com/products/fcs-ii-mark-richards-twin-stabiliser-fins
+FCS,Mark Richards '78 Twin,L-XL,fcs2,twin,all,5.19,6.05,22.99,29.3,,,https://www.surffcs.com/products/fcs-ii-mark-richards-78-twin-fin-set
+FCS,Mick Fanning Twin + 1,M-L,fcs2,twin_trailer,side,5.05,5.32,20.63,37.0,,Flat/Bev,https://www.surffcs.com/products/fcs-ii-mick-fanning-twin-1
+FCS,Mick Fanning Twin + 1,M-L,fcs2,twin_trailer,centre,3.72,3.79,10.39,32.9,,50/50,https://www.surffcs.com/products/fcs-ii-mick-fanning-twin-1
+FCS,Panda Twinzer,S-M,fcs2,quad,rear,4.83,5.19,19.33,32.5,,Flat,https://www.surffcs.com/products/copy-of-fcs-ii-album-twin-1-fin-set
+FCS,Panda Twinzer,S-M,fcs2,quad,front,2.97,3.21,7.45,30.3,,Flat,https://www.surffcs.com/products/copy-of-fcs-ii-album-twin-1-fin-set
+FCS,Performer Twin + 1,S-M,fcs2,twin_trailer,side,5.00,5.15,19.14,33.3,,Flat,https://www.surffcs.com/products/fcs-ii-performer-twin-1-fin-set
+FCS,Performer Twin + 1,S-M,fcs2,twin_trailer,centre,3.73,3.83,11.32,37.3,,50/50,https://www.surffcs.com/products/fcs-ii-performer-twin-1-fin-set
+FCS,Power Twin + Stabiliser,S-M,fcs2,twin_trailer,side,5.00,5.10,19.45,32.7,,Flat,https://www.surffcs.com/products/fcs-ii-power-twin-stabiliser-fin-set-2026-new-colorway
+FCS,Power Twin + Stabiliser,S-M,fcs2,twin_trailer,centre,3.10,3.25,7.86,33.6,,50/50,https://www.surffcs.com/products/fcs-ii-power-twin-stabiliser-fin-set-2026-new-colorway
+FCS,Power Twin + Stabiliser,L-XL,fcs2,twin_trailer,side,5.26,5.35,21.44,32.7,,Flat,https://www.surffcs.com/products/fcs-ii-power-twin-stabiliser-fin-set-2026-new-colorway
+FCS,Power Twin + Stabiliser,L-XL,fcs2,twin_trailer,centre,3.30,3.45,8.71,33.6,,50/50,https://www.surffcs.com/products/fcs-ii-power-twin-stabiliser-fin-set-2026-new-colorway
+FCS,JS Modern Keel,M-L,fcs2,twin,all,6.41,5.50,25.05,32.8,,Flat,https://www.surffcs.com/products/fcs-ii-js-modern-keel
+FCS,Modern Keel,M-L,fcs2,twin,all,6.41,5.50,25.05,32.8,,Flat,https://www.surffcs.com/products/fcs-ii-modern-keel-twin-fins
+FCS,CI Keel,L-XL,fcs2,twin,all,6.41,5.15,25.53,37.0,,Flat,https://www.surffcs.com/products/fcs-ii-ci-keel
+FCS,Panda Keel,M-L,fcs2,twin,all,4.65,5.37,24.23,39.9,,Flat,https://www.surffcs.com/products/fcs-ii-panda-keel-twin-fins
+FCS,Performer Keel,L-XL,fcs2,twin,all,6.69,5.25,26.42,32.7,,Flat,https://www.surffcs.com/products/fcs-ii-performer-keel-twin-fin-set
+FCS,Retro Keel,S-M,fcs2,twin,all,7.28,4.73,22.58,38.3,,80/20,https://www.surffcs.com/products/fcs-ii-retro-keel-twin-fins
+FCS,Split Keel Quad,L-XL,fcs2,quad,side,5.41,4.79,19.27,42.5,,Flat,https://www.surffcs.com/products/fcs-ii-split-keel-quad-fins
+FCS,Split Keel Quad,L-XL,fcs2,quad,rear,4.03,4.40,12.63,28.5,,80/20,https://www.surffcs.com/products/fcs-ii-split-keel-quad-fins
+FCS,Performer Split Keel Quad,L-XL,fcs2,quad,side,5.63,4.83,21.16,35.7,,Flat,https://www.surffcs.com/products/fcs-ii-performer-split-keel-quad-fins
+FCS,Performer Split Keel Quad,L-XL,fcs2,quad,rear,4.11,3.12,9.65,34.2,,Flat,https://www.surffcs.com/products/fcs-ii-performer-split-keel-quad-fins
+FCS,Connect,6,us_box,single,centre,4.27,6.00,17.65,33.7,,50/50,https://www.surffcs.com/products/fcs-ii-connect-pg-longboard-fin
+FCS,Connect,7,us_box,single,centre,4.99,7.01,24.05,33.7,,50/50,https://www.surffcs.com/products/fcs-ii-connect-pg-longboard-fin
+FCS,Connect,8,us_box,single,centre,5.64,7.96,30.71,33.7,,50/50,https://www.surffcs.com/products/fcs-ii-connect-pg-longboard-fin
+FCS,Connect,9,us_box,single,centre,6.43,9.03,39.91,33.7,,50/50,https://www.surffcs.com/products/fcs-ii-connect-pg-longboard-fin
+FCS,Connect,10,us_box,single,centre,7.13,10.01,49.06,33.7,,50/50,https://www.surffcs.com/products/fcs-ii-connect-pg-longboard-fin
+FCS,Clique,7,us_box,single,centre,4.74,7.01,21.95,34.5,,50/50,https://www.surffcs.com/products/fcs-ii-clique-pg-longboard-fin
+FCS,Clique,8,us_box,single,centre,5.42,8.01,28.67,34.5,,50/50,https://www.surffcs.com/products/fcs-ii-clique-pg-longboard-fin
+FCS,Clique,9,us_box,single,centre,6.10,9.01,36.29,34.5,,50/50,https://www.surffcs.com/products/fcs-ii-clique-pg-longboard-fin
+FCS,Christenson Longboard,7.5,us_box,single,centre,5.43,7.51,24.54,33.3,,50/50,https://www.surffcs.com/products/fcs-ii-christenson-longboard-fin
+FCS,Christenson Longboard,8,us_box,single,centre,5.79,8.01,27.92,33.3,,50/50,https://www.surffcs.com/products/fcs-ii-christenson-longboard-fin
+FCS,Christenson Longboard,8.5,us_box,single,centre,6.15,8.51,31.52,33.3,,50/50,https://www.surffcs.com/products/fcs-ii-christenson-longboard-fin
+FCS,Christenson Longboard,9,us_box,single,centre,6.52,9.01,35.34,33.3,,50/50,https://www.surffcs.com/products/fcs-ii-christenson-longboard-fin
+FCS,Christenson Longboard,9.5,us_box,single,centre,6.91,9.51,39.38,33.3,,50/50,https://www.surffcs.com/products/fcs-ii-christenson-longboard-fin
+FCS,Christenson Mid Tracker,7.5,us_box,single,centre,4.99,7.51,25.39,28.9,,50/50,https://www.surffcs.com/products/fcs-ii-christenson-mid-tracker
+FCS,Christenson Mid Tracker,8,us_box,single,centre,5.33,8.01,28.89,28.9,,50/50,https://www.surffcs.com/products/fcs-ii-christenson-mid-tracker
+FCS,Christenson Mid Tracker,8.5,us_box,single,centre,5.66,8.51,32.62,28.9,,50/50,https://www.surffcs.com/products/fcs-ii-christenson-mid-tracker
+FCS,Christenson Noserider,10,us_box,single,centre,7.84,10.01,48.50,35.7,,50/50,https://www.surffcs.com/products/fcs-ii-christenson-noserider
+FCS,Flow,8.5,us_box,single,centre,6.42,8.50,30.91,33.1,,50/50,https://www.surffcs.com/products/fcs-ii-flow-pg-longboard-fin
+FCS,Flow,9.5,us_box,single,centre,7.17,9.50,38.64,33.1,,50/50,https://www.surffcs.com/products/fcs-ii-flow-pg-longboard-fin
+FCS,Flow,10.5,us_box,single,centre,7.96,10.54,47.53,33.7,,50/50,https://www.surffcs.com/products/fcs-ii-flow-pg-longboard-fin
+FCS,Kelia Moniz,9.75,us_box,single,centre,7.11,9.75,39.56,33.8,,50/50,https://www.surffcs.com/products/fcs-ii-kelia-moniz-longboard-fin
+FCS,Pivot II,9.75,us_box,single,centre,7.29,9.75,52.08,27.7,,50/50,https://www.surffcs.com/products/fcs-ii-pivot-ii-longboard-fin
+FCS,Pivot II,10.25,us_box,single,centre,7.66,10.25,57.49,27.7,,50/50,https://www.surffcs.com/products/fcs-ii-pivot-ii-longboard-fin
+FCS,Pivot II,10.75,us_box,single,centre,8.03,10.75,63.31,27.7,,50/50,https://www.surffcs.com/products/fcs-ii-pivot-ii-longboard-fin
+FCS,Thomas,9.75,us_box,single,centre,6.85,9.76,37.29,30.5,,50/50,https://www.surffcs.com/products/fcs-ii-thomas-single-fin
+FCS,Thomas,10.25,us_box,single,centre,7.20,10.26,41.67,30.5,,50/50,https://www.surffcs.com/products/fcs-ii-thomas-single-fin
+FCS,Thomas,10.75,us_box,single,centre,7.55,10.76,45.36,30.5,,50/50,https://www.surffcs.com/products/fcs-ii-thomas-single-fin
+FCS,Thomas,11.5,us_box,single,centre,8.08,11.51,51.88,30.5,,50/50,https://www.surffcs.com/products/fcs-ii-thomas-single-fin
+FCS,Single Fin,6,us_box,single,centre,4.89,6.00,21.19,32.7,,50/50,https://www.surffcs.com/products/fcs-ii-single-fin
+FCS,Single Fin,7,us_box,single,centre,5.70,7.01,28.84,32.7,,50/50,https://www.surffcs.com/products/fcs-ii-single-fin
+FCS,Single Fin,8,us_box,single,centre,6.51,8.01,37.67,32.7,,50/50,https://www.surffcs.com/products/fcs-ii-single-fin
+FCS,Mid Single,6.5,us_box,single,centre,4.89,6.50,22.78,30.7,,50/50,https://www.surffcs.com/products/fcs-ii-mid-single-fin
+FCS,Mid Single,7,us_box,single,centre,5.27,7.00,26.42,30.7,,50/50,https://www.surffcs.com/products/fcs-ii-mid-single-fin
+FCS,Harley Single,5.5,us_box,single,centre,4.84,5.27,18.50,32.1,,50/50,https://www.surffcs.com/products/fcs-ii-harley-single-fin
+FCS,Skindog,7,us_box,single,centre,5.32,6.98,31.69,30.5,,50/50,https://www.surffcs.com/products/fcs-ii-skindog-longboard-fin-2026-new-colorway
+FCS,Skindog,8,us_box,single,centre,6.10,8.01,34.41,30.5,,50/50,https://www.surffcs.com/products/fcs-ii-skindog-longboard-fin-2026-new-colorway
+FCS,Performer Single,M,us_box,single,centre,4.37,4.55,14.81,33.7,,,https://www.surffcs.com/products/fcs-ii-performer-single-fin
+FCS,Performer Single,L,us_box,single,centre,4.48,4.67,15.58,33.7,,,https://www.surffcs.com/products/fcs-ii-performer-single-fin
+FCS,Performer Single,XL,us_box,single,centre,4.59,4.78,16.36,33.7,,,https://www.surffcs.com/products/fcs-ii-performer-single-fin
+FCS,Skindog Side Byte,M,fcs2,2+1,side,4.39,4.58,15.28,33.7,,Flat,https://www.surffcs.com/products/fcs-ii-skindog-side-bytes-2026-new-colorway
+FCS,Skindog Side Byte,L,fcs2,2+1,side,4.50,4.70,16.06,33.7,,Flat,https://www.surffcs.com/products/fcs-ii-skindog-side-bytes-2026-new-colorway
+FCS,Carver Side Byte,S,fcs2,2+1,side,3.86,3.93,11.07,33.2,,Flat,https://www.surffcs.com/products/fcs-ii-carver-pg-side-byte-fins
+FCS,Mid Side Byte,3.6,fcs2,2+1,side,3.4,3.6,9.3,28.6,,Flat,https://www.surffcs.com/products/fcs-ii-mid-side-byte-fin-set-2026-new-colorway
+FCS,Mid Carver,XL,fcs2,2+1,side,4.69,4.77,16.51,37,,Flat,https://www.surffcs.com/products/fcs-ii-mid-carver-2-1-fin-set-copy
+FCS,Mid Carver,XL,fcs2,2+1,centre,4.48,4.67,15.58,33.8,,50/50,https://www.surffcs.com/products/fcs-ii-mid-carver-2-1-fin-set-copy
+FCS,Harley Longboard,XL,fcs2,2+1,side,4.61,4.99,16.93,34,,Flat,https://www.surffcs.com/products/fcs-ii-harley-longboard-tri-fins
+FCS,Harley Longboard,XL,us_box,2+1,centre,4.84,5.27,18.5,32.1,,50/50,https://www.surffcs.com/products/fcs-ii-harley-longboard-tri-fins
+FCS,Tokoro,M,fcs2,thruster,centre,4.43,4.44,14.25,35.2,,50/50,https://www.surffcs.com/pages/fcs-fin-data
+FCS,Tokoro,M,fcs2,thruster,side,4.50,4.50,14.65,35.2,,Flat,https://www.surffcs.com/pages/fcs-fin-data
+FCS,Tokoro,L,fcs2,thruster,centre,4.55,4.56,15.03,35.2,,50/50,https://www.surffcs.com/pages/fcs-fin-data
+FCS,Tokoro,L,fcs2,thruster,side,4.61,4.62,15.42,35.2,,Flat,https://www.surffcs.com/pages/fcs-fin-data
+FCS,Gerry Lopez,,fcs2,quad,rear,3.77,3.74,9.38,31.4,,Flat,https://www.surffcs.com/pages/fcs-fin-data
+FCS,Sky Brown,S,fcs2,thruster,all,4.28,4.47,14.51,33.7,,Flat,https://www.surffcs.com/pages/fcs-fin-data
+FCS,Otis Twin + 1,,fcs2,twin_trailer,side,5.26,5.35,21.44,32.7,,Flat,https://www.surffcs.com/pages/fcs-fin-data
+FCS,Otis Twin + 1,,fcs2,twin_trailer,centre,3.30,3.45,8.71,32.7,,50/50,https://www.surffcs.com/pages/fcs-fin-data
+FCS,JS Power Twin + 1,,fcs2,twin_trailer,side,5.26,5.35,21.44,32.7,,Flat,https://www.surffcs.com/pages/fcs-fin-data
+FCS,JS Power Twin + 1,,fcs2,twin_trailer,centre,3.30,3.45,8.71,33.6,,50/50,https://www.surffcs.com/pages/fcs-fin-data
+FCS,Christenson Keel,,fcs2,twin,all,6.39,5.08,23.64,34.7,,Flat,https://www.surffcs.com/pages/fcs-fin-data
+FCS,Album Keel,,fcs2,twin,all,5.96,5.22,22.74,38.2,,Flat,https://www.surffcs.com/pages/fcs-fin-data
+FCS,MB Quad,,fcs2,quad,side,5.27,4.66,18.31,42.5,,Flat,https://www.surffcs.com/pages/fcs-fin-data
+FCS,MB Quad,,fcs2,quad,rear,4.03,4.40,12.63,28.5,,80/20,https://www.surffcs.com/pages/fcs-fin-data
+FCS,Mayhem,M/L,fcs2,quad,rear,4.10,4.26,12.64,32.4,,50/50,https://www.surffcs.com/pages/fcs-fin-data
+FCS,Harley Mid,,fcs2,quad,rear,4.09,4.26,12.63,32.4,,80/20,https://www.surffcs.com/pages/fcs-fin-data
+FCS,Connect Side Byte,S,fcs2,2+1,side,3.64,3.62,9.30,29.9,,Flat,https://www.surffcs.com/pages/fcs-fin-data
+FCS,Waxhead,10,us_box,single,centre,6.82,10.01,42.60,29.8,,50/50,https://www.surffcs.com/pages/fcs-fin-data
+Futures,Scimitar Quad Rears (Alpha),M,futures,quad,rear,3.94,4.01,11.25,,,FLAT,https://futuresfins.com/products/3-2-quad-rears
+Futures,Akila Twin+1,,futures,twin_trailer,side,4.83,5.40,19.10,,6.5,FLAT,https://futuresfins.com/products/akila-twin-1
+Futures,Akila Twin+1,,futures,twin_trailer,centre,2.58,2.40,4.68,,,SYM,https://futuresfins.com/products/akila-twin-1
+Futures,Al Knost Surreal Single Fin,9.5,us_box,single,centre,6.43,9.91,38.24,,,SYMM,https://futuresfins.com/products/al-knost-9-5-surreal-single-fin
+Futures,Al Merrick Keel Twin Fins,,futures,twin,all,6.46,5.15,25.54,,5.5,FLAT,https://futuresfins.com/products/al-merrick-keel-twin-fins
+Futures,Al Merrick Twin+1,,futures,twin_trailer,side,5.04,5.63,20.43,,7.5,FLAT,https://futuresfins.com/products/al-merrick-twin-1
+Futures,Al Merrick Twin+1,,futures,twin_trailer,centre,3.25,3.74,9.18,,,SYMM,https://futuresfins.com/products/al-merrick-twin-1
+Futures,Albacore Flex,7.5,us_box,single,centre,5.13,7.50,27.52,,,SYMM,https://futuresfins.com/products/albacore-7-5
+Futures,Albacore Flex,8.5,us_box,single,centre,5.79,8.50,35.14,,,SYMM,https://futuresfins.com/products/albacore-8-5
+Futures,Album Mod Quad Fins,,futures,quad,side,4.70,4.89,19.45,,6.5,Flat,https://futuresfins.com/products/album-mod-quad-fins
+Futures,Album Mod Quad Fins,,futures,quad,rear,3.80,3.76,10.05,,3.0,Flat,https://futuresfins.com/products/album-mod-quad-fins
+Futures,Alpha Reverse 3/2 Twin+1,,futures,twin_trailer,side,4.60,5.14,19.69,,4.0,3/2,https://futuresfins.com/products/alpha-3-2-reverse-twin-1
+Futures,Alpha Reverse 3/2 Twin+1,,futures,twin_trailer,centre,3.38,3.37,8.20,,,SYMM,https://futuresfins.com/products/alpha-3-2-reverse-twin-1
+Futures,AM1 Alpha,M,futures,thruster,side,4.50,4.50,14.84,,6.5,FLAT,https://futuresfins.com/products/alpha-am1
+Futures,AM1 Alpha,M,futures,thruster,centre,4.31,4.29,13.35,,,SYMM,https://futuresfins.com/products/alpha-am1
+Futures,AM2 Alpha,L,futures,thruster,side,4.64,4.73,15.98,,6.5,FLAT,https://futuresfins.com/products/alpha-am2
+Futures,AM2 Alpha,L,futures,thruster,centre,4.63,4.49,15.32,,,SYMM,https://futuresfins.com/products/alpha-am2
+Futures,K2 Alpha Keel,,futures,twin,all,6.34,4.63,22.25,,4.0,FLAT,https://futuresfins.com/products/alpha-k2-keel
+Futures,Alpha Reverse 3/2 Twinzer,,futures,quad,side,4.60,5.14,19.69,,4.0,3/2,https://futuresfins.com/products/alpha-reverse-3-2-twinzer
+Futures,Alpha Reverse 3/2 Twinzer,,futures,quad,front,2.75,3.19,7.20,,9.0,FLAT,https://futuresfins.com/products/alpha-reverse-3-2-twinzer
+Futures,Vector 3/2 Alpha 5-Fin,L,futures,five,side,4.79,4.64,16.00,,6.5,Vector 3/2,https://futuresfins.com/products/alpha-vector-3-2-5-fin-l
+Futures,Vector 3/2 Alpha 5-Fin,L,futures,five,centre,4.79,4.64,15.50,,,SYMM,https://futuresfins.com/products/alpha-vector-3-2-5-fin-l
+Futures,Vector 3/2 Alpha 5-Fin,L,futures,five,rear,3.94,4.01,11.25,,3.0,FLAT,https://futuresfins.com/products/alpha-vector-3-2-5-fin-l
+Futures,Vector 3/2 Alpha 5-Fin,M,futures,five,side,4.63,4.48,15.00,,6.5,Vector 3/2,https://futuresfins.com/products/alpha-vector-3-2-5-fin-m
+Futures,Vector 3/2 Alpha 5-Fin,M,futures,five,centre,4.63,4.48,14.50,,,SYMM,https://futuresfins.com/products/alpha-vector-3-2-5-fin-m
+Futures,Vector 3/2 Alpha 5-Fin,M,futures,five,rear,3.94,4.01,11.25,,3.0,FLAT,https://futuresfins.com/products/alpha-vector-3-2-5-fin-m
+Futures,Vector 3/2 Alpha Thruster,L,futures,thruster,side,4.79,4.64,16.00,,6.5,Vector 3/2,https://futuresfins.com/products/alpha-vector-3-2-l
+Futures,Vector 3/2 Alpha Thruster,L,futures,thruster,centre,4.79,4.64,15.50,,0,SYMM,https://futuresfins.com/products/alpha-vector-3-2-l
+Futures,Vector 3/2 Alpha Thruster,M,futures,thruster,side,4.63,4.48,15.00,,6.5,Vector 3/2,https://futuresfins.com/products/alpha-vector-3-2
+Futures,Vector 3/2 Alpha Thruster,M,futures,thruster,centre,4.63,4.48,14.50,,0,SYMM,https://futuresfins.com/products/alpha-vector-3-2
+Futures,AM1 Honeycomb,M,futures,thruster,side,4.50,4.50,14.84,,6.5,FLAT,https://futuresfins.com/products/am1-honeycomb-2
+Futures,AM1 Honeycomb,M,futures,thruster,centre,4.31,4.29,13.35,,,SYMM,https://futuresfins.com/products/am1-honeycomb-2
+Futures,AM1 Techflex Thruster,M,futures,thruster,side,4.50,4.50,14.84,,6.5,FLAT,https://futuresfins.com/products/am1-techflex-1
+Futures,AM1 Techflex Thruster,M,futures,thruster,centre,4.31,4.29,13.35,,,SYMM,https://futuresfins.com/products/am1-techflex-1
+Futures,AM1 Techflex 5-Fin,M,futures,five,side,4.50,4.50,14.84,,6.5,FLAT,https://futuresfins.com/products/am1-techflex-5-fin
+Futures,AM1 Techflex 5-Fin,M,futures,five,centre,4.31,4.29,13.35,,,SYMM,https://futuresfins.com/products/am1-techflex-5-fin
+Futures,AM1 Techflex 5-Fin,M,futures,five,rear,3.94,3.92,11.74,,3.0,80/20,https://futuresfins.com/products/am1-techflex-5-fin
+Futures,AM2 Techflex 5-Fin,L,futures,five,side,4.64,4.73,15.98,,6.5,FLAT,https://futuresfins.com/products/am2-techflex-5-fin-1
+Futures,AM2 Techflex 5-Fin,L,futures,five,centre,4.63,4.49,15.32,,,SYMM,https://futuresfins.com/products/am2-techflex-5-fin-1
+Futures,AM2 Techflex 5-Fin,L,futures,five,rear,4.07,4.34,12.26,,3.0,80/20,https://futuresfins.com/products/am2-techflex-5-fin-1
+Futures,AM2 Techflex Thruster,L,futures,thruster,side,4.64,4.73,15.98,,6.5,FLAT,https://futuresfins.com/products/am2-techflex-thruster
+Futures,AM2 Techflex Thruster,L,futures,thruster,centre,4.63,4.49,15.32,,,SYMM,https://futuresfins.com/products/am2-techflex-thruster
+Futures,AM3 Honeycomb,S,futures,thruster,side,4.34,4.38,13.80,,6.5,FLAT,https://futuresfins.com/products/am3-honeycomb-1
+Futures,AM3 Honeycomb,S,futures,thruster,centre,4.34,4.38,13.80,,,SYMM,https://futuresfins.com/products/am3-honeycomb-1
+Futures,Ando,7.8,us_box,single,centre,5.40,7.80,29.70,,,SYMM,https://futuresfins.com/products/ando-7-9
+Futures,Bark BFD,7.75,us_box,single,centre,5.54,7.72,29.95,,,50/50,https://futuresfins.com/products/bark-bfd-7-75
+Futures,Billy Kemper Quad,,futures,quad,side,3.85,4.00,11.21,,4.0,80/20,https://futuresfins.com/products/billy-kemper-quad
+Futures,Billy Kemper Quad,,futures,quad,rear,3.63,3.94,10.45,,2.0,50/50,https://futuresfins.com/products/billy-kemper-quad
+Futures,Blackstix Twin+1,,futures,twin_trailer,side,4.94,5.61,19.04,,4.0,V2,https://futuresfins.com/products/blackstix-twin-1
+Futures,Blackstix Twin+1,,futures,twin_trailer,centre,3.69,3.80,11.00,,,SYMM,https://futuresfins.com/products/blackstix-twin-1
+Futures,Brewer,7.5,us_box,single,centre,6.0,7.68,34.01,,,SYMM,https://futuresfins.com/products/brewer-7-5
+Futures,Brewer,8,us_box,single,centre,6.35,8.27,40.67,,,SYMM,https://futuresfins.com/products/brewer-8
+Futures,Britt Merrick Twin,,futures,twin,all,5.77,5.39,23.58,,6.5,FLAT,https://futuresfins.com/products/britt-merrick-twin
+Futures,CB Tow Thruster G10,,futures,thruster,side,4.36,4.48,14.51,,,TOW,https://futuresfins.com/products/cb-tow-thruster
+Futures,CB Tow Thruster G10,,futures,thruster,centre,4.53,4.84,15.85,,,SYMM,https://futuresfins.com/products/cb-tow-thruster
+Futures,Christenson 5-Fin,M,futures,five,side,4.52,4.49,15.16,,6.5,FLAT,https://futuresfins.com/products/christenson-5-fin-1
+Futures,Christenson 5-Fin,M,futures,five,centre,4.46,4.37,14.61,,,SYMM,https://futuresfins.com/products/christenson-5-fin-1
+Futures,Christenson 5-Fin,M,futures,five,rear,3.98,3.91,11.18,,3.0,FLAT,https://futuresfins.com/products/christenson-5-fin-1
+Futures,Christenson Keel,,futures,twin,all,6.34,4.91,23.42,,3.0,FLAT,https://futuresfins.com/products/christenson-keel-copy
+Futures,Christenson Twin,,futures,twin,all,5.12,5.40,20.34,,5.0,FLAT,https://futuresfins.com/products/christenson-twin-1
+Futures,Coffin Bros,M,futures,thruster,side,4.55,4.58,15.25,,6.5,FLAT,https://futuresfins.com/products/coffin-bros
+Futures,Coffin Bros,M,futures,thruster,centre,4.50,4.53,14.76,,,SYMM,https://futuresfins.com/products/coffin-bros
+Futures,Controller Alpha,L,futures,quad,side,5.05,4.50,18.24,,6.5,V2,https://futuresfins.com/products/controller-alpha
+Futures,Controller Alpha,L,futures,quad,rear,3.89,4.53,12.06,,3.0,80/20,https://futuresfins.com/products/controller-alpha
+Futures,Controller Quad,L,futures,quad,side,5.05,4.50,18.24,,6.5,V2,https://futuresfins.com/products/controller-quad
+Futures,Controller Quad,L,futures,quad,rear,3.89,4.53,12.06,,3.0,80/20,https://futuresfins.com/products/controller-quad
+Futures,AM2 Honeycomb,L,futures,thruster,side,4.64,4.73,15.98,,6.5,FLAT,https://futuresfins.com/products/copy-of-am2-honeycomb
+Futures,AM2 Honeycomb,L,futures,thruster,centre,4.63,4.49,15.32,,,SYMM,https://futuresfins.com/products/copy-of-am2-honeycomb
+Futures,Cutaway Fiberglass,7,us_box,single,centre,3.30,7.00,24.70,,,SYMM,https://futuresfins.com/products/cutaway-7-0
+Futures,DHD,L,futures,thruster,side,4.52,4.69,15.83,,6.5,Bevel,https://futuresfins.com/products/dhd-honeycomb-large
+Futures,DHD,L,futures,thruster,centre,4.52,4.69,15.83,,,50/50,https://futuresfins.com/products/dhd-honeycomb-large
+Futures,DHD,M,futures,thruster,side,4.32,4.45,14.37,,6.5,Bevel,https://futuresfins.com/products/dhd-honeycomb-medium
+Futures,DHD,M,futures,thruster,centre,4.32,4.45,14.37,,,50/50,https://futuresfins.com/products/dhd-honeycomb-medium
+Futures,EA Control Series,L,futures,thruster,side,4.58,4.80,16.12,,6.5,FLAT,https://futuresfins.com/products/ea-control-series-l
+Futures,EA Control Series,L,futures,thruster,centre,4.48,4.58,15.51,,,SYMM,https://futuresfins.com/products/ea-control-series-l
+Futures,EA Control Series,M,futures,thruster,side,4.46,4.68,15.30,,6.5,FLAT,https://futuresfins.com/products/ea-control-series-m
+Futures,EA Control Series,M,futures,thruster,centre,4.38,4.48,14.81,,,SYMM,https://futuresfins.com/products/ea-control-series-m
+Futures,EA Control Series Quad,M,futures,quad,side,4.38,4.42,14.50,,6.5,FLAT,https://futuresfins.com/products/ea-quad
+Futures,EA Control Series Quad,M,futures,quad,rear,4.00,3.95,12.40,,3.0,FLAT,https://futuresfins.com/products/ea-quad
+Futures,EA Techflex,M,futures,thruster,side,4.40,4.57,15.16,,,FLAT,https://futuresfins.com/products/ea-techflex-1
+Futures,EA Techflex,M,futures,thruster,centre,4.40,4.57,15.16,,,SYMM,https://futuresfins.com/products/ea-techflex-1
+Futures,Eddie Gun G10,,futures,single,centre,4.72,5.97,20.34,,,SYMM,https://futuresfins.com/products/eddie-gun
+Futures,EN Reverse 3/2 Twin,,futures,twin,all,5.53,5.53,22.68,,4.0,3/2,https://futuresfins.com/products/en-reverse-3-2-twin
+Futures,Ethan Ewing,Grom,futures,thruster,side,4.04,4.20,12.75,,6.5,Flat,https://futuresfins.com/products/ethan-ewing-grom
+Futures,Ethan Ewing,Grom,futures,thruster,centre,4.04,4.20,12.75,,0,SYMM,https://futuresfins.com/products/ethan-ewing-grom
+Futures,Ethan Ewing,L,futures,thruster,side,4.52,4.69,15.83,,6.5,Bevel,https://futuresfins.com/products/ethan-ewing-l
+Futures,Ethan Ewing,L,futures,thruster,centre,4.52,4.69,15.83,,0,SYMM,https://futuresfins.com/products/ethan-ewing-l
+Futures,Ethan Ewing,M,futures,thruster,side,4.32,4.45,14.37,,6.5,Bevel,https://futuresfins.com/products/ethan-ewing-m
+Futures,Ethan Ewing,M,futures,thruster,centre,4.32,4.45,14.37,,0,SYMM,https://futuresfins.com/products/ethan-ewing-m
+Futures,Ethan Ewing,S,futures,thruster,side,4.22,4.34,13.80,,6.5,Flat,https://futuresfins.com/products/ethan-ewing-s
+Futures,Ethan Ewing,S,futures,thruster,centre,4.22,4.34,13.80,,0,SYMM,https://futuresfins.com/products/ethan-ewing-s
+Futures,F2 Alpha,XS,futures,thruster,side,3.97,4.15,12.56,,6.5,FLAT,https://futuresfins.com/products/f2-alpha-1
+Futures,F2 Alpha,XS,futures,thruster,centre,3.97,4.15,12.56,,,50/50,https://futuresfins.com/products/f2-alpha-1
+Futures,P4 Alpha,S,futures,thruster,side,4.24,4.44,14.22,,,FLAT,https://futuresfins.com/products/f2-alpha-pivot-fin
+Futures,P4 Alpha,S,futures,thruster,centre,4.12,4.22,13.22,,,50/50,https://futuresfins.com/products/f2-alpha-pivot-fin
+Futures,F3 Legacy Series,XS,futures,thruster,side,4.07,4.23,13.24,,6.5,FLAT,https://futuresfins.com/products/f3-legacy-series
+Futures,F3 Legacy Series,XS,futures,thruster,centre,4.07,4.23,13.24,,,50/50,https://futuresfins.com/products/f3-legacy-series
+Futures,F4 Alpha 5-Fin,S,futures,five,side,4.22,4.37,14.22,,6.5,FLAT,https://futuresfins.com/products/f4-alpha-5-fin-1
+Futures,F4 Alpha 5-Fin,S,futures,five,centre,4.22,4.37,14.22,,,SYMM,https://futuresfins.com/products/f4-alpha-5-fin-1
+Futures,F4 Alpha 5-Fin,S,futures,five,rear,3.77,3.76,10.73,,3.0,SYMM,https://futuresfins.com/products/f4-alpha-5-fin-1
+Futures,F4 Alpha,S,futures,thruster,side,4.22,4.37,14.22,,6.5,FLAT,https://futuresfins.com/products/f4-alpha-fin
+Futures,F4 Alpha,S,futures,thruster,centre,4.22,4.37,14.22,,,SYMM,https://futuresfins.com/products/f4-alpha-fin
+Futures,F4 Blackstix,S,futures,thruster,side,4.22,4.37,14.22,,6.5,V2,https://futuresfins.com/products/f4-blackstix-1
+Futures,F4 Blackstix,S,futures,thruster,centre,4.22,4.37,14.22,,,SYMM,https://futuresfins.com/products/f4-blackstix-1
+Futures,F4 Legacy Neutral 5-Fin,S,futures,five,side,4.22,4.37,14.22,,6.5,FLAT,https://futuresfins.com/products/f4-legacy-neutral-5-fin
+Futures,F4 Legacy Neutral 5-Fin,S,futures,five,centre,4.22,4.37,14.22,,,SYMM,https://futuresfins.com/products/f4-legacy-neutral-5-fin
+Futures,F4 Legacy Neutral 5-Fin,S,futures,five,rear,3.71,3.76,10.73,,3.0,80/20,https://futuresfins.com/products/f4-legacy-neutral-5-fin
+Futures,F4 Legacy Quad,S,futures,quad,side,4.22,4.37,14.22,,6.5,FLAT,https://futuresfins.com/products/f4-legacy-quad
+Futures,F4 Legacy Quad,S,futures,quad,rear,3.71,3.76,10.73,,3.0,80/20,https://futuresfins.com/products/f4-legacy-quad
+Futures,F4 Legacy Series,S,futures,thruster,side,4.22,4.37,14.22,,6.5,FLAT,https://futuresfins.com/products/f4-legacy-series
+Futures,F4 Legacy Series,S,futures,thruster,centre,4.22,4.37,14.22,,,50/50,https://futuresfins.com/products/f4-legacy-series
+Futures,F6 Alpha 5-Fin,M,futures,five,side,4.35,4.56,15.12,,6.5,FLAT,https://futuresfins.com/products/f6-alpha-5-fin-1
+Futures,F6 Alpha 5-Fin,M,futures,five,centre,4.35,4.56,15.12,,,SYMM,https://futuresfins.com/products/f6-alpha-5-fin-1
+Futures,F6 Alpha 5-Fin,M,futures,five,rear,3.87,4.05,11.67,,3.0,SYMM,https://futuresfins.com/products/f6-alpha-5-fin-1
+Futures,F6 Alpha,M,futures,thruster,side,4.35,4.56,15.12,,6.5,FLAT,https://futuresfins.com/products/f6-alpha-fin
+Futures,F6 Alpha,M,futures,thruster,centre,4.35,4.56,15.12,,,SYMM,https://futuresfins.com/products/f6-alpha-fin
+Futures,P6 Alpha,M,futures,thruster,side,4.35,4.55,14.98,,,FLAT,https://futuresfins.com/products/f6-alpha-pivot-fin
+Futures,P6 Alpha,M,futures,thruster,centre,4.25,4.35,14.05,,,SYMM,https://futuresfins.com/products/f6-alpha-pivot-fin
+Futures,F6 Blackstix,M,futures,thruster,side,4.35,4.56,15.12,,6.5,V2,https://futuresfins.com/products/f6-blackstix-1
+Futures,F6 Blackstix,M,futures,thruster,centre,4.35,4.56,15.12,,,SYMM,https://futuresfins.com/products/f6-blackstix-1
+Futures,F6 Legacy Neutral 5-Fin,M,futures,five,side,4.35,4.56,15.12,,6.5,FLAT,https://futuresfins.com/products/f6-legacy-neutral-5-fin
+Futures,F6 Legacy Neutral 5-Fin,M,futures,five,centre,4.35,4.56,15.12,,,SYMM,https://futuresfins.com/products/f6-legacy-neutral-5-fin
+Futures,F6 Legacy Neutral 5-Fin,M,futures,five,rear,3.87,4.05,11.67,,3.0,80/20,https://futuresfins.com/products/f6-legacy-neutral-5-fin
+Futures,F6 Legacy Quad,M,futures,quad,side,4.35,4.56,15.12,,6.5,FLAT,https://futuresfins.com/products/f6-legacy-quad
+Futures,F6 Legacy Quad,M,futures,quad,rear,3.87,4.05,11.67,,3.0,80/20,https://futuresfins.com/products/f6-legacy-quad
+Futures,F6 Legacy Series,M,futures,thruster,side,4.35,4.56,15.12,,6.5,FLAT,https://futuresfins.com/products/f6-legacy-series
+Futures,F6 Legacy Series,M,futures,thruster,centre,4.35,4.56,15.12,,,50/50,https://futuresfins.com/products/f6-legacy-series
+Futures,F6 Honeycomb (US Base),M,us_box,single,centre,4.35,4.56,15.12,,,SYMM,https://futuresfins.com/products/f6-us-base
+Futures,F8 Alpha 5-Fin,L,futures,five,side,4.47,4.64,15.90,,6.5,FLAT,https://futuresfins.com/products/f8-alpha-5-fin-1
+Futures,F8 Alpha 5-Fin,L,futures,five,centre,4.47,4.64,15.90,,,SYMM,https://futuresfins.com/products/f8-alpha-5-fin-1
+Futures,F8 Alpha 5-Fin,L,futures,five,rear,3.87,4.05,11.67,,3.0,SYMM,https://futuresfins.com/products/f8-alpha-5-fin-1
+Futures,F8 Alpha,L,futures,thruster,side,4.47,4.64,15.90,,6.5,FLAT,https://futuresfins.com/products/f8-alpha-fin
+Futures,F8 Alpha,L,futures,thruster,centre,4.47,4.64,15.90,,,SYMM,https://futuresfins.com/products/f8-alpha-fin
+Futures,P8 Alpha,L,futures,thruster,side,4.48,4.69,15.90,,6.5,FLAT,https://futuresfins.com/products/f8-alpha-pivot-fin
+Futures,P8 Alpha,L,futures,thruster,centre,4.35,4.46,14.77,,,SYMM,https://futuresfins.com/products/f8-alpha-pivot-fin
+Futures,F8 Blackstix,L,futures,thruster,side,4.47,4.64,15.90,,6.5,V2,https://futuresfins.com/products/f8-blackstix
+Futures,F8 Blackstix,L,futures,thruster,centre,4.47,4.64,15.90,,,SYMM,https://futuresfins.com/products/f8-blackstix
+Futures,F8 Legacy Neutral 5-Fin,L,futures,five,side,4.47,4.64,15.90,,6.5,FLAT,https://futuresfins.com/products/f8-legacy-neutral-5-fin
+Futures,F8 Legacy Neutral 5-Fin,L,futures,five,centre,4.47,4.64,15.90,,,SYMM,https://futuresfins.com/products/f8-legacy-neutral-5-fin
+Futures,F8 Legacy Neutral 5-Fin,L,futures,five,rear,4.16,4.15,12.60,,3.0,80/20,https://futuresfins.com/products/f8-legacy-neutral-5-fin
+Futures,F8 Legacy Quad,L,futures,quad,side,4.47,4.64,15.90,,6.5,FLAT,https://futuresfins.com/products/f8-legacy-quad
+Futures,F8 Legacy Quad,L,futures,quad,rear,4.16,4.15,12.60,,3.0,80/20,https://futuresfins.com/products/f8-legacy-quad
+Futures,F8 Legacy Series,L,futures,thruster,side,4.47,4.64,15.90,,6.5,FLAT,https://futuresfins.com/products/f8-legacy-series
+Futures,F8 Legacy Series,L,futures,thruster,centre,4.47,4.64,15.90,,,50/50,https://futuresfins.com/products/f8-legacy-series
+Futures,EN Twin,,futures,twin,all,5.53,5.55,22.75,,4.0,FLAT,https://futuresfins.com/products/fiberglass-twin
+Futures,Flow Quad,,futures,quad,side,4.75,5.01,20.63,,6.5,FLAT,https://futuresfins.com/products/flow-quad
+Futures,Flow Quad,,futures,quad,rear,3.15,3.60,10.17,,3.0,FLAT,https://futuresfins.com/products/flow-quad
+Futures,TW1 Alpha Canard Pair - 9 Degree,,futures,quad,front,2.75,3.19,7.20,,9.0,Flat,https://futuresfins.com/products/futures-tw1-alpha-canard-pair-9-deg
+Futures,TW1 Fiberglass Canard Pair - 9 Degree,,futures,quad,front,2.75,3.19,7.20,,9.0,Flat,https://futuresfins.com/products/futures-tw1-fiberglass-canard-pair-9-deg
+Futures,Gerry,7.75,us_box,single,centre,5.40,7.80,28.90,,,SYMM,https://futuresfins.com/products/gerry-7-75
+Futures,Gerry,8.5,us_box,single,centre,6.0,8.55,35.22,,,SYMM,https://futuresfins.com/products/gerry-8-5
+Futures,Gerry Flex,9.7,us_box,single,centre,6.4,9.72,43.85,,,SYMM,https://futuresfins.com/products/gerry-9-7
+Futures,Gerry Lopez Alpha 5-Fin,L,futures,five,side,4.77,4.55,15.80,,6.5,FLAT,https://futuresfins.com/products/gerry-lopez-alpha
+Futures,Gerry Lopez Alpha 5-Fin,L,futures,five,centre,4.77,4.55,15.60,,,SYMM,https://futuresfins.com/products/gerry-lopez-alpha
+Futures,Gerry Lopez Alpha 5-Fin,L,futures,five,rear,4.17,3.87,11.60,,3.0,SYMM,https://futuresfins.com/products/gerry-lopez-alpha
+Futures,GL Quad G10,3.75,futures,quad,side,4.63,3.75,10.11,,,TOW,https://futuresfins.com/products/gl-3-75-quad
+Futures,GL Quad G10,3.75,futures,quad,rear,4.63,3.75,10.11,,,TOW,https://futuresfins.com/products/gl-3-75-quad
+Futures,GL Quad G10,4.0,futures,quad,side,3.89,4.00,11.59,,,TOW,https://futuresfins.com/products/gl-4-0-quad
+Futures,GL Quad G10,4.0,futures,quad,rear,3.89,4.00,11.59,,,TOW,https://futuresfins.com/products/gl-4-0-quad
+Futures,GL Tow Thruster G10,,futures,thruster,side,3.63,3.73,10.08,,,TOW,https://futuresfins.com/products/gl-tow-thruster
+Futures,GL Tow Thruster G10,,futures,thruster,centre,4.53,4.84,15.86,,,SYMM,https://futuresfins.com/products/gl-tow-thruster
+Futures,Glenn Pang Twin+1,,futures,twin_trailer,side,5.05,5.85,22.80,,6.5,FLAT,https://futuresfins.com/products/glenn-pang-twin-2
+Futures,Glenn Pang Twin+1,,futures,twin_trailer,centre,3.17,2.57,6.56,,,SYMM,https://futuresfins.com/products/glenn-pang-twin-2
+Futures,Grant Noble,10,us_box,single,centre,7.46,10.00,44.10,,,SYMM,https://futuresfins.com/products/grant-noble-10-midnight
+Futures,Hatchet Honeycomb 2+1,,futures,2+1,side,4.22,4.37,14.22,,,V2,https://futuresfins.com/products/hatchet-2-2
+Futures,Hatchet Honeycomb 2+1,,us_box,2+1,centre,2.56,5.94,16.13,,,SYMM,https://futuresfins.com/products/hatchet-2-2
+Futures,Alpha 2+1,6.0,futures,2+1,side,3.91,3.57,10.77,,,FLAT,https://futuresfins.com/products/hs-2-1-6-0
+Futures,Alpha 2+1,6.0,us_box,2+1,centre,4.59,6.02,20.03,,,SYMM,https://futuresfins.com/products/hs-2-1-6-0
+Futures,Alpha 2+1,7.0,futures,2+1,side,3.91,3.57,10.77,,,FLAT,https://futuresfins.com/products/hs-2-1-7-0
+Futures,Alpha 2+1,7.0,us_box,2+1,centre,4.82,7.00,25.50,,,SYMM,https://futuresfins.com/products/hs-2-1-7-0
+Futures,Jack Robinson,Grom,futures,thruster,side,4.15,4.24,12.80,,6.5,FLAT,https://futuresfins.com/products/jack-robinson-grom
+Futures,Jack Robinson,Grom,futures,thruster,centre,4.14,4.25,12.57,,0,SYMM,https://futuresfins.com/products/jack-robinson-grom
+Futures,Jack Robinson,M,futures,thruster,side,4.46,4.56,14.84,,6.5,FLAT,https://futuresfins.com/products/jack-robinson-m
+Futures,Jack Robinson,M,futures,thruster,centre,4.45,4.56,14.57,,0,SYMM,https://futuresfins.com/products/jack-robinson-m
+Futures,Jack Robinson,S,futures,thruster,side,4.34,4.43,14.00,,6.5,FLAT,https://futuresfins.com/products/jack-robinson-s
+Futures,Jack Robinson,S,futures,thruster,centre,4.33,4.43,13.75,,0,SYMM,https://futuresfins.com/products/jack-robinson-s
+Futures,Jack Robinson,L,futures,thruster,side,4.64,4.75,15.99,,6.5,FLAT,https://futuresfins.com/products/jack-robinson-signature-honeycomb
+Futures,Jack Robinson,L,futures,thruster,centre,4.63,4.74,15.71,,0,SYMM,https://futuresfins.com/products/jack-robinson-signature-honeycomb
+Futures,Jack Robinson Techflex,L,futures,thruster,side,4.64,4.75,15.99,,6.5,FLAT,https://futuresfins.com/products/jack-robinson-signature-techflex
+Futures,Jack Robinson Techflex,L,futures,thruster,centre,4.63,4.74,15.71,,0,SYMM,https://futuresfins.com/products/jack-robinson-signature-techflex
+Futures,John John Florence Alpha,XS,futures,thruster,side,4.15,4.31,13.00,,6.5,FLAT,https://futuresfins.com/products/jjf-alpha-f2-fin
+Futures,John John Florence Alpha,XS,futures,thruster,centre,4.15,4.31,13.00,,,50/50,https://futuresfins.com/products/jjf-alpha-f2-fin
+Futures,John John Florence Alpha,S,futures,thruster,side,4.32,4.42,14.10,,6.5,FLAT,https://futuresfins.com/products/jjf-alpha-f4-fin
+Futures,John John Florence Alpha,S,futures,thruster,centre,4.32,4.42,14.10,,,SYMM,https://futuresfins.com/products/jjf-alpha-f4-fin
+Futures,John John Florence Alpha,M,futures,thruster,side,4.45,4.56,14.98,,6.5,FLAT,https://futuresfins.com/products/jjf-alpha-f6-fin
+Futures,John John Florence Alpha,M,futures,thruster,centre,4.56,4.45,14.98,,,SYMM,https://futuresfins.com/products/jjf-alpha-f6-fin
+Futures,John John Florence Big Wave Quad,,futures,quad,side,3.25,3.89,9.49,,4.0,80/20,https://futuresfins.com/products/john-john-florence-big-wave-quad
+Futures,John John Florence Big Wave Quad,,futures,quad,rear,3.63,4.19,11.69,,2.0,SYMM,https://futuresfins.com/products/john-john-florence-big-wave-quad
+Futures,John John Florence Honeycomb,Grom,futures,thruster,side,4.15,4.31,13.00,,6.5,FLAT,https://futuresfins.com/products/john-john-florence-honeycomb-grom
+Futures,John John Florence Honeycomb,Grom,futures,thruster,centre,4.15,4.31,13.00,,,SYMM,https://futuresfins.com/products/john-john-florence-honeycomb-grom
+Futures,John John Florence Vapor Core Scimitar,L,futures,thruster,side,4.57,4.62,15.63,,6.5,VECTOR,https://futuresfins.com/products/john-john-florence-scimitar-vapor-core
+Futures,John John Florence Vapor Core Scimitar,L,futures,thruster,centre,4.57,4.58,15.36,,,SYMM,https://futuresfins.com/products/john-john-florence-scimitar-vapor-core
+Futures,John John Florence Techflex,L,futures,thruster,side,4.61,4.71,16.05,,6.5,FLAT,https://futuresfins.com/products/john-john-florence-techflex-l
+Futures,John John Florence Techflex,L,futures,thruster,centre,4.61,4.71,16.05,,,SYMM,https://futuresfins.com/products/john-john-florence-techflex-l
+Futures,John John Florence Techflex,M,futures,thruster,side,4.45,4.56,14.98,,6.5,FLAT,https://futuresfins.com/products/john-john-florence-techflex-m
+Futures,John John Florence Techflex,M,futures,thruster,centre,4.45,4.56,14.98,,,SYMM,https://futuresfins.com/products/john-john-florence-techflex-m
+Futures,John John Florence Techflex,Pro,futures,thruster,side,4.57,4.64,15.53,,6.5,FLAT,https://futuresfins.com/products/john-john-florence-techflex-pro
+Futures,John John Florence Techflex,Pro,futures,thruster,centre,4.57,4.64,15.53,,,SYMM,https://futuresfins.com/products/john-john-florence-techflex-pro
+Futures,John John Florence Techflex,S,futures,thruster,side,4.32,4.42,14.10,,6.5,FLAT,https://futuresfins.com/products/john-john-florence-techflex-s
+Futures,John John Florence Techflex,S,futures,thruster,centre,4.32,4.42,14.10,,,SYMM,https://futuresfins.com/products/john-john-florence-techflex-s
+Futures,John John Florence Vapor Core Scimitar,M,futures,thruster,side,4.40,4.45,14.45,,6.5,VECTOR,https://futuresfins.com/products/john-john-florence-vapor-core-scimitar-m
+Futures,John John Florence Vapor Core Scimitar,M,futures,thruster,centre,4.40,4.40,14.21,,,SYMM,https://futuresfins.com/products/john-john-florence-vapor-core-scimitar-m
+Futures,Jordy Signature Techflex,L,futures,thruster,side,4.65,4.68,15.92,,6.5,FLAT,https://futuresfins.com/products/jordy-signature-l-techflex
+Futures,Jordy Signature Techflex,L,futures,thruster,centre,4.56,4.49,15.29,,,SYMM,https://futuresfins.com/products/jordy-signature-l-techflex
+Futures,Jordy Signature,L,futures,thruster,side,4.65,4.68,15.92,,6.5,FLAT,https://futuresfins.com/products/jordy-signature-l
+Futures,Jordy Signature,L,futures,thruster,centre,4.56,4.49,15.29,,,SYMM,https://futuresfins.com/products/jordy-signature-l
+Futures,Jordy Signature,M,futures,thruster,side,4.44,4.47,14.50,,6.5,FLAT,https://futuresfins.com/products/jordy-signature-m-1
+Futures,Jordy Signature,M,futures,thruster,centre,4.29,4.22,13.50,,,SYMM,https://futuresfins.com/products/jordy-signature-m-1
+Futures,JS Thruster,L,futures,thruster,side,4.62,4.62,15.71,,6.5,FLAT,https://futuresfins.com/products/js-thruster-l
+Futures,JS Thruster,L,futures,thruster,centre,4.62,4.62,15.71,,,SYMM,https://futuresfins.com/products/js-thruster-l
+Futures,JS Thruster,M,futures,thruster,side,4.47,4.51,14.74,,6.5,FLAT,https://futuresfins.com/products/js-thruster-m
+Futures,JS Thruster,M,futures,thruster,centre,4.47,4.51,14.74,,,SYMM,https://futuresfins.com/products/js-thruster-m
+Futures,K2 Fiberglass Keel,,futures,twin,all,6.34,4.63,22.25,,4.0,FLAT,https://futuresfins.com/products/k2-fiberglass-keel-fin
+Futures,Al Knost Twinzer,,futures,quad,side,4.48,5.27,17.72,,4.0,V,https://futuresfins.com/products/knost-twinzer
+Futures,Al Knost Twinzer,,futures,quad,front,2.52,2.26,4.69,,8.0,Flat,https://futuresfins.com/products/knost-twinzer
+Futures,Lost Twin Trailer,3.625,us_box,twin_trailer,centre,3.46,3.625,9.63,,,50/50,https://futuresfins.com/products/lost-3-625
+Futures,Lost Single,6.25,us_box,single,centre,5.43,6.25,23.67,,,50/50,https://futuresfins.com/products/lost-6-25
+Futures,Mann Kine 3/2 Thruster,,futures,thruster,side,4.67,4.66,16.51,,6.5,3/2,https://futuresfins.com/products/mann-kine-3-2-thuster
+Futures,Mann Kine 3/2 Thruster,,futures,thruster,centre,4.44,4.39,14.77,,,SYMM,https://futuresfins.com/products/mann-kine-3-2-thuster
+Futures,Mayhem 3.0 5-Fin,L,futures,five,side,4.66,4.75,16.25,,6.5,FLAT,https://futuresfins.com/products/mayhem-3-0-large-5-fin
+Futures,Mayhem 3.0 5-Fin,L,futures,five,centre,4.62,4.71,15.98,,,50/50,https://futuresfins.com/products/mayhem-3-0-large-5-fin
+Futures,Mayhem 3.0 5-Fin,L,futures,five,rear,4.03,4.20,11.62,,3.0,80/20,https://futuresfins.com/products/mayhem-3-0-large-5-fin
+Futures,Mayhem 3.0,L,futures,thruster,side,4.66,4.75,16.25,,6.5,FLAT,https://futuresfins.com/products/mayhem-3-0-large
+Futures,Mayhem 3.0,L,futures,thruster,centre,4.62,4.71,15.98,,,50/50,https://futuresfins.com/products/mayhem-3-0-large
+Futures,Mayhem 3.0 5-Fin,M,futures,five,side,4.50,4.59,15.18,,6.5,FLAT,https://futuresfins.com/products/mayhem-3-0-medium-5-fin
+Futures,Mayhem 3.0 5-Fin,M,futures,five,centre,4.47,4.55,14.93,,,50/50,https://futuresfins.com/products/mayhem-3-0-medium-5-fin
+Futures,Mayhem 3.0 5-Fin,M,futures,five,rear,4.03,4.20,11.62,,3.0,80/20,https://futuresfins.com/products/mayhem-3-0-medium-5-fin
+Futures,Mayhem 3.0,M,futures,thruster,side,4.50,4.59,15.18,,6.5,FLAT,https://futuresfins.com/products/mayhem-3-0-medium
+Futures,Mayhem 3.0,M,futures,thruster,centre,4.47,4.55,14.93,,,50/50,https://futuresfins.com/products/mayhem-3-0-medium
+Futures,Mayhem 3.0,S,futures,thruster,side,4.35,4.43,14.15,,6.5,FLAT,https://futuresfins.com/products/mayhem-3-0-small
+Futures,Mayhem 3.0,S,futures,thruster,centre,4.31,4.39,13.92,,,50/50,https://futuresfins.com/products/mayhem-3-0-small
+Futures,Mayhem Evil Quad,,futures,quad,side,4.72,4.87,19.34,,6.5,FLAT,https://futuresfins.com/products/mayhem-evil-quad
+Futures,Mayhem Evil Quad,,futures,quad,rear,3.84,3.80,10.62,,3.0,80/20,https://futuresfins.com/products/mayhem-evil-quad
+Futures,Mayhem Evil Twin+1,M,futures,twin_trailer,side,4.72,4.87,19.34,,5.5,FLAT,https://futuresfins.com/products/mayhem-evil-twin-2
+Futures,Mayhem Evil Twin+1,M,futures,twin_trailer,centre,3.16,2.91,7.22,,,SYMM,https://futuresfins.com/products/mayhem-evil-twin-2
+Futures,Mayhem Evil Twin+1,L,futures,twin_trailer,side,5.58,5.12,21.25,,5.5,FLAT,https://futuresfins.com/products/mayhem-evil-twin-3
+Futures,Mayhem Evil Twin+1,L,futures,twin_trailer,centre,3.16,2.91,7.22,,,SYMM,https://futuresfins.com/products/mayhem-evil-twin-3
+Futures,Mayhem Twin Trailer,,futures,twin_trailer,centre,3.16,2.91,7.22,,,50/50,https://futuresfins.com/products/mayhem-twin-trailer
+Futures,Mayhem Twinzer + By Matt Biolos,L,futures,five,side,4.90,5.36,19.25,,6.0,Flat,https://futuresfins.com/products/mayhem-twinzer-by-matt-biolos-l
+Futures,Mayhem Twinzer + By Matt Biolos,L,futures,five,centre,2.87,3.0,6.21,,,SYM,https://futuresfins.com/products/mayhem-twinzer-by-matt-biolos-l
+Futures,Mayhem Twinzer + By Matt Biolos,L,futures,five,front,2.69,2.87,5.83,,9.0,Flat,https://futuresfins.com/products/mayhem-twinzer-by-matt-biolos-l
+Futures,McCallum Keel,,futures,twin,all,6.00,5.22,24.49,,5.0,FLAT,https://futuresfins.com/products/mccallum-twin
+Futures,Mid 2+1,,futures,2+1,side,4.33,4.96,16.45,,,FLAT,https://futuresfins.com/products/mid-2-1
+Futures,Mid 2+1,,us_box,2+1,centre,4.76,5.32,18.53,,,SYMM,https://futuresfins.com/products/mid-2-1
+Futures,Mikey February Keel,,futures,twin,all,6.54,5.04,22.47,,4.0,FLAT,https://futuresfins.com/products/mikey-february-keel
+Futures,Mark Richards Twin+1,,futures,twin_trailer,side,5.02,5.50,20.64,,6.5,FLAT,https://futuresfins.com/products/mr-twin-1
+Futures,Mark Richards Twin+1,,futures,twin_trailer,centre,3.33,3.30,8.06,,,SYMM,https://futuresfins.com/products/mr-twin-1
+Futures,Neutral Quad Rears,L,futures,quad,rear,4.16,4.15,12.60,,,80/20,https://futuresfins.com/products/neutral-quad-rears-large
+Futures,Neutral Quad Rears,M,futures,quad,rear,3.87,4.05,11.67,,,80/20,https://futuresfins.com/products/neutral-quad-rears-medium
+Futures,Neutral Quad Rears,S,futures,quad,rear,3.71,3.76,10.73,,,80/20,https://futuresfins.com/products/neutral-quad-rears-small
+Futures,P3 Legacy Series,XS,futures,thruster,side,4.10,4.29,13.24,,6.5,FLAT,https://futuresfins.com/products/p3-legacy-series
+Futures,P3 Legacy Series,XS,futures,thruster,centre,3.98,4.07,12.30,,,50/50,https://futuresfins.com/products/p3-legacy-series
+Futures,P4 Blackstix,S,futures,thruster,side,4.24,4.44,14.22,,6.5,V2,https://futuresfins.com/products/p4-blackstix
+Futures,P4 Blackstix,S,futures,thruster,centre,4.12,4.22,13.22,,,SYMM,https://futuresfins.com/products/p4-blackstix
+Futures,P4 Legacy Series,S,futures,thruster,side,4.24,4.44,14.22,,,FLAT,https://futuresfins.com/products/p4-legacy-series
+Futures,P4 Legacy Series,S,futures,thruster,centre,4.12,4.22,13.22,,,50/50,https://futuresfins.com/products/p4-legacy-series
+Futures,P6 Blackstix,M,futures,thruster,side,4.35,4.55,14.98,,6.5,V2,https://futuresfins.com/products/p6-blackstix
+Futures,P6 Blackstix,M,futures,thruster,centre,4.25,4.35,14.05,,,SYMM,https://futuresfins.com/products/p6-blackstix
+Futures,P6 Legacy Series,M,futures,thruster,side,4.35,4.55,14.98,,6.5,FLAT,https://futuresfins.com/products/p6-legacy-series
+Futures,P6 Legacy Series,M,futures,thruster,centre,4.25,4.35,14.05,,,50/50,https://futuresfins.com/products/p6-legacy-series
+Futures,P8 Blackstix,L,futures,thruster,side,4.48,4.69,15.90,,6.5,V2,https://futuresfins.com/products/p8-blackstix
+Futures,P8 Blackstix,L,futures,thruster,centre,4.35,4.46,14.77,,,SYMM,https://futuresfins.com/products/p8-blackstix
+Futures,P8 Legacy Series,L,futures,thruster,side,4.48,4.69,15.90,,6.5,FLAT,https://futuresfins.com/products/p8-legacy-series
+Futures,P8 Legacy Series,L,futures,thruster,centre,4.35,4.46,14.77,,,50/50,https://futuresfins.com/products/p8-legacy-series
+Futures,Paddle Quad G10,,futures,quad,side,4.36,4.48,14.52,,,TOW,https://futuresfins.com/products/paddle-quad
+Futures,Paddle Quad G10,,futures,quad,rear,3.89,4.00,11.59,,,TOW,https://futuresfins.com/products/paddle-quad
+Futures,Pyzel Padillac Quad,M,futures,quad,side,4.36,4.48,14.45,,4.0,80/20,https://futuresfins.com/products/padillac-quad
+Futures,Pyzel Padillac Quad,M,futures,quad,rear,3.87,4.00,11.51,,3.0,50/50,https://futuresfins.com/products/padillac-quad
+Futures,Pancho Control Series,L,futures,thruster,side,4.69,4.71,16.70,,6.5,FLAT,https://futuresfins.com/products/pancho
+Futures,Pancho Control Series,L,futures,thruster,centre,4.69,4.71,16.70,,,SYMM,https://futuresfins.com/products/pancho
+Futures,Performance,4.5,us_box,single,centre,4.50,4.60,15.30,,,SYMM,https://futuresfins.com/products/performance-4-6
+Futures,Performance,6,us_box,single,centre,4.60,6.00,20.00,,,SYMM,https://futuresfins.com/products/performance-6
+Futures,Performance,7,us_box,single,centre,4.80,7.00,24.50,,,SYMM,https://futuresfins.com/products/performance-7
+Futures,Performance,8,us_box,single,centre,5.60,8.00,31.50,,,SYMM,https://futuresfins.com/products/performance-8
+Futures,Performance Thermotech,9,us_box,single,centre,6.30,9.00,,,,SYMM,https://futuresfins.com/products/performance-9-thermotech
+Futures,Performance,9,us_box,single,centre,6.30,9.00,39.80,,,SYMM,https://futuresfins.com/products/performance-9
+Futures,Pivot Quad Rears,L,futures,quad,rear,3.96,4.15,12.41,,,FLAT,https://futuresfins.com/products/pivot-quad-rears-large
+Futures,Pivot Quad Rears,M,futures,quad,rear,3.82,4.00,11.51,,,FLAT,https://futuresfins.com/products/pivot-quad-rears-medium
+Futures,Pivot Quad Rears,S,futures,quad,rear,3.77,3.77,10.27,,,FLAT,https://futuresfins.com/products/pivot-quad-rears-small
+Futures,Pukas Twin+1,,futures,twin_trailer,side,5.22,5.18,19.88,,5.5,FLAT,https://futuresfins.com/products/pukas-twin-1
+Futures,Pukas Twin+1,,futures,twin_trailer,centre,3.09,2.89,6.17,,,SYMM,https://futuresfins.com/products/pukas-twin-1
+Futures,Pyzel Bobcat Twin,,futures,twin,all,5.33,5.52,21.73,,4.0,FLAT,https://futuresfins.com/products/pyzel-bobcat-twin
+Futures,Pyzel Thruster,L,futures,thruster,side,4.65,4.64,16.00,,6.5,FLAT,https://futuresfins.com/products/pyzel-large-thruster-1
+Futures,Pyzel Thruster,L,futures,thruster,centre,4.65,4.64,16.00,,,SYMM,https://futuresfins.com/products/pyzel-large-thruster-1
+Futures,Pyzel Thruster,M,futures,thruster,side,4.53,4.51,15.15,,,FLAT,https://futuresfins.com/products/pyzel-medium-thruster-1
+Futures,Pyzel Thruster,M,futures,thruster,centre,4.53,4.51,15.15,,,SYMM,https://futuresfins.com/products/pyzel-medium-thruster-1
+Futures,QD2 Alpha,3.75,futures,quad,rear,3.77,3.76,10.73,,3.0,SYMM,https://futuresfins.com/products/qd2-3-75-alpha
+Futures,QD2 Alpha,4.0,futures,quad,rear,3.87,4.05,11.67,,3.0,SYMM,https://futuresfins.com/products/qd2-4-00-alpha
+Futures,R3 Blackstix,XS,futures,thruster,side,4.27,4.27,13.24,,6.5,V2,https://futuresfins.com/products/r3-blackstix
+Futures,R3 Blackstix,XS,futures,thruster,centre,4.27,4.27,13.24,,,SYMM,https://futuresfins.com/products/r3-blackstix
+Futures,R3 Legacy Series,XS,futures,thruster,side,4.27,4.27,13.24,,6.5,FLAT,https://futuresfins.com/products/r3-legacy-series
+Futures,R3 Legacy Series,XS,futures,thruster,centre,4.27,4.27,13.24,,,50/50,https://futuresfins.com/products/r3-legacy-series
+Futures,R4 Blackstix,S,futures,thruster,side,4.42,4.42,14.22,,6.5,V2,https://futuresfins.com/products/r4-blackstix
+Futures,R4 Blackstix,S,futures,thruster,centre,4.42,4.42,14.22,,,SYMM,https://futuresfins.com/products/r4-blackstix
+Futures,R4 Legacy Series,S,futures,thruster,side,4.42,4.42,14.22,,6.5,FLAT,https://futuresfins.com/products/r4-legacy-series
+Futures,R4 Legacy Series,S,futures,thruster,centre,4.42,4.42,14.22,,,SYMM,https://futuresfins.com/products/r4-legacy-series
+Futures,R6 Blackstix,M,futures,thruster,side,4.56,4.56,15.10,,6.5,V2,https://futuresfins.com/products/r6-blackstix
+Futures,R6 Blackstix,M,futures,thruster,centre,4.56,4.56,15.10,,,SYMM,https://futuresfins.com/products/r6-blackstix
+Futures,R6 Legacy Series,M,futures,thruster,side,4.56,4.56,15.10,,6.5,FLAT,https://futuresfins.com/products/r6-legacy-series
+Futures,R6 Legacy Series,M,futures,thruster,centre,4.56,4.56,15.10,,,50/50,https://futuresfins.com/products/r6-legacy-series
+Futures,R8 Blackstix,L,futures,thruster,side,4.68,4.68,15.9,,6.5,V2,https://futuresfins.com/products/r8-blackstix
+Futures,R8 Blackstix,L,futures,thruster,centre,4.68,4.68,15.9,,,SYMM,https://futuresfins.com/products/r8-blackstix
+Futures,R8 Legacy Series,L,futures,thruster,side,4.68,4.68,15.90,,6.5,FLAT,https://futuresfins.com/products/r8-legacy-series
+Futures,R8 Legacy Series,L,futures,thruster,centre,4.68,4.68,15.90,,,50/50,https://futuresfins.com/products/r8-legacy-series
+Futures,Rasta Alpha Twin+1,,futures,twin_trailer,side,4.60,5.14,19.76,,4.0,V1,https://futuresfins.com/products/rasta-alpha-twin-1
+Futures,Rasta Alpha Twin+1,,futures,twin_trailer,centre,3.18,3.26,7.90,,,SYMM,https://futuresfins.com/products/rasta-alpha-twin-1
+Futures,Rasta Keel,,futures,twin,all,6.87,4.77,24.59,,4.0,V2,https://futuresfins.com/products/rasta-keel-1
+Futures,Rasta Quad,M,futures,quad,side,4.31,4.44,14.72,,6.5,V2,https://futuresfins.com/products/rasta-quad-1
+Futures,Rasta Quad,M,futures,quad,rear,3.78,3.79,11.03,,3.0,SYMM,https://futuresfins.com/products/rasta-quad-1
+Futures,Rasta Reverse 3/2 Twin+1,,futures,twin_trailer,side,4.60,5.14,19.69,,4.0,3/2,https://futuresfins.com/products/rasta-reverse-twin-1
+Futures,Rasta Reverse 3/2 Twin+1,,futures,twin_trailer,centre,3.38,3.36,8.20,,,SYMM,https://futuresfins.com/products/rasta-reverse-twin-1
+Futures,Rasta Twin+1,,futures,twin_trailer,side,4.60,5.14,19.76,,4.0,V1,https://futuresfins.com/products/rasta-twin-2
+Futures,Rasta Twin+1,,futures,twin_trailer,centre,3.18,3.26,7.91,,,SYMM,https://futuresfins.com/products/rasta-twin-2
+Futures,Bark RFD,7,us_box,single,centre,5.64,6.84,27.03,,,50/50,https://futuresfins.com/products/rfd-prone
+Futures,Rudder,10,us_box,single,centre,7.80,10.0,55.10,,,SYMM,https://futuresfins.com/products/rudder-10
+Futures,Rudder,9,us_box,single,centre,6.98,9.0,44.64,,,SYMM,https://futuresfins.com/products/rudder-9
+Futures,Rusty Goofy Asym Thruster,L,futures,thruster,side,4.59,4.70,16.25,,6.5,CUSTOM,https://futuresfins.com/products/rusty-goofy-asym-thruster-l
+Futures,Rusty Goofy Asym Thruster,L,futures,thruster,centre,4.50,4.53,15.27,,,SYMM,https://futuresfins.com/products/rusty-goofy-asym-thruster-l
+Futures,Rusty Goofy Asym Thruster,M,futures,thruster,side,4.46,4.56,15.34,,6.5,CUSTOM,https://futuresfins.com/products/rusty-goofy-asym-thruster-m
+Futures,Rusty Goofy Asym Thruster,M,futures,thruster,centre,4.43,4.48,14.89,,,SYMM,https://futuresfins.com/products/rusty-goofy-asym-thruster-m
+Futures,Rusty Quad,L,futures,quad,side,4.59,4.70,16.25,,6.5,CUSTOM,https://futuresfins.com/products/rusty-quad-l
+Futures,Rusty Quad,L,futures,quad,rear,4.01,4.12,12.02,,3.0,SYMM,https://futuresfins.com/products/rusty-quad-l
+Futures,Rusty Quad,M,futures,quad,side,4.46,4.56,15.34,,6.5,CUSTOM,https://futuresfins.com/products/rusty-quad-m
+Futures,Rusty Quad,M,futures,quad,rear,3.84,3.95,11.00,,3.0,SYMM,https://futuresfins.com/products/rusty-quad-m
+Futures,Rusty Quad Rear Pair,L,futures,quad,rear,4.01,4.12,12.02,,3.0,SYMM,https://futuresfins.com/products/rusty-quad-rear-pair-large
+Futures,Rusty Quad Rear Pair,M,futures,quad,rear,3.84,3.95,11.00,,3.0,SYMM,https://futuresfins.com/products/rusty-quad-rear-pair-medium
+Futures,Rusty Regular Asym Thruster,L,futures,thruster,side,4.59,4.70,16.25,,6.5,CUSTOM,https://futuresfins.com/products/rusty-regular_asym_thruster-l
+Futures,Rusty Regular Asym Thruster,L,futures,thruster,centre,4.50,4.53,15.27,,,SYMM,https://futuresfins.com/products/rusty-regular_asym_thruster-l
+Futures,Rusty Regular Asym Thruster,M,futures,thruster,side,4.46,4.56,15.34,,6.5,CUSTOM,https://futuresfins.com/products/rusty-regular_asym_thruster-m
+Futures,Rusty Regular Asym Thruster,M,futures,thruster,centre,4.43,4.48,14.89,,,SYMM,https://futuresfins.com/products/rusty-regular_asym_thruster-m
+Futures,Rusty Thruster,Grom,futures,thruster,side,4.17,4.18,13.09,,6.5,V2,https://futuresfins.com/products/rusty-thruster-grom
+Futures,Rusty Thruster,Grom,futures,thruster,centre,4.15,4.12,12.75,,,SYMM,https://futuresfins.com/products/rusty-thruster-grom
+Futures,Rusty Thruster,L,futures,thruster,side,4.59,4.70,16.25,,6.5,CUSTOM,https://futuresfins.com/products/rusty-thruster-l
+Futures,Rusty Thruster,L,futures,thruster,centre,4.50,4.53,15.27,,,SYMM,https://futuresfins.com/products/rusty-thruster-l
+Futures,Rusty Thruster,M,futures,thruster,side,4.46,4.56,15.34,,6.5,CUSTOM,https://futuresfins.com/products/rusty-thruster-m
+Futures,Rusty Thruster,M,futures,thruster,centre,4.43,4.48,14.89,,,SYMM,https://futuresfins.com/products/rusty-thruster-m
+Futures,Rusty V2 Twin,,futures,twin,all,5.26,5.52,21.86,,6.0,V2,https://futuresfins.com/products/rusty-twin
+Futures,Rusty Twinzer,,futures,quad,side,5.19,5.39,20.84,,5.5,V2,https://futuresfins.com/products/rusty-twinzer
+Futures,Rusty Twinzer,,futures,quad,front,2.75,3.19,7.2,,9.0,SYMM,https://futuresfins.com/products/rusty-twinzer
+Futures,SB1 Fiberglass Sidebite,,futures,2+1,side,3.91,3.57,10.77,,,FLAT,https://futuresfins.com/products/sb1-sidebite
+Futures,Scimitar Quad Rears (Honeycomb),M,futures,quad,rear,3.94,4.01,11.25,,,FLAT,https://futuresfins.com/products/scimitar-quad-rears
+Futures,Sharp Eye Thruster,L,futures,thruster,side,4.60,4.68,15.96,,6.5,FLAT,https://futuresfins.com/products/sharp-eye-thruster-l
+Futures,Sharp Eye Thruster,L,futures,thruster,centre,4.60,4.68,15.96,,,SYMM,https://futuresfins.com/products/sharp-eye-thruster-l
+Futures,Sharp Eye Thruster,M,futures,thruster,side,4.44,4.51,14.86,,6.5,FLAT,https://futuresfins.com/products/sharp-eye-thruster-m
+Futures,Sharp Eye Thruster,M,futures,thruster,centre,4.44,4.51,14.86,,,SYMM,https://futuresfins.com/products/sharp-eye-thruster-m
+Futures,Solus Hatchet,,futures,single,centre,3.38,4.72,13.00,,,SYMM,https://futuresfins.com/products/solus-hatchet
+Futures,Solus,M,futures,thruster,side,4.45,4.63,15.23,,,V2,https://futuresfins.com/products/solus
+Futures,Solus,M,futures,thruster,centre,4.22,3.37,14.22,,,SYMM,https://futuresfins.com/products/solus
+Futures,Son Of Cobra Twin,,futures,twin,all,5.21,5.68,21.75,,7.5,FLAT,https://futuresfins.com/products/son-of-cobra-twin-1
+Futures,Stretch Quad Fins,M,futures,quad,side,4.34,4.38,14.52,,7.0,Stretch,https://futuresfins.com/products/stretch-quad-fins
+Futures,Stretch Quad Fins,M,futures,quad,rear,3.88,3.99,12.39,,2.0,SYMM,https://futuresfins.com/products/stretch-quad-fins
+Futures,T1 Alpha Twin+1,,futures,twin_trailer,side,4.80,5.14,19.79,,4.0,FLAT,https://futuresfins.com/products/t1-alpha
+Futures,T1 Alpha Twin+1,,futures,twin_trailer,centre,3.18,3.26,7.90,,,SYMM,https://futuresfins.com/products/t1-alpha
+Futures,T1 Twin+1,,futures,twin_trailer,side,4.80,5.14,19.79,,4.0,FLAT,https://futuresfins.com/products/t1-honeycomb-twin-1
+Futures,T1 Twin+1,,futures,twin_trailer,centre,3.18,3.26,7.90,,,SYMM,https://futuresfins.com/products/t1-honeycomb-twin-1
+Futures,T2 Twin,,futures,twin,all,4.90,5.41,19.48,,5.5,FLAT,https://futuresfins.com/products/t2-fiberglass-twin
+Futures,T2 Twinzer - 9 Degree,,futures,quad,side,4.9,5.41,19.48,,5.5,Flat,https://futuresfins.com/products/t2-twinzer-9-deg
+Futures,T2 Twinzer - 9 Degree,,futures,quad,front,2.75,3.19,7.20,,9.0,Flat,https://futuresfins.com/products/t2-twinzer-9-deg
+Futures,Techflex 2+1,,futures,2+1,side,4.22,4.37,14.22,,,FLAT,https://futuresfins.com/products/techflex-2-1
+Futures,Techflex 2+1,,us_box,2+1,centre,5.74,6.88,27.90,,,SYMM,https://futuresfins.com/products/techflex-2-1
+Futures,AM1 Thermotech,M,futures,thruster,side,4.50,4.50,14.84,,,FLAT,https://futuresfins.com/products/thermotech-am1
+Futures,AM1 Thermotech,M,futures,thruster,centre,4.31,4.29,13.35,,,SYMM,https://futuresfins.com/products/thermotech-am1
+Futures,AM2 Thermotech,L,futures,thruster,side,4.64,4.73,15.98,,6.5,FLAT,https://futuresfins.com/products/thermotech-am2
+Futures,AM2 Thermotech,L,futures,thruster,centre,4.63,4.49,15.32,,,SYMM,https://futuresfins.com/products/thermotech-am2
+Futures,F4 Thermotech,S,futures,thruster,side,4.22,4.37,14.22,,,FLAT,https://futuresfins.com/products/thermotech-f4
+Futures,F4 Thermotech,S,futures,thruster,centre,4.22,4.37,14.22,,,SYMM,https://futuresfins.com/products/thermotech-f4
+Futures,F6 Thermotech,M,futures,thruster,side,4.35,4.56,15.12,,,FLAT,https://futuresfins.com/products/thermotech-f6
+Futures,F6 Thermotech,M,futures,thruster,centre,4.35,4.56,15.12,,,SYMM,https://futuresfins.com/products/thermotech-f6
+Futures,F8 Thermotech,L,futures,thruster,side,4.55,4.64,15.98,,6.5,FLAT,https://futuresfins.com/products/thermotech-f8
+Futures,F8 Thermotech,L,futures,thruster,centre,4.55,4.64,15.98,,,SYMM,https://futuresfins.com/products/thermotech-f8
+Futures,Performance Thermotech,6,us_box,single,centre,4.59,6.02,20.03,,,SYMM,https://futuresfins.com/products/thermotech-performance-6-0
+Futures,Performance Thermotech,7,us_box,single,centre,4.82,7.00,25.50,,,SYMM,https://futuresfins.com/products/thermotech-performance-7-0
+Futures,Performance Thermotech,8,us_box,single,centre,5.55,8.00,31.43,,,SYMM,https://futuresfins.com/products/thermotech-performance-8-0
+Futures,QD2 Thermotech,3.75,futures,quad,rear,3.77,3.76,10.73,,,SYMM,https://futuresfins.com/products/thermotech-qd2-3-75
+Futures,QD2 Thermotech,4.0,futures,quad,rear,3.87,4.05,11.67,,,SYMM,https://futuresfins.com/products/thermotech-qd2-4-00
+Futures,SB1 Thermotech Sidebite,,futures,2+1,side,3.91,3.57,10.77,,,FLAT,https://futuresfins.com/products/thermotech-sb1
+Futures,T1 Thermotech Twin,,futures,twin,all,4.80,5.14,19.79,,,FLAT,https://futuresfins.com/products/thermotech-t1-sides
+Futures,T1 Thermotech Twin+1,,futures,twin_trailer,side,4.80,5.14,19.79,,,FLAT,https://futuresfins.com/products/thermotech-t1
+Futures,T1 Thermotech Twin+1,,futures,twin_trailer,centre,3.18,3.26,7.90,,,SYMM,https://futuresfins.com/products/thermotech-t1
+Futures,Thermotech TMF-1,XS,futures,five,centre,3.76,1.76,4.85,,,SYMM,https://futuresfins.com/products/thermotech-tmf-1
+Futures,Tiller Volan,10,us_box,single,centre,7.90,10.00,40.60,,,SYMM,https://futuresfins.com/products/tiller-10-0-volan
+Futures,Tiller,10,us_box,single,centre,7.90,10.00,40.60,,,SYMM,https://futuresfins.com/products/tiller-10
+Futures,Tiller,8,us_box,single,centre,6.30,8.00,25.90,,,SYMM,https://futuresfins.com/products/tiller-8
+Futures,Tiller Volan,9,us_box,single,centre,7.10,9.00,32.90,,,SYMM,https://futuresfins.com/products/tiller-9-0-volan
+Futures,Tiller,9,us_box,single,centre,7.10,9.00,32.90,,,SYMM,https://futuresfins.com/products/tiller-9
+Futures,TP Twin,,futures,twin,all,5.32,5.44,22.21,,4.0,FLAT,https://futuresfins.com/products/timmy-twin
+Futures,Tokoro Honeycomb,M,futures,thruster,side,4.64,4.59,15.22,,9.0,FLAT,https://futuresfins.com/products/tokoro-honeycomb-thruster
+Futures,Tokoro Honeycomb,M,futures,thruster,centre,4.51,4.56,14.65,,,SYMM,https://futuresfins.com/products/tokoro-honeycomb-thruster
+Futures,TP Twin+1,,futures,twin_trailer,side,5.30,5.42,20.45,,5.0,FLAT,https://futuresfins.com/products/tp-twin-1
+Futures,TP Twin+1,,futures,twin_trailer,centre,2.96,3.07,7.04,,,SYMM,https://futuresfins.com/products/tp-twin-1
+Futures,TP1 Fiberglass Thruster,L,futures,thruster,side,4.52,4.62,15.27,,6.5,FLAT,https://futuresfins.com/products/tp1-fiberglass-thruster
+Futures,TP1 Fiberglass Thruster,L,futures,thruster,centre,4.52,4.62,15.27,,,50/50,https://futuresfins.com/products/tp1-fiberglass-thruster
+Futures,TP1 Honeycomb Thruster,L,futures,thruster,side,4.52,4.62,15.27,,6.5,FLAT,https://futuresfins.com/products/tp1-honeycomb-thruster
+Futures,TP1 Honeycomb Thruster,L,futures,thruster,centre,4.52,4.62,15.27,,,50/50,https://futuresfins.com/products/tp1-honeycomb-thruster
+Futures,TW1 Fiberglass Canard Pair - 4 Degree,,futures,quad,front,2.75,3.19,7.20,,4.0,Flat,https://futuresfins.com/products/tw1-canard-pair-4-deg
+Futures,TWC Twin Trailer (Alpha),,futures,twin_trailer,centre,2.65,3.20,6.42,,,SYM,https://futuresfins.com/products/twc-alpha
+Futures,TWC Twin Trailer (Fiberglass),,futures,twin_trailer,centre,2.65,3.20,6.42,,,SYM,https://futuresfins.com/products/twc-center
+Futures,Twiggy 5-Fin Step-Up,L,futures,five,side,4.70,4.70,15.39,,6.5,Bevel,https://futuresfins.com/products/twiggy-5-fin-step-up
+Futures,Twiggy 5-Fin Step-Up,L,futures,five,centre,4.70,4.90,16.30,,,SYMM,https://futuresfins.com/products/twiggy-5-fin-step-up
+Futures,Twiggy 5-Fin Step-Up,L,futures,five,rear,3.70,3.90,10.34,,3.0,80/20,https://futuresfins.com/products/twiggy-5-fin-step-up
+Futures,Twiggy 5-Fin Big Wave,L,futures,five,side,4.70,4.70,16.30,,6.5,Bevel,https://futuresfins.com/products/twiggy-5-fin
+Futures,Twiggy 5-Fin Big Wave,L,futures,five,centre,4.70,4.90,17.00,,,SYMM,https://futuresfins.com/products/twiggy-5-fin
+Futures,Twiggy 5-Fin Big Wave,L,futures,five,rear,3.70,3.90,10.70,,3.0,80/20,https://futuresfins.com/products/twiggy-5-fin
+Futures,TT1 Twin Trailer,,futures,twin_trailer,centre,3.18,3.26,7.90,,,SYMM,https://futuresfins.com/products/twin-trailer
+Futures,Mayhem Twinzer + By Matt Biolos,M,futures,five,side,4.70,5.14,17.70,,6.0,Flat,https://futuresfins.com/products/twinzer-by-matt-biolos-m
+Futures,Mayhem Twinzer + By Matt Biolos,M,futures,five,centre,2.87,3.0,6.21,,,SYM,https://futuresfins.com/products/twinzer-by-matt-biolos-m
+Futures,Mayhem Twinzer + By Matt Biolos,M,futures,five,front,2.69,2.87,5.83,,9.0,Flat,https://futuresfins.com/products/twinzer-by-matt-biolos-m
+Futures,Ando Blackstix,L,futures,thruster,side,4.54,4.56,15.50,,6.5,V2,https://futuresfins.com/products/v2-ando-blackstix
+Futures,Ando Blackstix,L,futures,thruster,centre,4.54,4.56,15.50,,,SYMM,https://futuresfins.com/products/v2-ando-blackstix
+Futures,Vector 3/2 Alpha Thruster,S,futures,thruster,side,4.46,4.33,14.00,,6.5,Vector 3/2,https://futuresfins.com/products/vector-3-2-alpha-thruster-s
+Futures,Vector 3/2 Alpha Thruster,S,futures,thruster,centre,4.46,4.33,13.50,,0,SYMM,https://futuresfins.com/products/vector-3-2-alpha-thruster-s
+Futures,Vector 3/2 Blackstix+ Thruster,L,futures,thruster,side,4.79,4.64,16.00,,6.5,Vector 3/2,https://futuresfins.com/products/vector-3-2-blackstix-thruster-l
+Futures,Vector 3/2 Blackstix+ Thruster,L,futures,thruster,centre,4.79,4.64,15.50,,0,SYMM,https://futuresfins.com/products/vector-3-2-blackstix-thruster-l
+Futures,Vector 3/2 Blackstix+ Thruster,M,futures,thruster,side,4.63,4.48,15.00,,6.5,Vector 3/2,https://futuresfins.com/products/vector-3-2-blackstix-thruster-m
+Futures,Vector 3/2 Blackstix+ Thruster,M,futures,thruster,centre,4.63,4.48,14.50,,0,SYMM,https://futuresfins.com/products/vector-3-2-blackstix-thruster-m
+Futures,XO Coco Mod Keel,,futures,twin,all,5.57,4.98,20.06,,6.5,FLAT,https://futuresfins.com/products/xo-by-coco-mod-keel
+Futures,XO Coco Twin + 1,,futures,twin_trailer,side,4.88,5.18,18.03,,5.0,FLAT,https://futuresfins.com/products/xo-by-coco-twin-1
+Futures,XO Coco Twin + 1,,futures,twin_trailer,centre,3.28,3.52,8.68,,,SYMM,https://futuresfins.com/products/xo-by-coco-twin-1
+Futures,Zack Flores Flex,9.5,us_box,single,centre,6.89,9.5,40.55,,,SYMM,https://futuresfins.com/products/zack-flores-9-5-mint
+Futures,Zack Flores Twin,,futures,twin,all,4.83,5.46,19.58,,4.0,FLAT,https://futuresfins.com/products/zack-flores-fiberglass-twin
+Firewire,Machado Twin Keel,,futures,twin,all,6.59,5.20,24.80,,,,https://firewiresurfboards.com/products/prestige-machado-twin-keel-fin-set
+Firewire,Machado Twin Keel,,fcs1,twin,all,6.59,5.20,24.80,,,,https://firewiresurfboards.com/products/prestige-machado-twin-keel-fin-set

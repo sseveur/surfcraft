@@ -6,6 +6,7 @@
 pub mod asym;
 pub mod blank;
 pub mod board;
+pub mod fin_catalog;
 pub mod fins;
 pub mod knot;
 pub mod math;

@@ -1907,6 +1907,38 @@ fn fin_shape_editor_and_fins_in_the_3d_export() {
     );
     snap(&mut h, "qa-fins-shape");
 
+    // Fin models: search, pick an FCS Performer set, use it.
+    click(&mut h, "Fin models (FCS, Futures, Firewire)");
+    let search = {
+        let label = h.get_by_label("Search").rect();
+        h.get_all_by_role(egui::accesskit::Role::TextInput)
+            .map(|n| n.rect())
+            .find(|r| (r.center().y - label.center().y).abs() < 8.0 && r.min.x > label.max.x)
+            .expect("search field")
+    };
+    type_into(&mut h, search.center(), "performer M");
+    let product =
+        surfcraft_core::fin_catalog::search("performer M", Some(surfcraft_core::BoxSystem::FcsII))
+            .into_iter()
+            .find(|p| p.setup == surfcraft_core::Preset::Thruster)
+            .expect("a Performer thruster set");
+    click(&mut h, &format!("{}  ·", product.name()));
+    click(&mut h, &format!("Use {}", product.name()));
+    step(&mut h);
+    let s = h.state().doc.board.fin_setup.clone().unwrap();
+    let side = product
+        .row_for(surfcraft_core::fins::Side::Left, 1, false)
+        .unwrap();
+    for f in s.fins.iter().filter(|f| f.y != 0.0) {
+        assert!(
+            (f.base - side.base).abs() < 1e-9 && (f.depth - side.depth).abs() < 1e-9,
+            "{f:?}"
+        );
+        if let Some(a) = side.area {
+            assert!((f.shape.area(f.base, f.depth) - a).abs() / a < 0.02);
+        }
+    }
+    snap(&mut h, "qa-fins-models");
 
     // 3D export: board only, board and fins, fins only.
     menu(&mut h, "File", "Print & export…");

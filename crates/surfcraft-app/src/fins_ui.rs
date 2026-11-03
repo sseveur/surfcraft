@@ -2,6 +2,7 @@
 
 use eframe::egui::{self, Color32, Stroke};
 use surfcraft_core::Board;
+use surfcraft_core::fin_catalog::{self, Product, Role};
 use surfcraft_core::fins::{BoxSystem, Fin, FinSetup, FinShape, Preset, Side};
 
 use crate::document::Document;
@@ -56,6 +57,10 @@ struct Choice {
     mirror: bool,
     /// The fin whose shape is being edited.
     shape_fin: usize,
+    /// The catalogue product picked in the fin models list (index into `fin_catalog::products()`).
+    product: Option<usize>,
+    /// List only products for the setup's box system.
+    same_system: bool,
 }
 
 pub fn window(ctx: &egui::Context, open: &mut bool, doc: &mut Document, set: &Settings) {
@@ -72,7 +77,12 @@ pub fn window(ctx: &egui::Context, open: &mut bool, doc: &mut Document, set: &Se
         },
         mirror: true,
         shape_fin: 0,
+        product: None,
+        same_system: true,
     });
+    let search_id = id.with("search");
+    let mut search: String = ctx.data(|d| d.get_temp(search_id)).unwrap_or_default();
+    let mut use_product = None;
     let mut setup = current.clone();
     let (mut apply, mut clear) = (false, false);
     let board = &doc.board;
@@ -130,6 +140,10 @@ pub fn window(ctx: &egui::Context, open: &mut bool, doc: &mut Document, set: &Se
                         ui.separator();
                         shape_editor(ui, &mut setup, &mut choice.shape_fin, choice.mirror, set);
                     }
+                    ui.separator();
+                    if catalog_picker(ui, &mut choice, &mut search, &current, set) {
+                        use_product = choice.product;
+                    }
                     ui.label(
                         egui::RichText::new(tr(
                             "From tail and from rail: to the fin's trailing edge (rear of the base), square to the stringer. Toe: leading edge turned towards the stringer. Cant: tip tilted towards the rail. Box sizes are approximate: check them against your boxes before routing.",
@@ -138,8 +152,20 @@ pub fn window(ctx: &egui::Context, open: &mut bool, doc: &mut Document, set: &Se
                     );
                 });
         });
-    ctx.data_mut(|d| d.insert_temp(id, choice));
-    if apply {
+    ctx.data_mut(|d| {
+        d.insert_temp(id, choice);
+        d.insert_temp(search_id, search);
+    });
+    if let Some(product) = use_product.and_then(|i| fin_catalog::products().get(i)) {
+        doc.edit(|b| {
+            let mut s = b.fin_setup();
+            if s.is_empty() {
+                s = FinSetup::preset(product.setup, product.system(), b);
+            }
+            product.apply(&mut s);
+            b.set_fin_setup(s);
+        });
+    } else if apply {
         doc.edit(|b| {
             let mut s = FinSetup::preset(choice.preset, choice.system, b);
             // Fins in the same role as before keep their shape.
@@ -507,4 +533,128 @@ fn planform_preview(ui: &mut egui::Ui, f: &Fin, set: &Settings) {
         egui::FontId::proportional(11.0),
         visuals.weak_text_color(),
     );
+}
+
+/// Translated name of a catalogue role.
+fn catalog_role(r: Role) -> &'static str {
+    match r {
+        Role::Side => tr("Side"),
+        Role::Centre => tr("Centre"),
+        Role::Rear => tr("Rear"),
+        Role::Front => tr("Front"),
+        Role::All => tr("All fins"),
+    }
+}
+
+/// Search the fin makers' models; returns true when the user asks to use the picked one.
+fn catalog_picker(
+    ui: &mut egui::Ui,
+    choice: &mut Choice,
+    search: &mut String,
+    setup: &FinSetup,
+    set: &Settings,
+) -> bool {
+    let mut use_it = false;
+    egui::CollapsingHeader::new(tr("Fin models (FCS, Futures, Firewire)"))
+        .id_salt("fin-models")
+        .show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.label(tr("Search"));
+                ui.add(
+                    egui::TextEdit::singleline(search)
+                        .hint_text(tr("e.g. performer M, F6, keel"))
+                        .desired_width(220.0),
+                );
+                let system = if setup.is_empty() {
+                    choice.system
+                } else {
+                    setup.system
+                };
+                ui.checkbox(
+                    &mut choice.same_system,
+                    trf("Only {0}", &[&box_label(system)]),
+                );
+            });
+            let system = if setup.is_empty() {
+                choice.system
+            } else {
+                setup.system
+            };
+            let found = fin_catalog::search(search, choice.same_system.then_some(system));
+            let all = fin_catalog::products();
+            ui.weak(trf("{0} of {1} models", &[&found.len(), &all.len()]));
+            egui::ScrollArea::vertical()
+                .id_salt("fin-models-list")
+                .max_height(170.0)
+                .show(ui, |ui| {
+                    for p in found.iter().take(300) {
+                        let i = all
+                            .iter()
+                            .position(|q| std::ptr::eq(q, *p))
+                            .expect("product from the catalogue");
+                        let text = format!(
+                            "{}  ·  {}  ·  {}",
+                            p.name(),
+                            preset_label(p.setup),
+                            box_label(p.system())
+                        );
+                        if ui.selectable_label(choice.product == Some(i), text).clicked() {
+                            choice.product = Some(i);
+                        }
+                    }
+                });
+            let Some(p) = choice.product.and_then(|i| all.get(i)) else {
+                return;
+            };
+            ui.separator();
+            product_specs(ui, p, set);
+            ui.horizontal(|ui| {
+                use_it = ui
+                    .button(trf("Use {0}", &[&p.name()]))
+                    .on_hover_text(tr(
+                        "Each fin takes the base, depth, area, sweep, foil and cant (where published) of its role in this set; positions stay. Without fins, the set's setup is placed first. One undo step.",
+                    ))
+                    .clicked();
+                ui.hyperlink_to(tr("Maker's page"), &p.source_url);
+            });
+            ui.label(
+                egui::RichText::new(tr(
+                    "Specs as the maker publishes them. The fin outline is fitted to them, not the maker's exact template.",
+                ))
+                .small(),
+            );
+        });
+    use_it
+}
+
+/// Published specs of a product, one row per role.
+fn product_specs(ui: &mut egui::Ui, p: &Product, set: &Settings) {
+    egui::Grid::new("fin-model-specs")
+        .num_columns(7)
+        .striped(true)
+        .show(ui, |ui| {
+            for h in [
+                tr("Fin"),
+                tr("Base"),
+                tr("Depth"),
+                tr("Area"),
+                tr("Sweep (°)"),
+                tr("Foil"),
+                tr("Cant (°)"),
+            ] {
+                ui.strong(h);
+            }
+            ui.end_row();
+            for f in &p.fins {
+                let opt = |v: Option<f64>| v.map_or("-".to_string(), |v| format!("{v:.1}"));
+                ui.label(catalog_role(f.role));
+                ui.label(set.fmt(f.base));
+                ui.label(set.fmt(f.depth));
+                ui.label(f.area.map_or("-".to_string(), |a| area_text(a, set)));
+                ui.label(opt(f.sweep));
+                ui.label(if f.foil.is_empty() { "-" } else { &f.foil });
+                ui.label(opt(f.cant));
+                ui.end_row();
+            }
+        });
 }

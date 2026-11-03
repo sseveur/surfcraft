@@ -105,6 +105,72 @@ The fin depths in the presets are used only to fill BoardCAD's legacy fin depth 
 
 These depths are not placement rules and have no source.
 
+## Fin shapes
+
+Each fin has a shape used for the 3D view and the 3D model export (`FinShape` in `fins.rs`). The outline seen from
+the side is parametric, in fractions of the fin's base so one shape fits every size:
+
+| Parameter | Meaning |
+|---|---|
+| Rake | How far the rear of the tip sits behind the rear of the base. |
+| Tip width | Width of the tip, front to back. 0 is pointed; above 100 % the fin widens towards the tip (hatchet, cutaway). |
+| Tip rounding | 0 % is a square-cut tip, 100 % a fully round one. |
+| Fullness | Exponent of the leading edge's sweep back: 1 is straight, about 2 a typical convex edge, 4 or more a full, wide fin. |
+| Thickness | Foil thickness at the root. It thins to 20 % of that at the tip. |
+| Foil | Share of the thickness on the inside face: 50/50, 80/20 or flat inside (side fins only; a fin on the stringer is symmetric). The section is a NACA 4-digit thickness form with a closed trailing edge. |
+
+The trailing edge curves back to the tip with a slight hollow (exponent 1.6). Typing an area in the Fins window
+refits the fullness to match it. In an export, each fin is a separate closed shell sunk 3 mm into the bottom.
+
+These shapes match a fin's published base, depth, area and sweep. They are not the makers' exact templates. Use
+them for proportions, volume and flow studies, not to copy a fin.
+
+## Fin models (catalogue)
+
+`crates/surfcraft-core/data/fin-catalog.csv` lists 705 fins (443 products) with the specs their makers publish.
+Retrieved November 2026 from the makers' own product pages; each row keeps its source URL.
+
+- **FCS** (surffcs.com): 283 rows. Base, depth, area, sweep and foil from each product's spec table; 18 rows from
+  [FCS fin data](https://www.surffcs.com/pages/fcs-fin-data) where a product page has no table. FCS publishes no cant.
+- **Futures** (futuresfins.com): 420 rows. Base, height, area, foil and "Angle", which is the cant: product
+  pages say so (Son of Cobra: "7.5 degree cant angle"). Futures publishes no sweep angle. Its rake is an area
+  ratio (area behind a line square to the base at its rear / area in front,
+  [Futures ride number](https://futuresfins.com/pages/ride-number-2023)), not stored here.
+- **Firewire** sells fins (singles, side bites, Machado, Endorfins, Dan Mann, Tomo and Stu Kenson sets) in single
+  tab (Futures) and dual tab (FCS) versions, but publishes specs for one only: the Machado Twin Keel (132 mm deep,
+  167.5 mm base, 16,000 mm²), listed for both tabs.
+
+How the specs are used:
+- **Sweep**: FCS calls it "the angle measuring how far the outline of the fin is curved backwards; also referred to
+  as rake" without naming reference points. Its "Fin Characteristics" diagram
+  ([A guide to FCS fins](https://www.surffcs.com/blogs/community/a-guide-to-fcs-fins)) measures it at the middle of
+  the base, between a line square to the base and the line to the tip. SurfCraft uses that reading. Check: a
+  Performer M (base 4.37", depth 4.55", sweep 33.7°) then has its tip about 0.85" behind the trailing edge root.
+- **Area** sets the fullness (and the tip width when even the fullest outline is too small). Every catalogue fin is
+  matched within 2 % (a test checks them all).
+- **Foil** names map to the inside share: SYMM/50-50 → 50/50, Flat (and Flat/Bev) → flat inside, 80/20, 70/30;
+  inside foils with a slightly curved inside face (Futures Vector, V1, V2, 3/2; FCS IFT; Cambered, Stretch, TOW)
+  → 85/15. Other names (CUSTOM) keep the current foil.
+- Futures sets with two cants ("6.5/9.5") use the first.
+
+Doubtful published data, kept as published:
+- Panda Keel base: 4.65", though 165 mm is 6.50".
+- Mayhem Pivot M/L foils appear swapped (side 50/50, centre flat).
+- Album Laminar Twin is sold in L-XL, but its spec row says S-M.
+- Jeremy Flores L is the same as Carissa Moore L.
+- Where a product page and FCS fin data disagree, the product page is used: Christenson Twin M/L sweep 36.7 vs
+  34.7; H4 quad rear sweep 31.4 vs 33.2; Al Merrick Twin + Stabiliser centre base 3.22 vs 3.45.
+
+Left out because their table is copied from another fin:
+- Mid Carver Thruster (shows Performer M-L values).
+- Performer Keel M-L.
+
+Also left out: products with blank placeholder tables (2027 longboard fins: Flow III, Pivot, Connect PG,
+Noserider). FCS I fins (ARC, PC, M5, V2, GX) have no published specs. Futures "Performance 9 Thermotech" publishes
+an unreadable area and has none.
+
+Fin names and brands belong to their owners; SurfCraft only uses their published numbers to place and size fins.
+
 ## Not found
 
 The following could not be confirmed from a reliable source:
@@ -116,5 +182,5 @@ The following could not be confirmed from a reliable source:
 - where the fin's trailing edge sits relative to the box or plugs, for any system (footprints are centred on the middle of the fin base);
 - twin fin cant.
 
-futuresfins.com and surffcs.com could not be read during the research (rate limited or 404). Their technical pages are
-the place to check first.
+The box research above could not read futuresfins.com and surffcs.com (rate limited or 404). The fin catalogue was
+built from them later, but neither publishes box routing dimensions.

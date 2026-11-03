@@ -64,7 +64,9 @@ The builds are not signed with paid certificates yet, so the first launch needs 
   both edited in the Outline view; volume, specs, 3D, exports, templates and CNC use each rail's own shape.
 - **Fins** (Board > Fins): single, twin, twin + trailer, thruster, quad, 2+1 and 5-fin presets placed for the board,
   with FCS I, FCS II, Futures or US box footprints, printed 1:1 on the outline template with a measurement table
-  (dimensions and sources in `docs/fins.md`).
+  (dimensions and sources in `docs/fins.md`). Each fin has its own shape (rake, tip width, square to round tip,
+  fullness, thickness, 50/50, 80/20 or flat-inside foil) shown in 3D, or pick one of 443 FCS, Futures and Firewire
+  models from their published specs (base, depth, area, sweep, foil, cant), built in and offline.
 - **Weight calculator**: foam, stringer, glass, laps, resin, hot coat.
 - **Fit in blank** (Board menu): checks the board fits a foam blank (US Blanks and Surfblanks Australia library
   with measured stations, or your own blanks in any unit), with shift, tilt and Auto fit, clearances per view and
