@@ -9,7 +9,14 @@ them against values measured with BoardCAD 3.0.1.
 
 ## Download
 
-Get the latest version from the [Releases page](https://github.com/sseveur/surfcraft/releases/latest).
+**macOS, quickest way**: open Terminal and paste this line. It installs (or updates) SurfCraft in Applications
+and opens it, with no security warning:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/sseveur/surfcraft/main/install.sh | sh
+```
+
+Or get the latest version from the [Releases page](https://github.com/sseveur/surfcraft/releases/latest).
 
 | System | File | Install |
 |---|---|---|
