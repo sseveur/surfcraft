@@ -294,8 +294,8 @@ mod tests {
                 '\\' => match chars.next() {
                     Some('n') => out.push('\n'),
                     Some('t') => out.push('\t'),
-                    Some('\n') => {
-                        // Line continuation: skip the next line's indentation.
+                    // Line continuation (also with Windows line endings): skip the next line's indentation.
+                    Some('\n' | '\r') => {
                         let rest: String = chars.collect();
                         return out + &literal(rest.trim_start());
                     }
