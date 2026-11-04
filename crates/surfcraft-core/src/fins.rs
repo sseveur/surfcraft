@@ -314,8 +314,10 @@ impl Default for FinShape {
 /// Spanwise station of a fin planform, see [`FinShape::stations`].
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct FinStation {
-    /// Height below the root.
+    /// Height below the root of the trailing edge point (and of the leading edge point, except around a round
+    /// tip, where the two sides of the cap meet at its end).
     pub h: f64,
+    pub h_leading: f64,
     /// Trailing and leading edge, along the base from its rear end (negative = behind it).
     pub trailing: f64,
     pub leading: f64,
@@ -447,24 +449,48 @@ impl FinShape {
             let leading = (base - (base + rake - tip) * t.powf(s.fullness)).max(trailing);
             out.push(FinStation {
                 h: body_height * t,
+                h_leading: body_height * t,
                 trailing,
                 leading,
                 half: root_half * (1.0 - 0.8 * t),
             });
         }
         if cap_height > 1e-9 {
+            // Round the tip with a cubic curve on each side, leaving the trailing and leading edges in their own
+            // direction and meeting square to the fin's height at the end of the tip, so the outline has no
+            // corner or knob where the cap starts.
             let last = out[body];
-            let mid = (last.trailing + last.leading) / 2.0;
-            let a = (last.leading - last.trailing) / 2.0;
+            let end = DVec2::new((last.trailing + last.leading) / 2.0, depth);
+            let half_chord = (last.leading - last.trailing) / 2.0;
+            // Directions of the edges at the start of the cap ((along, down) per unit of t), from their formulas.
+            let dir_t = DVec2::new(-rake * TRAILING_HOLLOW, body_height).normalize_or_zero();
+            let dir_l =
+                DVec2::new(-(base + rake - tip) * s.fullness, body_height).normalize_or_zero();
+            let reach = 0.55 * cap_height.max(half_chord);
+            let side_curve = |start: DVec2, dir: DVec2, toward: f64| {
+                let (p0, p3) = (start, end);
+                let p1 = p0 + dir * reach;
+                let p2 = p3 + DVec2::new(toward * 0.55 * half_chord, 0.0);
+                move |t: f64| {
+                    let m = 1.0 - t;
+                    p0 * (m * m * m)
+                        + p1 * (3.0 * m * m * t)
+                        + p2 * (3.0 * m * t * t)
+                        + p3 * (t * t * t)
+                }
+            };
+            let trailing_side = side_curve(DVec2::new(last.trailing, body_height), dir_t, -1.0);
+            let leading_side = side_curve(DVec2::new(last.leading, body_height), dir_l, 1.0);
             for j in 1..=cap {
                 // Stop just short of the end so the last ring keeps a little size for its closing fan.
-                let phi = std::f64::consts::FRAC_PI_2 * 0.97 * j as f64 / cap as f64;
-                let (sin, cos) = phi.sin_cos();
+                let t = 0.97 * j as f64 / cap as f64;
+                let (a, b) = (trailing_side(t), leading_side(t));
                 out.push(FinStation {
-                    h: body_height + cap_height * sin,
-                    trailing: mid - a * cos,
-                    leading: mid + a * cos,
-                    half: last.half * cos,
+                    h: a.y,
+                    h_leading: b.y,
+                    trailing: a.x,
+                    leading: b.x.max(a.x),
+                    half: last.half * (std::f64::consts::FRAC_PI_2 * t).cos(),
                 });
             }
         }
@@ -482,7 +508,7 @@ impl FinShape {
             let l = st[st.len() - 1];
             pts.push(DVec2::new((l.trailing + l.leading) / 2.0, depth));
         }
-        pts.extend(st.iter().rev().map(|s| DVec2::new(s.leading, s.h)));
+        pts.extend(st.iter().rev().map(|s| DVec2::new(s.leading, s.h_leading)));
         pts.dedup_by(|a, b| a.distance(*b) < 1e-9);
         pts
     }
@@ -1261,10 +1287,11 @@ fn add_fin(board: &Board, fin: &Fin, mesh: &mut crate::Mesh) {
     for st in &stations {
         let point = |w: f64, offset: f64| {
             let u = st.trailing + (st.leading - st.trailing) * w;
+            let h = st.h + (st.h_leading - st.h) * w;
             let plan = fin.rear() + d * u;
             let root = board.bottom_at_xy(plan.x, plan.y) + FIN_EMBED;
             DVec3::new(plan.x, plan.y, root)
-                + down * st.h
+                + down * h
                 + side * (offset * 2.0 * st.half * foil(1.0 - w))
         };
         // Cosine spacing: more points near the edges, where the foil curves most.
@@ -1418,7 +1445,8 @@ mod tests {
         let st = round.stations(base, depth, 20, 8);
         let tip = st.last().unwrap();
         assert!(tip.leading - tip.trailing < 0.1 * 0.3 * base);
-        assert!(tip.h < depth && tip.h > depth - 0.01 * depth);
+        assert!(tip.h < depth && tip.h > depth - 0.02 * depth);
+        assert!(tip.h_leading < depth && tip.h_leading > depth - 0.02 * depth);
         assert!(round.area(base, depth) < square.area(base, depth));
         // A pointed tip has less area than a wide one.
         let pointed = FinShape { tip: 0.0, ..square };
