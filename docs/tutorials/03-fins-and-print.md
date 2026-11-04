@@ -1,8 +1,8 @@
 # Tutorial 3: Fins and print templates
 
-Place a fin setup in real fin boxes, fine-tune each fin, check the fins in the outline and in 3D, then print the
-outline template at full size with the fin boxes and a table of their measurements. About 15 minutes, or watch the
-2.5-minute video (`SurfCraft-tutorial-03-fins-and-print.mp4` on the
+Place a fin setup in real fin boxes, fine-tune each fin, shape it or pick a real fin model, check the fins in the
+outline and in 3D, then print the outline template at full size with the fin boxes and a table of their measurements,
+and export the 3D model with its fins. About 20 minutes, or watch the 4.5-minute video (`SurfCraft-tutorial-03-fins-and-print.mp4` on the
 [Releases page](https://github.com/sseveur/surfcraft/releases)).
 
 The tutorial uses the built-in 6'0" shortboard that SurfCraft opens with. The screenshots use feet and inches; every
@@ -11,14 +11,15 @@ value can also be typed in centimetres (`47cm`) or millimetres.
 ## 1. Choose a fin setup
 
 1. Open the **Outline** tab and zoom in on the tail (scroll at the pointer; drag with the right button to pan).
-2. **Board > Fins…** opens the Fins window. Drag it by its title bar to where it does not hide the tail.
+2. **Board > Fins…** opens the Fins window. Drag it by its title bar to where it does not hide the tail (here to the
+   right).
 3. Choose a **Setup**: Single, Twin, Twin + 1 (twin + stabiliser), Thruster, Quad, 2+1 (side bites + US box single) or 5 fins.
 4. Choose a **Box system**: FCS I, FCS II, Futures, US box (single) for a longboard centre fin, or None (position
    only).
 5. Click **Apply preset**. The fins are placed at standard positions for this board's length and outline, as one undo
    step.
 
-![A thruster in FCS II boxes, with the Fins window moved below the tail](img/t3-1-thruster.png)
+![A thruster in FCS II boxes, with the Fins window moved beside the tail](img/t3-1-thruster.png)
 
 The positions come from published placement charts (Lundquist, the McKee table, Fiberglass Hawaii and the FCS II
 install guide), scaled to the board's length. On a 6'0" thruster the side fins are 11" from the tail and 1 1/4" from
@@ -27,6 +28,14 @@ the rail, with 1/4" of toe (3.28°) and 6.5° of cant, and the centre fin is 3 1
 
 **Quad** puts the rear fins 5 1/2" from the tail. **5 fins** combines the thruster and quad boxes, so the board can be
 ridden either way with the same boxes.
+
+Each fin also gets a typical size for its role, for example 4.45" × 4.55" (base × depth) for thruster side fins,
+3.95" × 4.05" for quad rears, 5.65" × 5.35" for twins and 3.25" × 3.3" for a twin's stabiliser (the medians of the
+real fins in the fin catalogue, see section 4).
+
+"2+1" means two things in surf shops. **Twin + 1 (twin + stabiliser)** is the shortboard one: two large twins and a
+small trailer, all in FCS or Futures boxes. **2+1 (side bites + US box single)** is the longboard and mid-length one:
+small side bites with a big single fin in a US box.
 
 ## 2. Box systems
 
@@ -63,7 +72,46 @@ it along the board. Each edit is one undo step.
 
 **Remove fins** takes all fins off the board.
 
-## 4. Check the fins in the outline and in 3D
+## 4. Shape the fins, or use a real fin model
+
+Below the table, **Fin shape (3D model and export)** sets the outline and foil of one fin (choose it in **Fin**; with
+**Mirror edits** the other side follows). The shape is used by the 3D view and the 3D export, not by the templates.
+
+- **Template**: Raked (swept, small round tip), Upright (wide round tip), Square tip, Pointed, or Keel.
+- **Rake**: how far the tip reaches behind the rear of the base.
+- **Tip width**: from 0 (pointed) to wider than the base (hatchet and cutaway fins).
+- **Tip rounding**: from 0 % (square-cut) to 100 % (fully round).
+- **Fullness**: how long the leading edge stays forward; a fuller fin has more area.
+- **Thickness** at the root, and **Foil**: 50/50, 80/20 or flat inside (a centre fin is always symmetric).
+- **Area**: type a fin maker's published area and the fullness changes to match it.
+- **Use this shape on every fin** copies it to all fins, each keeping its own base and depth.
+
+The side view on the right shows the fin to scale, with its base, depth and area.
+
+![An upright template with a nearly square tip and a flat-inside foil](img/t3-2b-shape.png)
+
+**Fin models (FCS, Futures, Firewire)** lists 443 fin sets with the specs their makers publish: base, depth, area,
+sweep, foil and cant. They are built into SurfCraft and work offline.
+
+1. Open **Fin models** and type in **Search**: words match the start of the model's words, so `christenson 5 m`
+   finds the Christenson 5-Fin M, and `performer m` finds the Performer M but not the XS. **Only Futures** (or your box
+   system) hides sets for other boxes.
+2. Click a set to see its fins, one row per role (side, centre, rear, front, or all fins the same). **Maker's page**
+   opens the product page the numbers come from.
+3. Click **Use ...**. Each fin takes the fin of its place in the set (the rear pair takes the rear fins), with its
+   base, depth, foil and published cant, and an outline fitted to the published area and sweep. The positions stay.
+   Without fins on the board, the set's setup is placed first.
+
+A fin only takes a fin that fits its box: a US box single only goes in a US box, and an FCS or Futures fin only in an
+FCS or Futures box. A 2+1 can take side bites from one set (for example the Skindog Side Byte) and its centre from a
+US box single. Fins a set has nothing for are left as they are, and the window says which.
+
+![The Futures Christenson 5-Fin M on the five boxes](img/t3-2c-models.png)
+
+The outlines match the published numbers, not the makers' exact templates. [docs/fins.md](../fins.md) lists the
+sources and the published data that looks doubtful.
+
+## 5. Check the fins in the outline and in 3D
 
 The outline view draws each fin base to scale, turned by its toe, with its box footprint around it. Zoom in to check
 the distances; press **F** to fit the whole board again. **View > Fins** hides or shows them.
@@ -74,7 +122,7 @@ The **3D** tab shows the fins in blue under the board. Drag to turn the board ov
 
 ![The fins in the 3D view, seen from below](img/t3-4-3d.png)
 
-## 5. Print the outline template
+## 6. Print the outline template
 
 **File > Print & export…** (Ctrl+P, Cmd+P on a Mac):
 
@@ -103,7 +151,16 @@ Page 1 holds the tail, the table of fin positions and a **100 mm check bar**.
 The fin table gives, for every fin, the distance from the tail and from the rail, the toe (in degrees and as a
 distance, for example 3.5° (1/4")), the cant, the base, the depth and the box.
 
-## 6. Before you cut
+## 7. Export the 3D model with its fins
+
+In **File > Print & export…**, **3D model** exports the board as STL, OBJ, 3MF or glTF, at full size or as a 1:5 or
+1:10 scale model. With fins on the board, choose **Board only**, **Board and fins**, or **Fins only**. Each fin is a
+separate closed solid sunk 3 mm into the bottom: slicers for 3D printing join them to the board, and for a flow
+simulation you can join them first (a boolean union in your CAD or mesh tool) if your tool needs one solid.
+
+![3D model export with the fins](img/t3-8-export-3d.png)
+
+## 8. Before you cut
 
 - Print at **100% / actual size** (turn off "fit to page" in the print dialog), then **measure the 100 mm bar**. If it
   is not 100 mm, fix the printer settings and print again.
