@@ -62,7 +62,8 @@ The builds are not signed with paid certificates yet, so the first launch needs 
   rider's weight, skill, fitness, age, waves and board type (Guild factor method, see `docs/volume-advisor.md`).
 - **Asymmetric boards** (Board > Asymmetric outline): a separate outline for each rail (toe side and heel side),
   both edited in the Outline view; volume, specs, 3D, exports, templates and CNC use each rail's own shape.
-- **Fins** (Board > Fins): single, twin, twin + trailer, thruster, quad, 2+1 and 5-fin presets placed for the board,
+- **Fins** (Board > Fins): single, twin, twin + 1 (twin + stabiliser), thruster, quad, 2+1 (side bites + US box single) and 5-fin presets
+  sized and placed for the board,
   with FCS I, FCS II, Futures or US box footprints, printed 1:1 on the outline template with a measurement table
   (dimensions and sources in `docs/fins.md`). Each fin has its own shape (rake, tip width, square to round tip,
   fullness, thickness, 50/50, 80/20 or flat-inside foil) shown in 3D, or pick one of 443 FCS, Futures and Firewire

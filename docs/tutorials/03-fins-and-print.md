@@ -12,7 +12,7 @@ value can also be typed in centimetres (`47cm`) or millimetres.
 
 1. Open the **Outline** tab and zoom in on the tail (scroll at the pointer; drag with the right button to pan).
 2. **Board > Fins…** opens the Fins window. Drag it by its title bar to where it does not hide the tail.
-3. Choose a **Setup**: Single, Twin, Twin + trailer, Thruster, Quad, 2+1 or 5 fins.
+3. Choose a **Setup**: Single, Twin, Twin + 1 (twin + stabiliser), Thruster, Quad, 2+1 (side bites + US box single) or 5 fins.
 4. Choose a **Box system**: FCS I, FCS II, Futures, US box (single) for a longboard centre fin, or None (position
    only).
 5. Click **Apply preset**. The fins are placed at standard positions for this board's length and outline, as one undo

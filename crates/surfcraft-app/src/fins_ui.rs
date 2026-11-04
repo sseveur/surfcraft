@@ -16,10 +16,10 @@ pub fn preset_label(p: Preset) -> &'static str {
         Preset::Custom => tr("Custom"),
         Preset::Single => tr("Single"),
         Preset::Twin => tr("Twin"),
-        Preset::TwinTrailer => tr("Twin + trailer"),
+        Preset::TwinTrailer => tr("Twin + 1 (twin + stabiliser)"),
         Preset::Thruster => tr("Thruster"),
         Preset::Quad => tr("Quad"),
-        Preset::TwoPlusOne => tr("2+1"),
+        Preset::TwoPlusOne => tr("2+1 (side bites + US box single)"),
         Preset::Five => tr("5 fins"),
     }
 }
@@ -608,6 +608,23 @@ fn catalog_picker(
             };
             ui.separator();
             product_specs(ui, p, set);
+            // Fins of the board this set has nothing for (or nothing that fits their box) stay as they are.
+            let unchanged: Vec<&str> = p
+                .rows_for(setup)
+                .iter()
+                .enumerate()
+                .filter(|(_, r)| r.is_none())
+                .map(|(i, _)| role_label(setup.role_label(i)))
+                .collect();
+            if !unchanged.is_empty() {
+                ui.label(
+                    egui::RichText::new(trf(
+                        "Not in this set for your boxes, left as they are: {0}",
+                        &[&unchanged.join(", ")],
+                    ))
+                    .color(ui.visuals().warn_fg_color),
+                );
+            }
             ui.horizontal(|ui| {
                 use_it = ui
                     .button(trf("Use {0}", &[&p.name()]))

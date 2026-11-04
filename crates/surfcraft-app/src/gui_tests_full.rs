@@ -1927,7 +1927,9 @@ fn fin_shape_editor_and_fins_in_the_3d_export() {
     step(&mut h);
     let s = h.state().doc.board.fin_setup.clone().unwrap();
     let side = product
-        .row_for(surfcraft_core::fins::Side::Left, 1, false)
+        .fins
+        .iter()
+        .find(|f| f.role != surfcraft_core::fin_catalog::Role::Centre)
         .unwrap();
     for f in s.fins.iter().filter(|f| f.y != 0.0) {
         assert!(

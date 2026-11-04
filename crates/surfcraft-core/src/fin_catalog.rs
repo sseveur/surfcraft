@@ -78,42 +78,52 @@ impl Product {
             .map_or(BoxSystem::None, |f| f.system)
     }
 
-    /// The row for a fin in the given position: `pairs` side fin pairs on the board, `rear` for the rear pair
-    /// of two. Falls back from the exact role to a similar one, then to any row.
-    pub fn row_for(&self, side: Side, pairs: usize, rear: bool) -> Option<&CatalogFin> {
-        let order: &[Role] = match (side, pairs > 1, rear) {
-            (Side::Centre, ..) => &[Role::Centre, Role::All, Role::Rear, Role::Side],
+    /// The row for a fin in the given position and box: `pairs` side fin pairs on the board, `rear` for the rear
+    /// pair of two. Falls back from the exact role to a similar one, but only to a fin that fits the box: a fin
+    /// in a US box takes only US box fins, any other box only fins for FCS or Futures boxes. `None` when the set
+    /// has no fin for it (a set of side bites has none for the centre of a 2+1).
+    pub fn row_for(&self, f: &Fin, pairs: usize, rear: bool) -> Option<&CatalogFin> {
+        let order: &[Role] = match (f.side(), pairs > 1, rear) {
+            (Side::Centre, ..) => &[Role::Centre, Role::All],
             (_, true, true) => &[Role::Rear, Role::Side, Role::All],
             (_, true, false) => &[Role::Front, Role::Side, Role::All],
             _ => &[Role::Side, Role::All, Role::Front, Role::Rear],
         };
+        let fits = |row: &CatalogFin| match f.system {
+            BoxSystem::UsBox => row.system == BoxSystem::UsBox,
+            // A position without a box takes any fin of its role; a US box fin only on the stringer.
+            BoxSystem::None => row.system != BoxSystem::UsBox || f.side() == Side::Centre,
+            _ => row.system != BoxSystem::UsBox,
+        };
         order
             .iter()
-            .find_map(|r| self.fins.iter().find(|f| f.role == *r))
-            .or(self.fins.first())
+            .find_map(|r| self.fins.iter().find(|row| row.role == *r && fits(row)))
+    }
+
+    /// For each fin of `setup`, the row it takes (see [`Product::row_for`]).
+    pub fn rows_for(&self, setup: &FinSetup) -> Vec<Option<&CatalogFin>> {
+        let count = |side: Side| setup.fins.iter().filter(|f| f.side() == side).count();
+        let pairs = count(Side::Left).max(count(Side::Right));
+        setup
+            .fins
+            .iter()
+            .enumerate()
+            .map(|(i, f)| self.row_for(f, pairs, setup.role_label(i).ends_with("rear")))
+            .collect()
     }
 
     /// Give the fins of `setup` this product's sizes and shapes, keeping their positions. Side fins in front of
-    /// another pair take the front (or side) fins, the rear pair the rear fins; centre fins the centre fin.
-    /// Each fin gets the published cant where there is one.
+    /// another pair take the front (or side) fins, the rear pair the rear fins, centre fins the centre fin, each
+    /// only if it fits the fin's box; fins the set has nothing for are left as they are. Each fin gets the
+    /// published cant where there is one.
     pub fn apply(&self, setup: &mut FinSetup) {
-        let pairs = setup
-            .fins
-            .iter()
-            .filter(|f| f.side() == Side::Left)
-            .count()
-            .max(
-                setup
-                    .fins
-                    .iter()
-                    .filter(|f| f.side() == Side::Right)
-                    .count(),
-            );
-        let snapshot = setup.clone();
-        for (i, f) in setup.fins.iter_mut().enumerate() {
-            let side = f.side();
-            let rear = snapshot.role_label(i).ends_with("rear");
-            if let Some(row) = self.row_for(side, pairs, rear) {
+        let rows: Vec<Option<CatalogFin>> = self
+            .rows_for(setup)
+            .into_iter()
+            .map(|r| r.cloned())
+            .collect();
+        for (f, row) in setup.fins.iter_mut().zip(rows) {
+            if let Some(row) = row {
                 row.apply(f);
             }
         }
@@ -327,15 +337,19 @@ mod tests {
             .find(|p| p.setup == Preset::Thruster && p.fins.len() == 2)
             .expect("an F6 set with side and centre rows");
         let mut setup = FinSetup::preset(Preset::Thruster, BoxSystem::Futures, &board);
+        let rows: Vec<CatalogFin> = futures
+            .rows_for(&setup)
+            .into_iter()
+            .map(|r| r.expect("a row for every fin").clone())
+            .collect();
         futures.apply(&mut setup);
-        let side = futures.row_for(Side::Left, 1, false).unwrap();
-        let centre = futures.row_for(Side::Centre, 1, false).unwrap();
-        for f in &setup.fins {
-            let row = if f.side() == Side::Centre {
-                centre
+        for (f, row) in setup.fins.iter().zip(&rows) {
+            let role = if f.side() == Side::Centre {
+                Role::Centre
             } else {
-                side
+                Role::Side
             };
+            assert_eq!(row.role, role);
             assert!((f.base - row.base).abs() < 1e-9 && (f.depth - row.depth).abs() < 1e-9);
             if let Some(a) = row.area {
                 assert!((f.shape.area(f.base, f.depth) - a).abs() / a < 0.02);
@@ -344,16 +358,67 @@ mod tests {
         // A quad set: the rear pair takes the rear fins.
         let quad = products()
             .iter()
-            .find(|p| p.setup == Preset::Quad && p.fins.iter().any(|f| f.role == Role::Rear))
+            .find(|p| {
+                p.setup == Preset::Quad
+                    && p.system() == BoxSystem::FcsII
+                    && p.fins.iter().any(|f| f.role == Role::Rear)
+            })
             .unwrap();
+        let rear = quad
+            .fins
+            .iter()
+            .find(|f| f.role == Role::Rear)
+            .unwrap()
+            .clone();
         let mut setup = FinSetup::preset(Preset::Quad, BoxSystem::FcsII, &board);
         quad.apply(&mut setup);
-        let rear = quad.row_for(Side::Left, 2, true).unwrap();
         for (i, f) in setup.fins.iter().enumerate() {
             if setup.role_label(i).ends_with("rear") {
                 assert!((f.base - rear.base).abs() < 1e-9, "{}", quad.name());
             }
         }
+    }
+
+    #[test]
+    fn a_2_plus_1_takes_only_fins_that_fit_its_boxes() {
+        let board = crate::mesh::tests::toy_board();
+        let fresh = FinSetup::preset(Preset::TwoPlusOne, BoxSystem::FcsII, &board);
+        let centre = fresh
+            .fins
+            .iter()
+            .position(|f| f.side() == Side::Centre)
+            .unwrap();
+        assert_eq!(fresh.fins[centre].system, BoxSystem::UsBox);
+        // Side bites only: the sides change, the US box centre fin stays as it was.
+        let bites = search("skindog side byte", None)[0];
+        let mut s = fresh.clone();
+        bites.apply(&mut s);
+        assert_eq!(s.fins[centre], fresh.fins[centre]);
+        for f in s.fins.iter().filter(|f| f.side() != Side::Centre) {
+            assert!((f.base - bites.fins[0].base).abs() < 1e-9);
+        }
+        // Then a US box single for the centre: only the centre changes, and stays in its US box.
+        let single = products()
+            .iter()
+            .find(|p| p.setup == Preset::Single && p.system() == BoxSystem::UsBox)
+            .unwrap();
+        let before = s.clone();
+        single.apply(&mut s);
+        assert_eq!(s.fins[centre].system, BoxSystem::UsBox);
+        assert!((s.fins[centre].depth - single.fins[0].depth).abs() < 1e-9);
+        for (i, f) in s.fins.iter().enumerate() {
+            if i != centre {
+                assert_eq!(*f, before.fins[i]);
+            }
+        }
+        // A thruster set never puts its FCS II centre fin in the US box.
+        let thruster = search("fcs performer m", None)
+            .into_iter()
+            .find(|p| p.setup == Preset::Thruster)
+            .unwrap();
+        let mut t = fresh.clone();
+        thruster.apply(&mut t);
+        assert_eq!(t.fins[centre], fresh.fins[centre]);
     }
 
     #[test]

@@ -81,7 +81,7 @@ Reference boards: 6'0" for the shortboard setups and 9'0" for single and 2+1. Al
 | | rears | 5 1/2 | 1 1/4 | 3/16 | 4° | **Sources disagree**: FGH 5, Timmy tool 5.5, L 6. 5.5 is used. Toe 3/16 (L; FGH 1/8). Cant: FCS II rear plugs are 3° or 5°, so 4° is used. |
 | Five fins | all | — | — | — | — | Thruster fronts and centre plus the quad rears (L: fronts 11, rears 6, centre 3.5). The quad's 5.5 rears are used so that switching between quad and thruster uses the same boxes. |
 | Twin | pair | 8 | 1 1/4 | 3/16 | 6.5° | **Sources disagree**: FGH 7–8 "depending on tail width"; L 10 for performance twins and 5–7 for wide-tail fish. The fish/twin value 8 is used. Cant is **not sourced** for twins; the thruster value is used. |
-| Twin + trailer | pair | 10 1/2 | 1 1/4 | 3/16 | 6.5° | L. |
+| Twin + 1 | pair | 10 1/2 | 1 1/4 | 3/16 | 6.5° | L. |
 | | trailer | 4 | — | — | 0° | L. |
 | 2+1 (9'0") | sides | 15 1/2 | 1 1/4 | 3/16 | 6.5° | L: 15.5, 1 1/4, 3/16 for 9'0"–9'4". FGH: 15–16.5, 1/4 toe. |
 | | centre box rear | 5 1/2 | — | — | 0° | L: 5.5 (10.5" box). FGH: 5–6. Always a US box. |
@@ -94,16 +94,34 @@ Reference boards: 6'0" for the shortboard setups and 9'0" for single and 2+1. Al
 - **Side fins** are always placed 1 1/4" from the outline at their own position.
 - **Pintails**: L adds 3/16" to the quad rear distance. SurfCraft does not apply this.
 
-### Fin depths
+### Fin sizes
 
-The fin depths in the presets are used only to fill BoardCAD's legacy fin depth fields and for drawing:
-- 4.5" for thruster sides and centre.
-- 4" for quad rears.
-- 5" for twins.
-- 9" for a longboard single.
-- 7" for a 2+1 centre and 3 1/2" for its sides.
+Each preset gives its fins a typical base and depth for their role: the median of the catalogue fins of that setup
+and role (see "Fin models" below), rounded. The box system does not set the size. Inches:
 
-These depths are not placement rules and have no source.
+| Setup | Fin | Base | Depth |
+|---|---|---|---|
+| Thruster, quad fronts, 5-fin sides | sides | 4.45 | 4.55 |
+| Thruster, 5-fin | centre | 4.4 | 4.5 |
+| Quad, 5-fin | rears | 3.95 | 4.05 |
+| Twin | pair | 5.65 | 5.35 |
+| Twin + 1 (twin + stabiliser) | pair | 5.05 | 5.3 |
+| | stabiliser | 3.25 | 3.3 |
+| 2+1 (side bites + US box single) | side bites | 3.9 | 3.6 |
+| | US box centre | 4.8 | 7.0 |
+| Single (longboard) | US box | 6.5 | 9.0 |
+
+The 2+1 centre and the single are longboard sizes (Futures Alpha 2+1 7.0: 4.82 × 7.00; 9" singles); the catalogue
+median for 2+1 centres (4.76 × 5.94) is pulled down by mid-length sets. Pick a fin model in the Fins window to
+use a real fin's size instead. Fin size by rider weight (the makers' XS to XL) is not applied.
+
+"2+1" means two things in surf shops. SurfCraft's "2+1" is the longboard and mid-length setup: side bites in FCS
+II or Futures boxes and a single fin in a US box. The shortboard "2+1", "twin + 1" or "twin + stabiliser" (two
+large twins and a small trailer, all in FCS II or Futures boxes) is the "Twin + 1" preset.
+
+Fin models fill only the fins whose box they fit: a US box fin goes only in a US box, an FCS or Futures fin only
+in an FCS or Futures box. A 2+1 can take side bites from one set and its centre from a US box single; fins a set
+has nothing for are left as they are.
 
 ## Fin shapes
 
