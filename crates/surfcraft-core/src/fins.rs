@@ -773,7 +773,8 @@ struct Place {
     /// Toe-in as a distance over the fin base.
     toe: f64,
     cant: f64,
-    /// Fin depth used for drawing (not a placement rule).
+    /// Typical fin base and depth for this role (inches), see `places`.
+    base: f64,
     depth: f64,
 }
 
@@ -816,43 +817,66 @@ fn length_factor(scaling: Scaling, l: f64) -> f64 {
 }
 
 fn places(preset: Preset) -> (Scaling, Vec<Place>) {
-    let side = |from_tail, from_rail, toe, cant, depth| Place {
+    let side = |from_tail, from_rail, toe, cant, (base, depth)| Place {
         role: Role::Sides,
         from_tail,
         from_rail,
         toe,
         cant,
+        base,
         depth,
     };
-    let centre = |from_tail, depth| Place {
+    let centre = |from_tail, (base, depth)| Place {
         role: Role::Centre,
         from_tail,
         from_rail: 0.0,
         toe: 0.0,
         cant: 0.0,
+        base,
         depth,
     };
+    // Fin sizes (base, depth in inches) for each role: medians of the fins of that setup and role in the fin
+    // catalogue (data/fin-catalog.csv, docs/fins.md), rounded; a longboard 2+1 centre and single from the
+    // longboard fins.
+    const THRUSTER_SIDE: (f64, f64) = (4.45, 4.55);
+    const THRUSTER_CENTRE: (f64, f64) = (4.4, 4.5);
+    const QUAD_REAR: (f64, f64) = (3.95, 4.05);
+    const TWIN: (f64, f64) = (5.65, 5.35);
+    const TWIN_PLUS_ONE_SIDE: (f64, f64) = (5.05, 5.3);
+    const STABILISER: (f64, f64) = (3.25, 3.3);
+    const SIDE_BITE: (f64, f64) = (3.9, 3.6);
+    const TWO_PLUS_ONE_CENTRE: (f64, f64) = (4.8, 7.0);
+    const LONGBOARD_SINGLE: (f64, f64) = (6.5, 9.0);
     // Front/side fins 1 1/4" from the rail at the trailing edge, 1/4" toe, 6.5° cant; quad rears 3/16" toe and
     // less cant (Lundquist, Fiberglass Hawaii, FCS; docs/fins.md).
     let (front, rear) = (
-        side(11.0, 1.25, 0.25, 6.5, 4.5),
-        side(5.5, 1.25, 0.1875, 4.0, 4.0),
+        side(11.0, 1.25, 0.25, 6.5, THRUSTER_SIDE),
+        side(5.5, 1.25, 0.1875, 4.0, QUAD_REAR),
     );
     match preset {
         Preset::Custom => (Scaling::Short, Vec::new()),
-        Preset::Single => (Scaling::Long, vec![centre(5.0, 9.0)]),
-        Preset::Twin => (Scaling::Short, vec![side(8.0, 1.25, 0.1875, 6.5, 5.0)]),
+        Preset::Single => (Scaling::Long, vec![centre(5.0, LONGBOARD_SINGLE)]),
+        Preset::Twin => (Scaling::Short, vec![side(8.0, 1.25, 0.1875, 6.5, TWIN)]),
         Preset::TwinTrailer => (
             Scaling::Short,
-            vec![side(10.5, 1.25, 0.1875, 6.5, 4.75), centre(4.0, 3.5)],
+            vec![
+                side(10.5, 1.25, 0.1875, 6.5, TWIN_PLUS_ONE_SIDE),
+                centre(4.0, STABILISER),
+            ],
         ),
-        Preset::Thruster => (Scaling::Short, vec![front, centre(3.5, 4.5)]),
+        Preset::Thruster => (Scaling::Short, vec![front, centre(3.5, THRUSTER_CENTRE)]),
         Preset::Quad => (Scaling::Short, vec![front, rear]),
         Preset::TwoPlusOne => (
             Scaling::Long,
-            vec![side(15.5, 1.25, 0.1875, 6.5, 3.5), centre(5.5, 7.0)],
+            vec![
+                side(15.5, 1.25, 0.1875, 6.5, SIDE_BITE),
+                centre(5.5, TWO_PLUS_ONE_CENTRE),
+            ],
         ),
-        Preset::Five => (Scaling::Short, vec![front, rear, centre(3.5, 4.5)]),
+        Preset::Five => (
+            Scaling::Short,
+            vec![front, rear, centre(3.5, THRUSTER_CENTRE)],
+        ),
     }
 }
 
@@ -881,13 +905,7 @@ impl FinSetup {
         let mut fins = Vec::new();
         for p in places {
             let sys = box_for(preset, p.role == Role::Centre, system);
-            let longboard_centre =
-                p.role == Role::Centre && matches!(preset, Preset::Single | Preset::TwoPlusOne);
-            let base = match sys.spec() {
-                Some(s) => s.fin_base,
-                None if longboard_centre => US_BOX.fin_base,
-                None => FCS2.fin_base,
-            };
+            let base = p.base * INCH;
             let mut x = p.from_tail * INCH * k;
             if sys == BoxSystem::UsBox {
                 // Given to the rear of the box; the fin sits in the middle of it.
